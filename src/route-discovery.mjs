@@ -8,9 +8,20 @@ export function collectionGroup(region){
   if(/대양주|오세아니아|Oceania/i.test(region))return '오세아니아';
   return '아시아';
 }
+
+// Keep the collector intentionally small: Northeast Asia is paused, and Korean Air's
+// combined Southeast/South Asia selector is screened only for Bali (DPS).
+export function monitoredRoute(route){
+  const region=String(route?.region||'');
+  const code=String(route?.code||'');
+  if(/동북아시아|^일본$|중국\/동북아시아/.test(region))return false;
+  if(/동남아시아/.test(region))return code==='DPS';
+  return true;
+}
+
 export function prioritizeRoutes(routes){
   const order=['유럽','미주','오세아니아','아시아'];
-  return [...routes].sort((a,b)=>order.indexOf(collectionGroup(a.region))-order.indexOf(collectionGroup(b.region)));
+  return [...routes].filter(monitoredRoute).sort((a,b)=>order.indexOf(collectionGroup(a.region))-order.indexOf(collectionGroup(b.region)));
 }
 
 export function parseDestinationButton(text,region){
