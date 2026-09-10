@@ -1,0 +1,33 @@
+name: Force one-time worldwide production refresh
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/force-worldwide-refresh.yml'
+permissions:
+  contents: write
+concurrency:
+  group: public-daily-collection
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install collector dependency
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Run tests
+        run: npm test
+      - name: Collect and publish all regions
+        id: collect
+        run: node --no-warnings scripts/collect-regions.mjs
+      - name: Validate published worldwide snapshot
+        shell: pwsh
+        run: |
+          node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));const r=s.bootstrap?.report||s.report||{};const routes=r.routes||s.bootstrap?.routes||[];const codes=new Set(routes.map(x=>x.code));const regions=new Set(routes.map(x=>x.region));console.log('PUBLISHED_WORLDWIDE_SUMMARY '+JSON.stringify({source_updated_at:r.source_updated_at,routes:codes.size,regions:[...regions]}));if(codes.size<100)process.exit(1);"
