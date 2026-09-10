@@ -1,5 +1,5 @@
 import {monthRange} from './public-calendar.mjs';
-import {validateDiscovery,collectionGroup} from './route-discovery.mjs';
+import {validateDiscovery,collectionGroup,monitoredRoute} from './route-discovery.mjs';
 
 export function validatePublication(report){
   if(!['WORLDWIDE','REGION'].includes(report.scope)||report.discovery?.validated!==true)throw Error('Only validated worldwide or completed region scans may publish');
@@ -7,9 +7,10 @@ export function validatePublication(report){
   if(!report.attempt_complete||report.failure||report.failed?.length||report.errors?.length||!report.source_updated_at||!report.finished_at||!Array.isArray(report.rows))throw Error('Incomplete or failed scan cannot publish');
   const months=monthRange(report.start_date,report.end_date);
   if(report.scope==='REGION'&&!['유럽','미주','오세아니아','아시아'].includes(report.collection_group))throw Error('Invalid collection group');
-  const routes=new Set(report.routes.filter(r=>report.scope==='WORLDWIDE'||collectionGroup(r.region)===report.collection_group).map(r=>r.code));
-  if(!routes.size)throw Error('No routes in completed region');
-  if(report.target_routes?.length!==routes.size||new Set(report.target_routes).size!==routes.size||report.target_routes.some(c=>!routes.has(c)))throw Error('Partial route selection cannot publish');
+  const expected=report.routes.filter(r=>monitoredRoute(r)&&(report.scope==='WORLDWIDE'||collectionGroup(r.region)===report.collection_group));
+  const routes=new Set(expected.map(r=>r.code));
+  if(!routes.size)throw Error('No monitored routes in completed region');
+  if(report.target_routes?.length!==routes.size||new Set(report.target_routes).size!==routes.size||report.target_routes.some(c=>!routes.has(c)))throw Error('Partial or out-of-policy route selection cannot publish');
   const covered=new Set(),normal=new Set();
   for(const [records,isNormal] of [[report.coverage,true],[report.unqueryable||[],false]]){
     if(!Array.isArray(records))throw Error('Missing coverage');
