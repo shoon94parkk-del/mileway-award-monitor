@@ -1,0 +1,25 @@
+name: Probe guest realtime award availability
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-guest-realtime.mjs'
+      - '.github/workflows/guest-realtime-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Probe guest realtime endpoint
+        run: node --no-warnings scripts/probe-guest-realtime.mjs
