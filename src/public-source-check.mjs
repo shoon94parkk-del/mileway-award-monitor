@@ -37,7 +37,9 @@ export async function fetchSourceUpdatedAt(){
     pw=require(bundled);
   }
   const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
-  const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:true});
+  // A/B testing on GitHub-hosted Windows runners shows Korean Air's public page
+  // works reliably in headed Edge while headless Edge fails before the UI loads.
+  const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:false});
   try{
     const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
     page.setDefaultTimeout(20000);
