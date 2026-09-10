@@ -37,7 +37,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Watch/check Korean Air source timestamp
         id: source
-        if: !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: github.event_name != 'workflow_dispatch' || inputs.force_full_scan != true
         shell: pwsh
         run: |
           $schedule = '${{ github.event.schedule }}'
@@ -153,5 +153,5 @@ jobs:
             git push
           fi
       - name: No source change
-        if: steps.source.outputs.changed != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed != 'true' && (github.event_name != 'workflow_dispatch' || inputs.force_full_scan != true)
         run: Write-Host "Korean Air source timestamp is unchanged; full collection skipped."
