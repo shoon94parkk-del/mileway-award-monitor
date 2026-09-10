@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const HOME='https://www.koreanair.com/';
+const HOME='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
 const BONUS='/api/hmp/bonusSeatView/bonusSeatView';
 const LIVE='/api/ap/long-running/booking/avail/scheduleAvailability';
 
@@ -25,7 +25,7 @@ try{
   const context=await browser.newContext({locale:'ko-KR'});
   const page=await context.newPage();
   await page.goto(HOME,{waitUntil:'domcontentloaded',timeout:60000});
-  console.log(JSON.stringify({label:'home',status:'loaded',url:page.url()}));
+  console.log(JSON.stringify({label:'award_page',status:'loaded',url:page.url()}));
 
   const control=await page.evaluate(async ({url,body})=>{
     const r=await fetch(url,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
