@@ -45,8 +45,8 @@ export function createStore(filename,catalog=[]) {
  }
  function where(filters={},available=true) {
   const saved=filters.saved==='true';
-  const clauses=saved?['1=1']:['s.source_updated_at=?','s.date>=?','s.date<=?',"(s.destination||'|'||substr(s.date,1,7)) IN (SELECT value FROM json_each(?))"];
-  const args=saved?[]:[report.source_updated_at||'',report.start_date||'0000-00-00',report.end_date||'9999-12-31',JSON.stringify((report.coverage||[]).map(c=>c.destination+'|'+c.month))];
+  const clauses=saved?['1=1']:['s.date>=?','s.date<=?',"(s.destination||'|'||substr(s.date,1,7)||'|'||s.source_updated_at) IN (SELECT value FROM json_each(?))"];
+  const args=saved?[]:[report.start_date||'0000-00-00',report.end_date||'9999-12-31',JSON.stringify((report.coverage||[]).map(c=>c.destination+'|'+c.month+'|'+(c.source_updated_at||report.source_updated_at||'')))];
   if(available&&!saved)clauses.push('s.available=1');
   if(filters.region){clauses.push('s.region=?');args.push(filters.region);}
   if(filters.destination){clauses.push('s.destination=?');args.push(filters.destination);}
@@ -73,7 +73,7 @@ export function createStore(filename,catalog=[]) {
   const {sql,args}=where();
   const stats=db.prepare(`SELECT count(*) AS available,count(DISTINCT s.destination) AS destinations,count(DISTINCT s.date) AS dates,sum(s.cabin='FIRST') AS first FROM seats s LEFT JOIN favorites f ON f.seat_id=s.id WHERE ${sql}`).get(...args);
   const routes=(report.routes||[]).map(r=>({...r,...catalog.find(c=>c.code===r.code),region:r.region}));
-  const destinations=db.prepare(`SELECT s.destination,s.city,s.region,count(*) AS count,min(s.date) AS next_date FROM seats s WHERE s.available=1 AND s.source_updated_at=? AND s.date>=? GROUP BY s.destination ORDER BY count DESC`).all(report.source_updated_at||'',report.start_date||'');
+  const destinations=db.prepare(`SELECT s.destination,s.city,s.region,count(*) AS count,min(s.date) AS next_date FROM seats s LEFT JOIN favorites f ON f.seat_id=s.id WHERE ${sql} GROUP BY s.destination ORDER BY count DESC`).all(...args);
   return {report,stats,routes,destinations,favorites:db.prepare('SELECT count(*) AS n FROM favorites').get().n,searches:db.prepare('SELECT * FROM searches ORDER BY id DESC').all().map(r=>({...r,filters:JSON.parse(r.filters)})),changes:db.prepare('SELECT c.*,s.city,s.date,s.cabin FROM changes c JOIN seats s ON s.id=c.seat_id ORDER BY c.id DESC LIMIT 30').all()};
  }
  function calendar(filters) {

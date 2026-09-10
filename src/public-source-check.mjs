@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {PUBLIC_URL} from './public-calendar.mjs';
+import {openPublicPage} from './public-navigation.mjs';
 
 const require=createRequire(import.meta.url);
 const NETWORK_ARGS=['--disable-http2','--disable-quic'];
@@ -26,11 +27,6 @@ async function dismissCookie(page){
     const close=cookie.getByRole('button',{name:/닫기|Close/i}).first();
     if(await close.count())await close.click().catch(()=>{});
   }
-}
-
-async function openPublicPage(page){
-  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
-  await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:90000});
 }
 
 export async function fetchSourceUpdatedAt(){
@@ -59,7 +55,9 @@ async function main(){
   const snapshot=snapshotArg>=0?path.resolve(process.argv[snapshotArg+1]):path.resolve('public-data/snapshot.json');
   const previous=readPublishedSourceUpdatedAt(snapshot);
   const current=await fetchSourceUpdatedAt();
-  const changed=!previous||previous!==current;
+  const report=fs.existsSync(snapshot)?JSON.parse(fs.readFileSync(snapshot,'utf8')).bootstrap?.report:null;
+  const regionsNeedRefresh=report?.scope==='REGIONAL_COMPOSITE'&&['유럽','미주','오세아니아','아시아'].some(g=>report.region_status?.[g]?.status!=='success'||report.region_status[g].source_updated_at!==current);
+  const changed=!previous||previous!==current||regionsNeedRefresh;
   console.log(`Published source: ${previous||'none'}`);
   console.log(`Korean Air source: ${current}`);
   console.log(changed?'Source changed: full collection required':'Source unchanged: skip full collection');
