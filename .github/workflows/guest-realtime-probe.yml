@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   probe:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -15,8 +15,9 @@ jobs:
         with:
           node-version: '24'
       - name: Install Playwright
+        shell: pwsh
         run: |
           npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Probe Korean Air guest realtime API
         run: node --no-warnings scripts/guest-realtime-probe.mjs
