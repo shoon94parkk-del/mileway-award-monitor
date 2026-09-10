@@ -4,7 +4,7 @@ const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/;
 const CABINS=new Set(['PRESTIGE','FIRST']);
 const RULE_ID=/^[A-Za-z0-9_-]{8,80}$/;
 const arr=value=>Array.isArray(value)?value:[];
-const uniq=value=>[...new Set(arr(value).map(v=>String(v).trim().toUpperCase()).filter(Boolean))];
+const uniq=value=>[...new Set(arr(value).map(v=>String(v).trim().toUpperCase()).filter(Boolean))].sort();
 const hash=value=>createHash('sha256').update(String(value)).digest('hex').slice(0,24);
 
 function normalizedShape(rule,index){
@@ -13,8 +13,9 @@ function normalizedShape(rule,index){
  const destinations=uniq(rule.destinations);if(destinations.some(v=>!/^[A-Z]{3}$/.test(v)))throw new Error(`${name}: 목적지는 3자리 공항코드여야 합니다.`);
  const cabins=uniq(rule.cabins);if(cabins.some(v=>!CABINS.has(v)))throw new Error(`${name}: 좌석 등급은 PRESTIGE/FIRST만 가능합니다.`);
  const start=String(rule.start||'').trim(),end=String(rule.end||'').trim();
- if(start&&!ISO_DATE.test(start))throw new Error(`${name}: start는 YYYY-MM-DD 형식이어야 합니다.`);
- if(end&&!ISO_DATE.test(end))throw new Error(`${name}: end는 YYYY-MM-DD 형식이어야 합니다.`);
+ const validDate=v=>ISO_DATE.test(v)&&Number.isFinite(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
+ if(start&&!validDate(start))throw new Error(`${name}: start는 유효한 YYYY-MM-DD 날짜여야 합니다.`);
+ if(end&&!validDate(end))throw new Error(`${name}: end는 유효한 YYYY-MM-DD 날짜여야 합니다.`);
  if(start&&end&&start>end)throw new Error(`${name}: 시작일이 종료일보다 늦습니다.`);
  const region=String(rule.region||'').trim();if(region.length>60||/[\u0000-\u001f]/.test(region))throw new Error(`${name}: region 형식이 올바르지 않습니다.`);
  const flights=uniq(rule.flights);if(flights.some(v=>!/^KE\d{1,4}$/.test(v)))throw new Error(`${name}: 항공편은 KE901 같은 형식이어야 합니다.`);

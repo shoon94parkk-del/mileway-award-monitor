@@ -36,7 +36,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Check Korean Air source timestamp
         id: source
-        if: github.event.schedule != '31 14 * * *'
+        if: github.event.schedule != '31 14 * * *' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: pwsh
         run: |
           $success = $false
@@ -56,52 +56,14 @@ jobs:
       - name: Test parsers
         id: tests
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
-        run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs test/route-discovery.test.mjs
-      - name: Collect all worldwide destinations with resume recovery
+        run: npm test
+      - name: Collect and publish Europe, Americas, Oceania, then Asia
         id: collect
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
-        shell: pwsh
-        run: |
-          $success = $false
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
-            Write-Host "Collector process attempt $attempt/3"
-            if ($attempt -eq 1) {
-              node --no-warnings src/public-extract.mjs --headless --interval-ms 3000 --max-retries 3
-            } else {
-              node --no-warnings src/public-extract.mjs --headless --interval-ms 3000 --max-retries 3 --resume
-            }
-            if ($LASTEXITCODE -eq 0) {
-              $success = $true
-              break
-            }
-            if ($attempt -lt 3) {
-              $delay = 15 * $attempt
-              Write-Host "Collector stopped; resuming saved route/months after ${delay}s"
-              Start-Sleep -Seconds $delay
-            }
-          }
-          if (-not $success) {
-            Write-Error "Collector could not finish after resume recovery attempts."
-            exit 1
-          }
-      - name: Export sanitized completed snapshot
-        id: publish
-        if: steps.collect.outcome == 'success'
-        run: node --no-warnings scripts/publish-data.mjs
-      - name: Build and validate public website
-        id: build
-        if: steps.publish.outcome == 'success'
-        run: |
-          node --no-warnings scripts/build-cloud.mjs
-          node --check dist/app.js
-          node --check dist/cloud-api.js
-          node --check dist/cloud-enhancements.js
-          node --check dist/global-regions.js
-          node --check dist/service-worker.js
-          Copy-Item dist/snapshot.json public-data/snapshot.json
+        run: node --no-warnings scripts/collect-regions.mjs
       - name: Notify matching seat alerts
         id: notify
-        if: steps.build.outcome == 'success'
+        if: always() && steps.collect.outputs.published == 'true'
         continue-on-error: true
         env:
           ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
@@ -119,7 +81,7 @@ jobs:
           SOURCE_OUTCOME: ${{ steps.source.outcome }}
           TESTS_OUTCOME: ${{ steps.tests.outcome }}
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
-          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          BUILD_OUTCOME: ${{ steps.collect.outputs.published == 'true' && 'success' || 'skipped' }}
           NOTIFY_OUTCOME: ${{ steps.notify.outcome }}
           FULL_SCAN: ${{ steps.collect.outcome == 'success' }}
           CURRENT_SOURCE: ${{ steps.source.outputs.current }}
@@ -137,9 +99,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public-data/health.json
-          if [ "${{ steps.build.outcome }}" = "success" ]; then
-            git add public-data/results.json.gz public-data/snapshot.json public-data/changes.json
-          fi
           if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
           if ! git diff --cached --quiet; then
             git commit -m "Update Mileway public state"
