@@ -1,0 +1,13 @@
+{
+  "name": "Mileway · 대한항공 보너스 좌석",
+  "short_name": "Mileway",
+  "description": "대한항공 공개 일일 보너스 좌석 탐색과 알림",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2764ef",
+  "lang": "ko-KR",
+  "icons": [
+    {"src":"/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

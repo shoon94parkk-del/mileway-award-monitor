@@ -10,12 +10,11 @@ on:
   schedule:
     # Normal hours: lightweight source check about once per hour.
     - cron: '17 0-12,16-23 * * *'
-    # Around the observed Korean Air daily refresh (22:30-00:30 KST):
-    # check about every five minutes, offset from common peak minutes.
+    # Around the observed Korean Air daily refresh (22:30-00:30 KST): check about every five minutes.
     - cron: '34-59/5 13 * * *'
     - cron: '4-59/5 14 * * *'
     - cron: '4-29/5 15 * * *'
-    # Daily safety-net full scan at 23:31 KST even if the source timestamp check misses a change.
+    # 23:31 KST safety scan. This path deliberately skips the source-timestamp gate.
     - cron: '31 14 * * *'
 permissions:
   contents: write
@@ -33,9 +32,11 @@ jobs:
         with:
           node-version: '24'
       - name: Install collector dependency
+        id: install
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Check Korean Air source timestamp
         id: source
+        if: github.event.schedule != '31 14 * * *'
         shell: pwsh
         run: |
           $success = $false
@@ -53,9 +54,11 @@ jobs:
             exit 1
           }
       - name: Test parsers
+        id: tests
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs
       - name: Collect one month per request with resume recovery
+        id: collect
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: pwsh
         run: |
@@ -82,18 +85,22 @@ jobs:
             exit 1
           }
       - name: Export sanitized completed snapshot
-        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        id: publish
+        if: steps.collect.outcome == 'success'
         run: node --no-warnings scripts/publish-data.mjs
       - name: Build and validate public website
-        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        id: build
+        if: steps.publish.outcome == 'success'
         run: |
           node --no-warnings scripts/build-cloud.mjs
           node --check dist/app.js
           node --check dist/cloud-api.js
           node --check dist/cloud-enhancements.js
+          node --check dist/service-worker.js
           Copy-Item dist/snapshot.json public-data/snapshot.json
       - name: Notify matching seat alerts
-        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        id: notify
+        if: steps.build.outcome == 'success'
         continue-on-error: true
         env:
           ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
@@ -103,16 +110,39 @@ jobs:
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
           ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
         run: node --no-warnings scripts/notify-alerts.mjs --snapshot public-data/snapshot.json --state public-data/alert-state.json
-      - name: Persist results to GitHub
-        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+      - name: Update public health
+        id: health
+        if: always()
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          SOURCE_OUTCOME: ${{ steps.source.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          NOTIFY_OUTCOME: ${{ steps.notify.outcome }}
+          FULL_SCAN: ${{ steps.collect.outcome == 'success' }}
+          CURRENT_SOURCE: ${{ steps.source.outputs.current }}
+          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+        run: node --no-warnings scripts/write-health.mjs public-data/health.json
+      - name: Persist public state
+        if: always()
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public-data/results.json.gz public-data/snapshot.json
+          git add public-data/health.json
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            git add public-data/results.json.gz public-data/snapshot.json public-data/changes.json
+          fi
           if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
           if ! git diff --cached --quiet; then
-            git commit -m "Update public daily award snapshot"
+            git commit -m "Update Mileway public state"
+            git pull --rebase origin main
             git push
           fi
       - name: No source change
