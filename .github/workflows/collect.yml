@@ -15,6 +15,11 @@ on:
     - cron: '57 13 * * *'
     # 23:10 KST backup check in case the watcher did not start on time or ended early.
     - cron: '10 14 * * *'
+    # GitHub-hosted US runners can receive the Korean Air daily source later than Korean clients.
+    # Keep checking every five minutes through 01:15 KST so regional propagation does not create a long blind spot.
+    - cron: '15-55/5 14 * * *'
+    - cron: '0-55/5 15 * * *'
+    - cron: '0-15/5 16 * * *'
     # 23:31 KST safety check. If the timestamp check itself fails, force a collection attempt.
     - cron: '31 14 * * *'
 permissions:
@@ -73,7 +78,7 @@ jobs:
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'current='
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'previous='
             } else {
-              Write-Host "No source change detected before watcher deadline; backup/safety schedules remain armed."
+              Write-Host "No source change detected before watcher deadline; post-midnight fallback checks remain armed."
             }
             exit 0
           }
