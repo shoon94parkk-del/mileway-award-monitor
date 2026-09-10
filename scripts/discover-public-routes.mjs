@@ -1,11 +1,10 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import {createRequire} from 'node:module';
 import {PUBLIC_URL} from '../src/public-calendar.mjs';
 import {candidateRegionLabels,parseDestinationButton} from '../src/route-discovery.mjs';
 
 const require=createRequire(import.meta.url);
-let pw;try{pw=require('playwright');}catch(e){throw new Error('Playwright is required for route discovery');}
+let pw;try{pw=require('playwright');}catch{throw new Error('Playwright is required for route discovery');}
 const args=['--disable-http2','--disable-quic'];
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args,headless:true});
@@ -23,8 +22,8 @@ async function regionList(kind,region){
  return page.locator('[id^="acc-panel-mobile-web"]:visible button:visible');
 }
 try{
- await page.goto(PUBLIC_URL,{waitUntil:'domcontentloaded',timeout:60000});
- await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:60000});
+ await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
+ await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:90000});
  await dismissCookie();
  await regionList('departure','대한민국');
  await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
