@@ -5,7 +5,8 @@ import {normalizeAlertRules,matchesAlertRule,evaluateAlerts,alertSeatKey} from '
 const rows=[
  {id:'1',destination:'CDG',region:'유럽',date:'2027-04-03',flight:'KE901',time:'11:20',cabin:'PRESTIGE',fare_class:'O',available:1},
  {id:'2',destination:'LHR',region:'유럽',date:'2027-04-04',flight:'KE907',time:'10:50',cabin:'FIRST',fare_class:'A',available:1},
- {id:'3',destination:'JFK',region:'미주',date:'2027-04-05',flight:'KE081',time:'10:00',cabin:'PRESTIGE',fare_class:'O',available:1}
+ {id:'3',destination:'JFK',region:'미주',date:'2027-04-05',flight:'KE081',time:'10:00',cabin:'PRESTIGE',fare_class:'O',available:1},
+ {id:'4',destination:'NRT',region:'일본',date:'2027-04-06',flight:'KE703',time:'10:10',cabin:'PRESTIGE',fare_class:'O',available:1}
 ];
 
 test('알림 규칙은 지역·목적지·객실·날짜·주말 조건을 모두 적용한다',()=>{
@@ -15,13 +16,19 @@ test('알림 규칙은 지역·목적지·객실·날짜·주말 조건을 모�
  assert.equal(matchesAlertRule(rows[2],rule),false);
 });
 
+test('미주·유럽 외 지역도 알림 규칙에 사용할 수 있다',()=>{
+ const [rule]=normalizeAlertRules([{id:'rule_japan_01',name:'일본',region:'일본',destinations:['NRT']}]);
+ assert.equal(matchesAlertRule(rows[3],rule),true);
+ assert.equal(matchesAlertRule(rows[0],rule),false);
+});
+
 test('같은 좌석은 반복 알림하지 않고 사라졌다 다시 생기면 다시 알린다',()=>{
  const rules=normalizeAlertRules([{id:'rule_europe_01',name:'유럽',region:'유럽'}]);
  const first=evaluateAlerts(rows,rules,{});
  assert.equal(first.opened[0].rows.length,2);
  const previous={rule_hash:first.rule_hash,rule_meta:first.rule_meta,active:first.active};
  assert.equal(evaluateAlerts(rows,rules,previous).opened.length,0);
- const disappeared=evaluateAlerts([rows[1],rows[2]],rules,previous);
+ const disappeared=evaluateAlerts([rows[1],rows[2],rows[3]],rules,previous);
  const reappeared=evaluateAlerts(rows,rules,{rule_hash:disappeared.rule_hash,rule_meta:disappeared.rule_meta,active:disappeared.active});
  assert.equal(reappeared.opened.length,1);
  assert.equal(reappeared.opened[0].rows[0].destination,'CDG');
