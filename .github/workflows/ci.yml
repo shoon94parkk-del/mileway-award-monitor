@@ -21,6 +21,7 @@ jobs:
           node --check src/public-extract.mjs
           node --check src/public-calendar.mjs
           node --check src/public-report.mjs
+          node --check src/public-source-check.mjs
           node --check scripts/build-cloud.mjs
           node --check scripts/publish-data.mjs
           node --check web/cloud-api.js
