@@ -15,7 +15,7 @@ function buildMessages(opened,sourceUpdatedAt){
   const visible=rows.slice(0,12),more=rows.length-visible.length;
   const lines=visible.map(row=>`• ${rowText(row)}`);
   if(more)lines.push(`• 외 ${more}건`);
-  return {subject:`[Mileway] ${rule.name} 좌석 ${rows.length}건`,text:`🔔 ${rule.name}\n${lines.join('\n')}\n\n대한항공 공개 일일 자료 기준: ${sourceUpdatedAt}\n예약 전 대한항공에서 최종 확인해 주세요.`};
+  return {subject:`[Mileway] ${rule.name} 좌석 ${rows.length}건`,text:`🔔 ${rule.name}\n${lines.join('\n')}\n\n대한항공 공개 일일 자료 기준: ${sourceUpdatedAt}\n예약 전 대한항공에서 최종 확인해 주세요.`,sourceUpdatedAt};
  });
 }
 
@@ -34,7 +34,8 @@ async function sendEmail(messages){
  if(!key||!to||!from)return false;
  for(const message of messages){
   const html=`<div style="font-family:Arial,sans-serif;line-height:1.6;white-space:pre-line">${escHtml(message.text)}</div>`;
-  const res=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`mileway-${Buffer.from(message.subject).toString('base64url').slice(0,80)}`},body:JSON.stringify({from,to:[to],subject:message.subject,html})});
+  const idem=Buffer.from(`${message.sourceUpdatedAt}|${message.subject}`).toString('base64url').slice(0,100);
+  const res=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`mileway-${idem}`},body:JSON.stringify({from,to:[to],subject:message.subject,html})});
   if(!res.ok)throw new Error(`Email 알림 전송 실패 (${res.status})`);
  }
  return true;
