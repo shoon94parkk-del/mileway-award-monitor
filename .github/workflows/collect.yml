@@ -2,7 +2,9 @@ name: Collect public daily award seats
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 0 * * *'
+    # Korean Air public daily data has been observed updating around 23:00 KST.
+    # Leave a buffer because scheduled Actions can start a little late.
+    - cron: '27 14 * * *'
 permissions:
   contents: write
 concurrency:
@@ -22,8 +24,31 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Test parsers
         run: node --no-warnings --test test/public-calendar.test.mjs
-      - name: Collect one month per request
-        run: node --no-warnings src/public-extract.mjs --interval-ms 5000
+      - name: Collect one month per request with resume recovery
+        shell: pwsh
+        run: |
+          $success = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            Write-Host "Collector process attempt $attempt/3"
+            if ($attempt -eq 1) {
+              node --no-warnings src/public-extract.mjs --interval-ms 5000 --max-retries 3
+            } else {
+              node --no-warnings src/public-extract.mjs --interval-ms 5000 --max-retries 3 --resume
+            }
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+            if ($attempt -lt 3) {
+              $delay = 15 * $attempt
+              Write-Host "Collector stopped; resuming saved route/months after ${delay}s"
+              Start-Sleep -Seconds $delay
+            }
+          }
+          if (-not $success) {
+            Write-Error "Collector could not finish after resume recovery attempts."
+            exit 1
+          }
       - name: Export sanitized completed snapshot
         run: node --no-warnings scripts/publish-data.mjs
       - name: Build and validate public website
