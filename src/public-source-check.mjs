@@ -7,6 +7,8 @@ import {openPublicPage} from './public-navigation.mjs';
 
 const require=createRequire(import.meta.url);
 const NETWORK_ARGS=['--disable-http2','--disable-quic'];
+const MIN_WORLDWIDE_ROUTES=100;
+const REQUIRED_GROUPS=['유럽','미주','오세아니아','아시아'];
 
 export function parseSourceUpdatedAt(text){
   return String(text||'').match(/대한민국 시간\(([^)]+)\)/)?.[1]?.trim()||null;
@@ -16,6 +18,17 @@ export function readPublishedSourceUpdatedAt(file){
   if(!file||!fs.existsSync(file))return null;
   const data=JSON.parse(fs.readFileSync(file,'utf8'));
   return data?.bootstrap?.report?.source_updated_at||data?.report?.source_updated_at||data?.source_updated_at||null;
+}
+
+export function publishedSnapshotNeedsRefresh(data,current){
+  const report=data?.bootstrap?.report||data?.report||{};
+  const routes=Array.isArray(report.routes)?report.routes:(Array.isArray(data?.bootstrap?.routes)?data.bootstrap.routes:[]);
+  const routeCount=new Set(routes.map(route=>route?.code).filter(Boolean)).size;
+  if(routeCount<MIN_WORLDWIDE_ROUTES)return true;
+  if(report.scope==='REGIONAL_COMPOSITE'){
+    return REQUIRED_GROUPS.some(group=>report.region_status?.[group]?.status!=='success'||report.region_status?.[group]?.source_updated_at!==current);
+  }
+  return false;
 }
 
 async function dismissCookie(page){
@@ -57,11 +70,12 @@ async function main(){
   const snapshot=snapshotArg>=0?path.resolve(process.argv[snapshotArg+1]):path.resolve('public-data/snapshot.json');
   const previous=readPublishedSourceUpdatedAt(snapshot);
   const current=await fetchSourceUpdatedAt();
-  const report=fs.existsSync(snapshot)?JSON.parse(fs.readFileSync(snapshot,'utf8')).bootstrap?.report:null;
-  const regionsNeedRefresh=report?.scope==='REGIONAL_COMPOSITE'&&['유럽','미주','오세아니아','아시아'].some(g=>report.region_status?.[g]?.status!=='success'||report.region_status[g].source_updated_at!==current);
-  const changed=!previous||previous!==current||regionsNeedRefresh;
+  const snapshotData=fs.existsSync(snapshot)?JSON.parse(fs.readFileSync(snapshot,'utf8')):null;
+  const coverageNeedsRefresh=publishedSnapshotNeedsRefresh(snapshotData,current);
+  const changed=!previous||previous!==current||coverageNeedsRefresh;
   console.log(`Published source: ${previous||'none'}`);
   console.log(`Korean Air source: ${current}`);
+  if(coverageNeedsRefresh)console.log('Published worldwide coverage is incomplete/stale: full collection required');
   console.log(changed?'Source changed: full collection required':'Source unchanged: skip full collection');
   if(process.env.GITHUB_OUTPUT){
     fs.appendFileSync(process.env.GITHUB_OUTPUT,`changed=${changed}\ncurrent=${current}\nprevious=${previous||''}\n`);
