@@ -7,11 +7,6 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/run-worldwide-scan.trigger'
   schedule:
     # Normal hours: lightweight source check about once per hour.
     - cron: '17 0-12,16-23 * * *'
@@ -41,7 +36,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Check Korean Air source timestamp
         id: source
-        if: github.event.schedule != '31 14 * * *' && github.event_name != 'push'
+        if: github.event.schedule != '31 14 * * *'
         shell: pwsh
         run: |
           $success = $false
@@ -60,11 +55,11 @@ jobs:
           }
       - name: Test parsers
         id: tests
-        if: github.event_name == 'push' || steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs test/route-discovery.test.mjs
       - name: Collect all worldwide destinations with resume recovery
         id: collect
-        if: github.event_name == 'push' || steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: pwsh
         run: |
           $success = $false
@@ -152,5 +147,5 @@ jobs:
             git push
           fi
       - name: No source change
-        if: github.event_name != 'push' && steps.source.outputs.changed != 'true' && github.event.schedule != '31 14 * * *' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed != 'true' && github.event.schedule != '31 14 * * *' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: Write-Host "Korean Air source timestamp is unchanged; full collection skipped."
