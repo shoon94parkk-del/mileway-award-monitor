@@ -1,8 +1,16 @@
 name: Collect public daily award seats
 on:
   workflow_dispatch:
+    inputs:
+      force_full_scan:
+        description: Force a full collection even when the Korean Air source timestamp is unchanged
+        required: false
+        default: true
+        type: boolean
   schedule:
-    - cron: '17 0 * * *'
+    # GitHub Actions supports a minimum 5-minute schedule. Offset from the top
+    # of the hour to reduce peak-time schedule delays.
+    - cron: '2/5 * * * *'
 permissions:
   contents: write
 concurrency:
@@ -20,18 +28,64 @@ jobs:
           node-version: '24'
       - name: Install collector dependency
         run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Check Korean Air source timestamp
+        id: source
+        shell: pwsh
+        run: |
+          $success = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            Write-Host "Source check attempt $attempt/2"
+            node --no-warnings src/public-source-check.mjs --snapshot public-data/snapshot.json
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+            if ($attempt -lt 2) { Start-Sleep -Seconds 10 }
+          }
+          if (-not $success) {
+            Write-Error "Could not read the Korean Air public source timestamp."
+            exit 1
+          }
       - name: Test parsers
-        run: node --no-warnings --test test/public-calendar.test.mjs
-      - name: Collect one month per request
-        run: node --no-warnings src/public-extract.mjs --interval-ms 5000
+        if: steps.source.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs
+      - name: Collect one month per request with resume recovery
+        if: steps.source.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        shell: pwsh
+        run: |
+          $success = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            Write-Host "Collector process attempt $attempt/3"
+            if ($attempt -eq 1) {
+              node --no-warnings src/public-extract.mjs --interval-ms 3000 --max-retries 3
+            } else {
+              node --no-warnings src/public-extract.mjs --interval-ms 3000 --max-retries 3 --resume
+            }
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+            if ($attempt -lt 3) {
+              $delay = 15 * $attempt
+              Write-Host "Collector stopped; resuming saved route/months after ${delay}s"
+              Start-Sleep -Seconds $delay
+            }
+          }
+          if (-not $success) {
+            Write-Error "Collector could not finish after resume recovery attempts."
+            exit 1
+          }
       - name: Export sanitized completed snapshot
+        if: steps.source.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: node --no-warnings scripts/publish-data.mjs
       - name: Build and validate public website
+        if: steps.source.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: |
           node --no-warnings scripts/build-cloud.mjs
           node --check dist/app.js
           Copy-Item dist/snapshot.json public-data/snapshot.json
       - name: Persist results to GitHub
+        if: steps.source.outputs.changed == 'true' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -41,3 +95,6 @@ jobs:
             git commit -m "Update public daily award snapshot"
             git push
           fi
+      - name: No source change
+        if: steps.source.outputs.changed != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        run: Write-Host "Korean Air source timestamp is unchanged; full collection skipped."

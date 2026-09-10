@@ -1,6 +1,8 @@
+import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePublicCalendar,parsePublicApi,monthRange} from '../src/public-calendar.mjs';
+
 test('invalid and reversed date ranges are rejected before collection',()=>{
  assert.throws(()=>monthRange('2027-02-30','2027-03-01'));
  assert.throws(()=>monthRange('2027-04-02','2027-04-01'));
@@ -27,4 +29,13 @@ test('public API preserves flight-level O/A inventory and excludes Z upgrades',(
  const rows=parsePublicApi(data,{...options,month:'2027-04'});
  assert.equal(rows.length,2);assert.equal(rows[0].available,false);assert.equal(rows[1].flight,'KE901');
  assert.throws(()=>parsePublicApi(data,{...options,month:'2027-05'}));
+});
+test('representative public API fixture keeps O/A semantics and rejects route drift',()=>{
+ const data=JSON.parse(fs.readFileSync(new URL('./fixtures/public-api-sample.json',import.meta.url),'utf8'));
+ const rows=parsePublicApi(data,{...options,month:'2027-04'});
+ assert.equal(rows.length,4);
+ assert.equal(rows.filter(r=>r.available).length,2);
+ assert.equal(rows.some(r=>r.fareClass==='Z'),false);
+ assert.equal(rows.find(r=>r.date==='2027-04-02'&&r.fareClass==='A')?.available,true);
+ assert.throws(()=>parsePublicApi({...data,arrivalAirport:'LHR'},{...options,month:'2027-04'}));
 });

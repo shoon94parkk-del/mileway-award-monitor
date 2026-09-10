@@ -1,0 +1,21 @@
+{
+  "departureAirport": "ICN",
+  "arrivalAirport": "CDG",
+  "flightList": [
+    {
+      "departureDate": "20270401",
+      "flightDetailList": [
+        {"flightNumber":"KE901","departureTime":"11:20","bookingClass":"O","availableSeat":true},
+        {"flightNumber":"KE901","departureTime":"11:20","bookingClass":"A","availableSeat":false},
+        {"flightNumber":"KE901","departureTime":"11:20","bookingClass":"Z","availableSeat":true}
+      ]
+    },
+    {
+      "departureDate": "20270402",
+      "flightDetailList": [
+        {"flightNumber":"KE901","departureTime":"11:20","bookingClass":"O","availableSeat":false},
+        {"flightNumber":"KE901","departureTime":"11:20","bookingClass":"A","availableSeat":true}
+      ]
+    }
+  ]
+}
