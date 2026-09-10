@@ -28,6 +28,11 @@ async function dismissCookie(page){
   }
 }
 
+async function openPublicPage(page){
+  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
+  await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:90000});
+}
+
 export async function fetchSourceUpdatedAt(){
   let pw;
   try { pw=require('playwright'); }
@@ -40,8 +45,7 @@ export async function fetchSourceUpdatedAt(){
   try{
     const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
     page.setDefaultTimeout(20000);
-    await page.goto(PUBLIC_URL,{waitUntil:'domcontentloaded',timeout:60000});
-    await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:60000});
+    await openPublicPage(page);
     await dismissCookie(page);
     const body=await page.locator('body').innerText();
     const sourceUpdatedAt=parseSourceUpdatedAt(body);
