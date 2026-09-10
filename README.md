@@ -4,9 +4,10 @@ Korean Air public **daily** award-seat explorer. Not realtime inventory; counts 
 
 ## Free cloud setup
 
+- The collector now discovers **all overseas destination regions and airports currently exposed by Korean Air's public award-seat selector**, instead of limiting collection to North America and Europe.
 - GitHub Actions checks the Korean Air public source timestamp about once per hour during normal hours and about every five minutes around the observed daily refresh window (roughly 22:30-00:30 KST).
 - If the source timestamp is unchanged, the expensive full collection is skipped. A daily 23:31 KST safety-net full scan bypasses the source-timestamp gate entirely.
-- Full collection uses one route/month per request with a 3-second interval, up to three retries per route/month, and `--resume` recovery after process failure.
+- Full worldwide collection uses one route/month per request with a 3-second interval, up to three retries per route/month, `--resume` recovery, headless Chromium, and a 180-minute workflow ceiling.
 - Only the Korean Air public award-seat API is treated as the monitored API. API route/month/class are validated and API availability is cross-checked with the rendered calendar.
 - Completed sanitized snapshots live in `public-data/results.json.gz` and `public-data/snapshot.json`. Failed/incomplete collections never replace the last good snapshot.
 - `public-data/health.json` records collector/notification health and alert-channel configuration without exposing secrets. `public-data/changes.json` retains up to 180 days of opened/closed seat changes.
@@ -14,6 +15,7 @@ Korean Air public **daily** award-seat explorer. Not realtime inventory; counts 
 
 ## Public-site UX
 
+- Region tabs are generated from the regions actually found in the latest Korean Air snapshot, so Japan/Asia/Oceania/etc. appear automatically when collected.
 - The main filter is intentionally simple: region, destination, departure month/date, weekend and sort. The redundant free-text search and cabin selector are hidden; Prestige award + First award results are always shown together.
 - Quick filters cover the next 3/6 months, weekends, and ±3/±7-day flexible date windows.
 - Search/filter state is mirrored into the URL so a filtered result can be bookmarked or shared.
@@ -26,7 +28,7 @@ Korean Air public **daily** award-seat explorer. Not realtime inventory; counts 
 
 ## Seat alerts
 
-The static site can build alert rules using destination(s), date range and weekend conditions. Cabin selection is intentionally fixed to both Prestige award and First award. Browser-saved rules are **not** automatically synchronized to GitHub Secrets; after editing rules, copy the generated JSON into `ALERT_RULES_JSON` again.
+The static site can build alert rules using region, destination(s), date range and weekend conditions. Region rules accept any region discovered from Korean Air rather than only America/Europe. Cabin selection is fixed to both Prestige award and First award. Browser-saved rules are **not** automatically synchronized to GitHub Secrets; after editing rules, copy the generated JSON into `ALERT_RULES_JSON` again.
 
 Required rule secret:
 
@@ -53,7 +55,7 @@ Use **Actions → Test Mileway alert → Run workflow** to send a test notificat
 - Airline `UNQUERYABLE` responses and collector `FAILED` states are never converted into “no seats”.
 - Incomplete collections cannot replace the published snapshot.
 - `health.json` can report source-check, collection, or notification degradation on the public UI.
-- CI runs unit tests, source syntax checks, alert-rule regression tests, PWA asset checks, and a full cloud-site build on pull requests and pushes to `main`.
+- CI runs unit tests, source syntax checks, worldwide route-discovery regression tests, alert-rule regression tests, PWA asset checks, and a full cloud-site build on pushes to `main`.
 
 ## Manual run
 
@@ -61,4 +63,4 @@ Actions → **Collect public daily award seats** → **Run workflow**. Manual ru
 
 ## Limits
 
-The underlying Korean Air source is a public daily dataset, not guaranteed realtime inventory. GitHub scheduled workflows can start late. Alerts only know about seats present in a successfully published snapshot, and final booking availability must be confirmed on Korean Air.
+The underlying Korean Air source is a public daily dataset, not guaranteed realtime inventory. GitHub scheduled workflows can start late. Worldwide collection takes materially longer than the old America/Europe-only scan. Alerts only know about seats present in a successfully published snapshot, and final booking availability must be confirmed on Korean Air.
