@@ -6,6 +6,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {PUBLIC_URL,PUBLIC_API,readPublicCalendar,parsePublicCalendar,parsePublicApi,monthRange} from './public-calendar.mjs';
 import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
+import {candidateRegionLabels,parseDestinationButton} from './route-discovery.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const require=createRequire(import.meta.url);
@@ -64,6 +65,15 @@ async function regionList(kind,region) {
   await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
   await page.getByRole('button',{name:region,exact:true}).click();
   return page.locator('[id^="acc-panel-mobile-web"]:visible button:visible');
+}
+async function discoverDestinationRegions() {
+  await page.locator('[id^="destinationBtn"]').click();
+  await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
+  const texts=await page.locator('[id^="acc-panel-mobile-web"]:visible button:visible').allTextContents();
+  const regions=candidateRegionLabels(texts);
+  await page.getByRole('button',{name:'닫기',exact:true}).click();
+  if(!regions.length)throw new Error('No destination regions discovered from Korean Air public selector');
+  return regions;
 }
 async function dismissCookie() {
   const cookie=page.locator('kc-global-cookie-banner');
@@ -163,20 +173,23 @@ try {
     report.rows=previous.rows||[];report.coverage=previous.coverage||[];report.unqueryable=previous.unqueryable||[];
     console.log(`Resuming ${report.coverage.length+report.unqueryable.length} saved route/months from the same daily data`);
   }
+  const regions=await discoverDestinationRegions();
   const routes=[];
-  for (const region of ['미주','유럽']) {
+  for (const region of regions) {
     const buttons=await regionList('destination',region);
+    const found=[];
     for(const text of await buttons.allTextContents()) {
-      const code=text.trim().match(/^([A-Z]{3})\b/)?.[1];
-      if(code && !routes.some(r=>r.code===code)) routes.push({code,region,label:text.trim()});
+      const route=parseDestinationButton(text,region);
+      if(route&&!routes.some(r=>r.code===route.code)){routes.push(route);found.push(route);}
     }
     await page.getByRole('button',{name:'닫기',exact:true}).click();
+    if(!found.length)throw new Error(`Destination region ${region} contained no airport buttons`);
   }
   report.routes=routes;
   const selected=routes.filter(r=>!only||only.includes(r.code));
   if(!selected.length) throw new Error('No requested route appears in the public calendar');
-  report.target_routes=previous?.target_routes||(previous?.routes&&previous.start_date===start&&previous.end_date===end?previous.routes.map(r=>r.code):selected.map(r=>r.code));
-  console.log(`PUBLIC DAILY: ${selected.length} routes, ${months.length} months, updated ${report.source_updated_at}`);
+  report.target_routes=selected.map(r=>r.code);
+  console.log(`PUBLIC DAILY WORLDWIDE: ${selected.length} routes across ${regions.length} regions, ${months.length} months, updated ${report.source_updated_at}`);
   for (const route of selected) {
     checkStop();
     const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&!report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
