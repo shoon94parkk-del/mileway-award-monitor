@@ -7,7 +7,7 @@ const report=JSON.parse(fs.readFileSync(input,'utf8'));
 if(!report.attempt_complete||!report.rows?.length||!report.source_updated_at)throw Error('Only a fully attempted, nonempty snapshot may be published');
 const pick=(o,keys)=>Object.fromEntries(keys.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
 const safe=pick(report,['source','source_type','source_updated_at','start_date','end_date','started_at','finished_at','complete','attempt_complete','target_routes']);
-safe.routes=report.routes.map(r=>pick(r,['code','region','label']));
+safe.routes=report.routes.map(r=>pick(r,['code','region','label','city','country']));
 safe.coverage=report.coverage.map(r=>pick(r,['destination','month','days','flightClassRows']));
 safe.unqueryable=(report.unqueryable||[]).map(r=>pick(r,['destination','month','status','reason','checked_at']));
 safe.rows=report.rows.map(r=>pick(r,['date','origin','destination','flight','departureTime','cabin','fareClass','available','region','sourceUpdatedAt','checkedAt','availabilityType']));
