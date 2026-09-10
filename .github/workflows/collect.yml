@@ -32,6 +32,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install collector dependency
+        id: install
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Check Korean Air source timestamp
         id: source
@@ -113,8 +114,11 @@ jobs:
         id: health
         if: always()
         env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
           SOURCE_OUTCOME: ${{ steps.source.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
           NOTIFY_OUTCOME: ${{ steps.notify.outcome }}
           FULL_SCAN: ${{ steps.collect.outcome == 'success' }}
           CURRENT_SOURCE: ${{ steps.source.outputs.current }}
