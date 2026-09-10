@@ -7,16 +7,14 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/run-worldwide-probe.trigger'
   schedule:
+    # Normal hours: lightweight source check about once per hour.
     - cron: '17 0-12,16-23 * * *'
+    # Around the observed Korean Air daily refresh (22:30-00:30 KST): check about every five minutes.
     - cron: '34-59/5 13 * * *'
     - cron: '4-59/5 14 * * *'
     - cron: '4-29/5 15 * * *'
+    # 23:31 KST safety scan. This path deliberately skips the source-timestamp gate.
     - cron: '31 14 * * *'
 permissions:
   contents: write
@@ -38,7 +36,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Check Korean Air source timestamp
         id: source
-        if: github.event.schedule != '31 14 * * *' && github.event_name != 'push'
+        if: github.event.schedule != '31 14 * * *'
         shell: pwsh
         run: |
           $success = $false
@@ -51,14 +49,17 @@ jobs:
             }
             if ($attempt -lt 2) { Start-Sleep -Seconds 10 }
           }
-          if (-not $success) { Write-Error "Could not read the Korean Air public source timestamp."; exit 1 }
+          if (-not $success) {
+            Write-Error "Could not read the Korean Air public source timestamp."
+            exit 1
+          }
       - name: Test parsers
         id: tests
-        if: github.event_name == 'push' || steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs test/route-discovery.test.mjs
       - name: Collect all worldwide destinations with resume recovery
         id: collect
-        if: github.event_name == 'push' || steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: pwsh
         run: |
           $success = $false
@@ -69,10 +70,20 @@ jobs:
             } else {
               node --no-warnings src/public-extract.mjs --headless --interval-ms 3000 --max-retries 3 --resume
             }
-            if ($LASTEXITCODE -eq 0) { $success = $true; break }
-            if ($attempt -lt 3) { $delay = 15 * $attempt; Start-Sleep -Seconds $delay }
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+            if ($attempt -lt 3) {
+              $delay = 15 * $attempt
+              Write-Host "Collector stopped; resuming saved route/months after ${delay}s"
+              Start-Sleep -Seconds $delay
+            }
           }
-          if (-not $success) { Write-Error "Collector could not finish after resume recovery attempts."; exit 1 }
+          if (-not $success) {
+            Write-Error "Collector could not finish after resume recovery attempts."
+            exit 1
+          }
       - name: Export sanitized completed snapshot
         id: publish
         if: steps.collect.outcome == 'success'
@@ -126,7 +137,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public-data/health.json
-          if [ "${{ steps.build.outcome }}" = "success" ]; then git add public-data/results.json.gz public-data/snapshot.json public-data/changes.json; fi
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            git add public-data/results.json.gz public-data/snapshot.json public-data/changes.json
+          fi
           if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
           if ! git diff --cached --quiet; then
             git commit -m "Update Mileway public state"
@@ -134,5 +147,5 @@ jobs:
             git push
           fi
       - name: No source change
-        if: github.event_name != 'push' && steps.source.outputs.changed != 'true' && github.event.schedule != '31 14 * * *' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
+        if: steps.source.outputs.changed != 'true' && github.event.schedule != '31 14 * * *' && !(github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         run: Write-Host "Korean Air source timestamp is unchanged; full collection skipped."
