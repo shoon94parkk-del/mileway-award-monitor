@@ -14,7 +14,9 @@ for(let index=0;index<groups.length;index++){
  console.log(`REGION START: ${group}`);
  let result=1;
  for(let attempt=1;attempt<=3;attempt++){
-  result=node(['src/public-extract.mjs','--headless','--group',group,'--output',output,'--interval-ms','3000','--max-retries','3',...(attempt>1?['--resume']:[])]);
+  // Korean Air's public page currently fails from GitHub-hosted Windows runners in headless Edge.
+  // Keep the proven headed Edge path used by the last successful production collection.
+  result=node(['src/public-extract.mjs','--group',group,'--output',output,'--interval-ms','3000','--max-retries','3',...(attempt>1?['--resume']:[])]);
   if(result===0||result===75)break;
   await new Promise(resolve=>setTimeout(resolve,15000*attempt));
  }
