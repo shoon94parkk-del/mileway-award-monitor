@@ -87,8 +87,8 @@ async function dismissCookie() {
 }
 async function initializeSearchPage(expectedSourceUpdatedAt=null) {
   pending.clear();apiErrors=[];lastPublicResponse=null;
-  await page.goto(PUBLIC_URL,{waitUntil:'domcontentloaded',timeout:60000});
-  await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:60000});
+  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
+  await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:90000});
   await dismissCookie();
   await regionList('departure','대한민국');
   await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
