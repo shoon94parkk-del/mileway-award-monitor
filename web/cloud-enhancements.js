@@ -33,6 +33,7 @@ async function copyAlertJson(){const text=$('#alert-json')?.value||'[]';try{awai
 
 function addCloudControls(){
  const top=$('.filter-top');if(!top||$('#cloud-alert-create'))return;const save=$('#save-search'),actions=document.createElement('div');actions.className='cloud-filter-actions';if(save){save.parentNode.insertBefore(actions,save);actions.appendChild(save);}const alert=document.createElement('button');alert.id='cloud-alert-create';alert.className='text-button';alert.type='button';alert.textContent='🔔 좌석 알림';actions.appendChild(alert);
+ const nav=$('.sidebar nav');if(nav&&!$('#cloud-alert-nav')){const navAlert=document.createElement('button');navAlert.id='cloud-alert-nav';navAlert.type='button';navAlert.className='nav cloud-alert-nav';navAlert.innerHTML='<span>🔔</span>알림';nav.appendChild(navAlert);}
  const quick=document.createElement('div');quick.className='quick-filters';quick.setAttribute('aria-label','빠른 검색');quick.innerHTML='<button type="button" data-quick="3m">앞으로 3개월</button><button type="button" data-quick="6m">앞으로 6개월</button><button type="button" data-quick="weekend">주말만</button><button type="button" data-quick="flex3">선택일 ±3일</button><button type="button" data-quick="flex7">선택일 ±7일</button>';top.insertAdjacentElement('afterend',quick);
  const filter=$('.filter-card');if(filter){const toggle=document.createElement('button');toggle.type='button';toggle.className='mobile-filter-toggle';toggle.setAttribute('aria-expanded','false');toggle.textContent='검색 조건 열기';filter.parentNode.insertBefore(toggle,filter);filter.classList.add('cloud-collapsed');}
 }
@@ -63,7 +64,7 @@ function addInstall(){window.addEventListener('beforeinstallprompt',e=>{e.preven
 
 function bind(){
  document.addEventListener('click',e=>{
-  const q=e.target.closest('[data-quick]');if(q){quickFilter(q.dataset.quick);return;}if(e.target.closest('#cloud-alert-create')){openAlertManager();return;}if(e.target.closest('#install-app')&&installPrompt){installPrompt.prompt();installPrompt=null;e.target.remove();return;}
+  const q=e.target.closest('[data-quick]');if(q){quickFilter(q.dataset.quick);return;}if(e.target.closest('#cloud-alert-create,#cloud-alert-nav')){openAlertManager();return;}if(e.target.closest('#install-app')&&installPrompt){installPrompt.prompt();installPrompt=null;e.target.remove();return;}
   const opened=e.target.closest('[data-opened-destination]');if(opened){const dest=opened.dataset.openedDestination,date=opened.dataset.openedDate;$('#destination').value=dest;$('#month').value='';$('#start').value=date;$('#end').value=date;triggerFilters();document.querySelector('.results-toolbar')?.scrollIntoView({behavior:'smooth'});return;}
   const toggle=e.target.closest('.mobile-filter-toggle');if(toggle){const card=$('.filter-card'),collapsed=card.classList.toggle('cloud-collapsed');toggle.setAttribute('aria-expanded',String(!collapsed));toggle.textContent=collapsed?'검색 조건 열기':'검색 조건 닫기';return;}
   const remove=e.target.closest('[data-alert-remove]');if(remove){const rules=readRules();rules.splice(Number(remove.dataset.alertRemove),1);writeRules(rules);renderAlertManager();return;}
