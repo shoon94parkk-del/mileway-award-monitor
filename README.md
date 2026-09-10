@@ -4,7 +4,9 @@ Korean Air public **daily** award-seat explorer. Not realtime inventory; counts 
 
 ## Free cloud setup
 
-- GitHub Actions: standard Windows runner, scheduled at 14:27 UTC (23:27 Korea), shortly after the observed 23:00 KST public-data refresh. One route/month per request, 5-second interval, 90-minute maximum. Schedule may be delayed by GitHub.
+- GitHub Actions performs a lightweight Korean Air source-timestamp check every five minutes (`02, 07, 12...` minutes). GitHub scheduled workflows may still be delayed during busy periods.
+- If the Korean Air source timestamp is unchanged, the expensive full collection is skipped. When the source timestamp changes, the workflow runs the full route/month collection and publishes the new snapshot.
+- Full collection uses one route/month per request with a 3-second interval and a 90-minute maximum. Manual workflow runs can force a full scan even when the source timestamp is unchanged.
 - The collector retries each failed route/month up to three times with exponential backoff. If the process still stops, the workflow restarts it with `--resume` so already completed route/months from the same source timestamp are skipped.
 - Only the Korean Air public award-seat API response is treated as the monitored API. Unrelated Korean Air API failures do not fail a collection.
 - Render Static Site: build `node --no-warnings scripts/build-cloud.mjs`, publish `dist`, Node 24. No paid web service, cron job or persistent disk.
@@ -18,11 +20,11 @@ Korean Air public **daily** award-seat explorer. Not realtime inventory; counts 
 - Prestige award class `O` and first-class public `A` are preserved; prestige upgrade class `Z` is intentionally excluded.
 - API availability is cross-checked against the rendered public calendar. A mismatch fails that route/month instead of publishing potentially incorrect data.
 - Airline `UNQUERYABLE` responses and collector `FAILED` states are never converted into “no seats”.
-- Parser regression tests include a representative public API fixture, and CI checks collector/build syntax on pull requests and pushes to `main`.
+- Parser regression tests include a representative public API fixture, source-change parsing tests, and CI syntax checks on pull requests and pushes to `main`.
 
 ## Manual run
 
-Actions → Collect public daily award seats → Run workflow. No airline login or credentials are used. Cloud IP access may be rejected by the airline; a deployed website is not evidence the collector works. Check run status, collection-health status and source timestamp. Never bypass authentication or CAPTCHA.
+Actions → Collect public daily award seats → Run workflow. Manual runs force a full collection by default; disable `force_full_scan` to perform only the source check. No airline login or credentials are used. Cloud IP access may be rejected by the airline; a deployed website is not evidence the collector works. Check run status, collection-health status and source timestamp. Never bypass authentication or CAPTCHA.
 
 ## Limits
 
