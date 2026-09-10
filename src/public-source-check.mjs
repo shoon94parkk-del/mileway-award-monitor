@@ -4,10 +4,10 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {PUBLIC_URL} from './public-calendar.mjs';
 import {openPublicPage} from './public-navigation.mjs';
+import {collectionGroup,monitoredRoute} from './route-discovery.mjs';
 
 const require=createRequire(import.meta.url);
 const NETWORK_ARGS=['--disable-http2','--disable-quic'];
-const MIN_WORLDWIDE_ROUTES=100;
 const REQUIRED_GROUPS=['유럽','미주','오세아니아','아시아'];
 
 export function parseSourceUpdatedAt(text){
@@ -23,8 +23,14 @@ export function readPublishedSourceUpdatedAt(file){
 export function publishedSnapshotNeedsRefresh(data,current){
   const report=data?.bootstrap?.report||data?.report||{};
   const routes=Array.isArray(report.routes)?report.routes:(Array.isArray(data?.bootstrap?.routes)?data.bootstrap.routes:[]);
-  const routeCount=new Set(routes.map(route=>route?.code).filter(Boolean)).size;
-  if(routeCount<MIN_WORLDWIDE_ROUTES)return true;
+  if(!routes.length)return true;
+  // A snapshot produced before the reduced-scope policy still contains Northeast/Southeast Asia
+  // routes that are intentionally no longer monitored. Force one refresh so those stale routes
+  // disappear instead of using an obsolete fixed "100 worldwide routes" threshold.
+  if(routes.some(route=>!monitoredRoute(route)))return true;
+  const groups=new Set(routes.map(route=>collectionGroup(route.region)));
+  if(REQUIRED_GROUPS.some(group=>!groups.has(group)))return true;
+  if(!routes.some(route=>route.code==='DPS'))return true;
   if(report.scope==='REGIONAL_COMPOSITE'){
     return REQUIRED_GROUPS.some(group=>report.region_status?.[group]?.status!=='success'||report.region_status?.[group]?.source_updated_at!==current);
   }
@@ -75,7 +81,7 @@ async function main(){
   const changed=!previous||previous!==current||coverageNeedsRefresh;
   console.log(`Published source: ${previous||'none'}`);
   console.log(`Korean Air source: ${current}`);
-  if(coverageNeedsRefresh)console.log('Published worldwide coverage is incomplete/stale: full collection required');
+  if(coverageNeedsRefresh)console.log('Published monitoring scope is incomplete/stale: collection required');
   console.log(changed?'Source changed: full collection required':'Source unchanged: skip full collection');
   if(process.env.GITHUB_OUTPUT){
     fs.appendFileSync(process.env.GITHUB_OUTPUT,`changed=${changed}\ncurrent=${current}\nprevious=${previous||''}\n`);
