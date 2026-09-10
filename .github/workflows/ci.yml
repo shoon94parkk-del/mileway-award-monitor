@@ -16,12 +16,22 @@ jobs:
           node-version: '24'
       - name: Run unit tests
         run: npm test
-      - name: Check collector syntax
+      - name: Check source syntax
         run: |
           node --check src/public-extract.mjs
           node --check src/public-calendar.mjs
           node --check src/public-report.mjs
           node --check src/public-source-check.mjs
+          node --check src/alert-rules.mjs
+          node --check scripts/notify-alerts.mjs
           node --check scripts/build-cloud.mjs
           node --check scripts/publish-data.mjs
           node --check web/cloud-api.js
+          node --check web/cloud-enhancements.js
+      - name: Build cloud site
+        run: |
+          node --no-warnings scripts/build-cloud.mjs
+          node --check dist/app.js
+          node --check dist/cloud-api.js
+          node --check dist/cloud-enhancements.js
+          test -s dist/cloud-enhancements.css
