@@ -1,0 +1,23 @@
+{
+  "name": "korean-air-award-monitor",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "정상 Edge 화면의 접근성 정보를 읽어 대한항공 마일리지 좌석 변화를 감지하는 로컬 모니터",
+  "scripts": {
+    "start": "node --no-warnings src/server.mjs",
+    "capture": "node --no-warnings src/cli.mjs capture",
+    "monitor:once": "node --no-warnings src/cli.mjs monitor --once",
+    "monitor": "node --no-warnings src/cli.mjs monitor",
+    "list": "node --no-warnings src/cli.mjs list --available-only",
+    "routes": "node --no-warnings src/cli.mjs routes",
+    "extract-year": "node --no-warnings src/public-extract.mjs",
+    "extract:public": "node --no-warnings src/public-extract.mjs",
+    "extract:realtime": "node --no-warnings src/cli.mjs monitor --once --wait-for-login",
+    "doctor": "node --no-warnings src/cli.mjs doctor",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

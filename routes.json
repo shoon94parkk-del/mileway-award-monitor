@@ -1,0 +1,35 @@
+{
+  "scope": "Seoul departures; Korean Air direct or actively marketed North America and Europe destinations",
+  "routes": [
+    { "region": "north_america", "code": "ATL", "city": "애틀랜타", "country": "미국" },
+    { "region": "north_america", "code": "BOS", "city": "보스턴", "country": "미국" },
+    { "region": "north_america", "code": "DFW", "city": "댈러스", "country": "미국" },
+    { "region": "north_america", "code": "HNL", "city": "호놀룰루", "country": "미국" },
+    { "region": "north_america", "code": "IAD", "city": "워싱턴 D.C.", "country": "미국" },
+    { "region": "north_america", "code": "JFK", "city": "뉴욕", "country": "미국" },
+    { "region": "north_america", "code": "LAS", "city": "라스베이거스", "country": "미국" },
+    { "region": "north_america", "code": "LAX", "city": "로스앤젤레스", "country": "미국" },
+    { "region": "north_america", "code": "ORD", "city": "시카고", "country": "미국" },
+    { "region": "north_america", "code": "SEA", "city": "시애틀", "country": "미국" },
+    { "region": "north_america", "code": "SFO", "city": "샌프란시스코", "country": "미국" },
+    { "region": "north_america", "code": "YVR", "city": "밴쿠버", "country": "캐나다" },
+    { "region": "north_america", "code": "YYZ", "city": "토론토", "country": "캐나다" },
+
+    { "region": "europe", "code": "AMS", "city": "암스테르담", "country": "네덜란드" },
+    { "region": "europe", "code": "ATH", "city": "아테네", "country": "그리스" },
+    { "region": "europe", "code": "BCN", "city": "바르셀로나", "country": "스페인" },
+    { "region": "europe", "code": "BUD", "city": "부다페스트", "country": "헝가리" },
+    { "region": "europe", "code": "CDG", "city": "파리", "country": "프랑스" },
+    { "region": "europe", "code": "FCO", "city": "로마", "country": "이탈리아" },
+    { "region": "europe", "code": "FRA", "city": "프랑크푸르트", "country": "독일" },
+    { "region": "europe", "code": "IST", "city": "이스탄불", "country": "튀르키예" },
+    { "region": "europe", "code": "LHR", "city": "런던", "country": "영국" },
+    { "region": "europe", "code": "LIS", "city": "리스본", "country": "포르투갈" },
+    { "region": "europe", "code": "MAD", "city": "마드리드", "country": "스페인" },
+    { "region": "europe", "code": "MXP", "city": "밀라노", "country": "이탈리아" },
+    { "region": "europe", "code": "PRG", "city": "프라하", "country": "체코" },
+    { "region": "europe", "code": "VIE", "city": "비엔나", "country": "오스트리아" },
+    { "region": "europe", "code": "ZAG", "city": "자그레브", "country": "크로아티아" },
+    { "region": "europe", "code": "ZRH", "city": "취리히", "country": "스위스" }
+  ]
+}

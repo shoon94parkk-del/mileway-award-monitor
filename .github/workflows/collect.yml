@@ -1,0 +1,43 @@
+name: Collect public daily award seats
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 0 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: public-daily-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install collector dependency
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Test parsers
+        run: node --no-warnings --test test/public-calendar.test.mjs
+      - name: Collect one month per request
+        run: node --no-warnings src/public-extract.mjs --interval-ms 5000
+      - name: Export sanitized completed snapshot
+        run: node --no-warnings scripts/publish-data.mjs
+      - name: Build and validate public website
+        run: |
+          node --no-warnings scripts/build-cloud.mjs
+          node --check dist/app.js
+          Copy-Item dist/snapshot.json public-data/snapshot.json
+      - name: Persist results to GitHub
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public-data/results.json.gz public-data/snapshot.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update public daily award snapshot"
+            git push
+          fi

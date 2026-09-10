@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mileway-award-monitor
+    runtime: static
+    buildCommand: node --no-warnings scripts/build-cloud.mjs
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
