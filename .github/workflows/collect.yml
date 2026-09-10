@@ -25,7 +25,7 @@ jobs:
   collect:
     if: github.event.repository.private == false
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,8 +56,8 @@ jobs:
       - name: Test parsers
         id: tests
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
-        run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs
-      - name: Collect one month per request with resume recovery
+        run: node --no-warnings --test test/public-calendar.test.mjs test/public-source-check.test.mjs test/alert-rules.test.mjs test/route-discovery.test.mjs
+      - name: Collect all worldwide destinations with resume recovery
         id: collect
         if: steps.source.outputs.changed == 'true' || github.event.schedule == '31 14 * * *' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
         shell: pwsh
@@ -66,9 +66,9 @@ jobs:
           for ($attempt = 1; $attempt -le 3; $attempt++) {
             Write-Host "Collector process attempt $attempt/3"
             if ($attempt -eq 1) {
-              node --no-warnings src/public-extract.mjs --interval-ms 3000 --max-retries 3
+              node --no-warnings src/public-extract.mjs --headless --interval-ms 3000 --max-retries 3
             } else {
-              node --no-warnings src/public-extract.mjs --interval-ms 3000 --max-retries 3 --resume
+              node --no-warnings src/public-extract.mjs --headless --interval-ms 3000 --max-retries 3 --resume
             }
             if ($LASTEXITCODE -eq 0) {
               $success = $true
@@ -96,6 +96,7 @@ jobs:
           node --check dist/app.js
           node --check dist/cloud-api.js
           node --check dist/cloud-enhancements.js
+          node --check dist/global-regions.js
           node --check dist/service-worker.js
           Copy-Item dist/snapshot.json public-data/snapshot.json
       - name: Notify matching seat alerts
