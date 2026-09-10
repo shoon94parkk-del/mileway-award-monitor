@@ -1,0 +1,21 @@
+name: Korean Air transport probe
+on:
+  push:
+    branches: [fast-source-watcher]
+    paths:
+      - 'scripts/transport-probe.mjs'
+      - '.github/workflows/transport-probe.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Compare browser transport modes
+        run: node --no-warnings scripts/transport-probe.mjs
