@@ -1,7 +1,6 @@
 import {createHash} from 'node:crypto';
 
 const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/;
-const REGIONS=new Set(['미주','유럽']);
 const CABINS=new Set(['PRESTIGE','FIRST']);
 const RULE_ID=/^[A-Za-z0-9_-]{8,80}$/;
 const arr=value=>Array.isArray(value)?value:[];
@@ -17,7 +16,7 @@ function normalizedShape(rule,index){
  if(start&&!ISO_DATE.test(start))throw new Error(`${name}: start는 YYYY-MM-DD 형식이어야 합니다.`);
  if(end&&!ISO_DATE.test(end))throw new Error(`${name}: end는 YYYY-MM-DD 형식이어야 합니다.`);
  if(start&&end&&start>end)throw new Error(`${name}: 시작일이 종료일보다 늦습니다.`);
- const region=String(rule.region||'').trim();if(region&&!REGIONS.has(region))throw new Error(`${name}: region은 미주 또는 유럽만 가능합니다.`);
+ const region=String(rule.region||'').trim();if(region.length>60||/[\u0000-\u001f]/.test(region))throw new Error(`${name}: region 형식이 올바르지 않습니다.`);
  const flights=uniq(rule.flights);if(flights.some(v=>!/^KE\d{1,4}$/.test(v)))throw new Error(`${name}: 항공편은 KE901 같은 형식이어야 합니다.`);
  return {name,region,destinations,cabins,start,end,weekend:rule.weekend===true,flights};
 }
