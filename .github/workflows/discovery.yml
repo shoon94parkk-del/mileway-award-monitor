@@ -1,0 +1,22 @@
+name: Validate worldwide discovery without publishing
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-daily-collection
+  cancel-in-progress: false
+jobs:
+  discovery:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npm test
+      - name: Discover and sanity-check regions and airport codes
+        run: node --no-warnings src/public-extract.mjs --headless --discover-only --output data/discovery

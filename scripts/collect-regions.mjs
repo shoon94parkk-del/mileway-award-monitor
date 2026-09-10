@@ -1,0 +1,42 @@
+import fs from 'node:fs';
+import {spawnSync} from 'node:child_process';
+
+if(process.env.GITHUB_ACTIONS!=='true')throw Error('This publishing orchestrator runs only in GitHub Actions; use public-extract for local probes');
+const groups=['유럽','미주','오세아니아','아시아'];
+const files=['public-data/results.json.gz','public-data/snapshot.json','public-data/changes.json'];
+const run=(command,args)=>{const result=spawnSync(command,args,{stdio:'inherit',shell:false});if(result.error)throw result.error;return result.status??1;};
+const node=args=>run(process.execPath,['--no-warnings',...args]);
+const git=args=>{if(run('git',args)!==0)throw Error('Git '+args[0]+' failed; stop to avoid replacing unconfirmed public state');};
+git(['config','user.name','github-actions[bot]']);git(['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
+let failures=0;
+for(let index=0;index<groups.length;index++){
+ const group=groups[index],output=`data/region-${index}`;
+ console.log(`REGION START: ${group}`);
+ let result=1;
+ for(let attempt=1;attempt<=3;attempt++){
+  result=node(['src/public-extract.mjs','--headless','--group',group,'--output',output,'--interval-ms','3000','--max-retries','3',...(attempt>1?['--resume']:[])]);
+  if(result===0||result===75)break;
+  await new Promise(resolve=>setTimeout(resolve,15000*attempt));
+ }
+ if(result===75){process.exitCode=75;break;}
+ if(result!==0){console.error(`REGION FAILED: ${group}; previous published region retained`);failures++;continue;}
+ const backup=new Map(files.map(file=>[file,fs.existsSync(file)?fs.readFileSync(file):null]));
+ try{
+  if(node(['scripts/publish-data.mjs',`${output}/results.json`])!==0)throw Error('Regional validation/publication failed');
+  if(node(['scripts/build-cloud.mjs'])!==0||node(['--check','dist/app.js'])!==0)throw Error('Regional cloud build failed');
+  fs.copyFileSync('dist/snapshot.json','public-data/snapshot.json');
+ }catch(error){
+  // Restore only the three known publication staging files; remote and personal data are untouched.
+  for(const [file,bytes] of backup){if(bytes)fs.writeFileSync(file,bytes);else if(fs.existsSync(file))fs.unlinkSync(file);}
+  console.error(`REGION NOT PUBLISHED: ${group}: ${error.message}`);failures++;continue;
+ }
+ git(['add','--',...files]);
+ if(run('git',['diff','--cached','--quiet'])!==0){
+  git(['commit','-m',`Publish completed ${group} award-seat region`]);
+  // Fast-forward pushes only. Concurrent changes stop the run instead of silently overwriting newer data.
+  git(['push','origin','HEAD:main']);
+ }
+ console.log(`REGION PUBLISHED: ${group}; website snapshot updated`);
+ if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'published=true\n');
+}
+if(failures)process.exitCode=1;

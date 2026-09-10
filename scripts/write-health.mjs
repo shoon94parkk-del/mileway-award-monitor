@@ -6,9 +6,10 @@ const readSnapshotSource=()=>{try{const s=JSON.parse(fs.readFileSync('public-dat
 const now=new Date().toISOString(),prev=read();
 const install=process.env.INSTALL_OUTCOME||'skipped',source=process.env.SOURCE_OUTCOME||'skipped',tests=process.env.TESTS_OUTCOME||'skipped',collect=process.env.COLLECT_OUTCOME||'skipped',build=process.env.BUILD_OUTCOME||'skipped',notify=process.env.NOTIFY_OUTCOME||'skipped';
 const fullScan=process.env.FULL_SCAN==='true';
+const publish=process.env.PUBLISH_OUTCOME||'skipped';
 const alerts={rules_configured:!!process.env.ALERT_RULES_JSON,telegram_configured:!!(process.env.TELEGRAM_BOT_TOKEN&&process.env.TELEGRAM_CHAT_ID),email_configured:!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM)};
 let status='healthy',error_step=null;
-for(const [outcome,step] of [[install,'dependency_install'],[source,'source_check'],[tests,'tests'],[collect,'collection'],[build,'build'],[notify,'notification']]){if(outcome==='failure'){status='degraded';error_step=step;break;}}
+for(const [outcome,step] of [[install,'dependency_install'],[source,'source_check'],[tests,'tests'],[collect,'collection'],[publish,'publication'],[build,'build'],[notify,'notification']]){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
 const next={...prev,version:1,status,alerts};
 const currentSource=process.env.CURRENT_SOURCE||readSnapshotSource();if(currentSource)next.source_updated_at=currentSource;
 if(fullScan&&collect==='success'&&build==='success')next.last_successful_scan_at=now;

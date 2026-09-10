@@ -6,7 +6,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {PUBLIC_URL,PUBLIC_API,readPublicCalendar,parsePublicCalendar,parsePublicApi,monthRange} from './public-calendar.mjs';
 import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
-import {candidateRegionLabels,parseDestinationButton} from './route-discovery.mjs';
+import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
+import {openPublicPage} from './public-navigation.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const require=createRequire(import.meta.url);
@@ -23,6 +24,8 @@ const horizon=new Date(`${today}T00:00:00Z`);horizon.setUTCDate(horizon.getUTCDa
 const end=value('--end',horizon.toISOString().slice(0,10));
 const months=monthRange(start,end);
 const only=value('--route',null)?.split(',');
+const groupOnly=value('--group',null);
+if(groupOnly&&!['유럽','미주','오세아니아','아시아'].includes(groupOnly))throw Error('Unknown collection group');
 const intervalMs=Math.max(2000,Number(value('--interval-ms','5000')));
 const maxRetries=Math.max(1,Math.min(5,Number(value('--max-retries','3'))));
 const stopFile=value('--stop-file',null);
@@ -87,8 +90,7 @@ async function dismissCookie() {
 }
 async function initializeSearchPage(expectedSourceUpdatedAt=null) {
   pending.clear();apiErrors=[];lastPublicResponse=null;
-  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
-  await page.locator('[id^="departureBtn"]').waitFor({state:'attached',timeout:90000});
+  await openPublicPage(page);
   await dismissCookie();
   await regionList('departure','대한민국');
   await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
@@ -116,7 +118,7 @@ async function collectMonth(route,monthKey) {
   const responsePromise=waitForMonth();
   await page.getByRole('button',{name:'조회',exact:true}).click();
   const response=await responsePromise;
-  if(!response.ok()) throw new Error(`Public API returned ${response.status()}`);
+  if(!response.ok()) throw new Error(`${[403,429].includes(response.status())?'ACCESS_LIMIT ':''}Public API returned ${response.status()}`);
   const data=await response.json();
   lastPublicResponse={request:response.request().postData(),data};
   let requested;
@@ -186,12 +188,27 @@ try {
     await page.getByRole('button',{name:'닫기',exact:true}).click();
     if(!found.length)throw new Error(`Destination region ${region} contained no airport buttons`);
   }
+  validateDiscovery(regions,routes);
   report.routes=routes;
-  const selected=routes.filter(r=>!only||only.includes(r.code));
+  report.discovery={validated:true,regions,route_count:routes.length};
+  writeJson('route-discovery.json',{source_updated_at:report.source_updated_at,discovered_at:new Date().toISOString(),regions:regions.map(region=>({region,codes:routes.filter(r=>r.region===region).map(r=>r.code)})),routes});
+  for(const region of regions)console.log(`DISCOVERY ${region}: ${routes.filter(r=>r.region===region).map(r=>r.code).join(', ')}`);
+  console.log(`DISCOVERY TOTAL: ${regions.length} regions, ${routes.length} destinations`);
+  const selected=prioritizeRoutes(routes.filter(r=>(!only||only.includes(r.code))&&(!groupOnly||collectionGroup(r.region)===groupOnly)));
   if(!selected.length) throw new Error('No requested route appears in the public calendar');
   report.target_routes=selected.map(r=>r.code);
+  report.scope=only?'SMOKE':groupOnly?'REGION':'WORLDWIDE';
+  if(groupOnly)report.collection_group=groupOnly;
+  const selectedCodes=new Set(report.target_routes);
+  report.rows=report.rows.filter(r=>selectedCodes.has(r.destination));
+  report.coverage=report.coverage.filter(r=>selectedCodes.has(r.destination));
+  report.unqueryable=report.unqueryable.filter(r=>selectedCodes.has(r.destination));
   console.log(`PUBLIC DAILY WORLDWIDE: ${selected.length} routes across ${regions.length} regions, ${months.length} months, updated ${report.source_updated_at}`);
+  if(!process.argv.includes('--discover-only')) {
+  let activeGroup=null;
   for (const route of selected) {
+    const group=collectionGroup(route.region);
+    if(group!==activeGroup){activeGroup=group;console.log(`COLLECTION GROUP: ${group}`);}
     checkStop();
     const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&!report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
     if(!routeMonths.length) continue;
@@ -202,6 +219,7 @@ try {
         try {
           await collectMonth(route,monthKey);success=true;break;
         } catch(e) {
+          if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(e.message))throw e;
           lastError=e;await writeFailureDiagnostic(route,monthKey,attempt,e);
           console.error(`${route.code} ${monthKey}: attempt ${attempt}/${maxRetries} failed: ${e.message}`);
           if(attempt<maxRetries) {
@@ -229,9 +247,10 @@ try {
     report.failure=`${report.failed.length} route/month collections failed after retries`;
     save();process.exitCode=1;
   }
+  }
 } catch(e) {
   report.failure=e.message;report.finished_at=new Date().toISOString();
   if(report.coverage.length||report.unqueryable.length||report.failed.length)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
-  console.error(e.message);process.exitCode=1;
+  console.error(e.message);process.exitCode=/ACCESS_LIMIT/.test(e.message)?75:1;
 }
 finally {await browser.close();db.close();releaseCollection();}
