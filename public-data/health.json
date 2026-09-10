@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "degraded",
+  "status": "healthy",
   "alerts": {
     "rules_configured": false,
     "telegram_configured": false,
@@ -8,5 +8,6 @@
   },
   "source_updated_at": "2026년 9월 9일 23:00",
   "last_error_at": "2026-09-10T15:16:43.819Z",
-  "last_error_step": "collection"
+  "last_error_step": "collection",
+  "recovered_at": "2026-09-10T16:22:52.947Z"
 }
