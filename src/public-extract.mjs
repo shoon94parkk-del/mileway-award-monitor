@@ -10,6 +10,7 @@ import {candidateRegionLabels,parseDestinationButton} from './route-discovery.mj
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const require=createRequire(import.meta.url);
+const NETWORK_ARGS=['--disable-http2','--disable-quic'];
 let pw;
 try { pw=require('playwright'); } catch {
   const bundled=path.join(process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE,'AppData','Local'),'..','..','.cache','codex-runtimes','codex-primary-runtime','dependencies','node','node_modules','playwright');
@@ -37,7 +38,7 @@ const db=new DatabaseSync(path.join(output,'seats.db'));
 db.exec('CREATE TABLE IF NOT EXISTS snapshots (origin TEXT, destination TEXT, month TEXT, checked_at TEXT, source_updated_at TEXT, snapshot_json TEXT, PRIMARY KEY(origin,destination,month));');
 const store=db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?)');
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
-const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless')});
+const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
 const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
 page.setDefaultTimeout(20000);
 const pending=new Set();
