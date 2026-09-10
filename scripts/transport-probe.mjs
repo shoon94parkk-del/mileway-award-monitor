@@ -7,6 +7,7 @@ const edge=['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/P
 if(!edge) throw new Error('Microsoft Edge not found');
 const modes=[
   {name:'old-success-like',headless:false,args:[]},
+  {name:'headed-current-network-flags',headless:false,args:['--disable-http2','--disable-quic']},
   {name:'headless-default-network',headless:true,args:[]},
   {name:'current-regional',headless:true,args:['--disable-http2','--disable-quic']},
 ];
