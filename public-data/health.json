@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "status": "unknown",
+  "alerts": {
+    "rules_configured": false,
+    "telegram_configured": false,
+    "email_configured": false
+  }
+}
