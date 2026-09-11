@@ -26,7 +26,9 @@ test('Android booking forces Korean Air My app with browser fallback',()=>{const
 
 test('Telegram setup wizard only asks for Bot Token and Start',()=>{const js=read('web/telegram-setup.js'),build=read('scripts/build-cloud.mjs');assert.match(js,/TELEGRAM_BOT_TOKEN/);assert.match(js,/TELEGRAM_CHAT_ID는 이제 필요 없습니다/);assert.match(js,/@BotFather/);assert.match(build,/telegram-setup\.js/);});
 
-test('Algumon-style alert center uses the existing bot and hides saved-flight UI',()=>{const js=read('web/alert-center.js'),css=read('web/alert-center.css'),build=read('scripts/build-cloud.mjs');assert.match(js,/Telegram 알림 등록/);assert.match(js,/\?start=/);assert.match(js,/telegram-rules\.json/);assert.match(css,/\.nav\[data-view="saved"\]/);assert.match(css,/\.favorite/);assert.match(build,/alert-center\.js/);assert.match(build,/alert-center\.css/);});
+test('alert center registers real rules directly without JSON or GitHub secrets',()=>{const js=read('web/alert-center.js'),css=read('web/alert-center.css'),build=read('scripts/build-cloud.mjs'),notify=read('scripts/notify-alerts.mjs');assert.match(js,/mileway-alert-api\.onrender\.com/);assert.match(js,/method:'POST'/);assert.match(js,/Telegram 좌석 알림이 바로 등록됐어요/);assert.match(js,/alert-key/);assert.doesNotMatch(js,/ALERT_RULES_JSON/);assert.match(css,/\.nav\[data-view="saved"\]/);assert.match(css,/\.favorite/);assert.match(build,/alert-center\.js/);assert.match(build,/alert-center\.css/);assert.match(notify,/readApiRules/);assert.match(notify,/mileway-alert-api\.onrender\.com/);});
+
+test('alert API requires a management token for writes',()=>{const api=read('src/alert-api.mjs');assert.match(api,/ALERT_ADMIN_TOKEN/);assert.match(api,/timingSafeEqual/);assert.match(api,/req\.method==='POST'&&url\.pathname==='\/rules'/);assert.match(api,/req\.method==='DELETE'/);assert.match(api,/ALLOWED_ORIGIN/);});
 
 test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{const cloudApi=read('web/cloud-api.js');assert.doesNotMatch(cloudApi,/Map\.groupBy/);assert.match(cloudApi,/function groupRowsByDate/);});
 
@@ -38,6 +40,6 @@ test('region labels and copy describe the reduced monitoring scope',()=>{const s
 
 test('one-time production refresh workflow is removed',()=>{assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);});
 
-test('browser shell cache advances after alert center update',()=>{const sw=read('web/service-worker.js');assert.match(sw,/mileway-shell-v13/);assert.match(sw,/alert-center\.js/);assert.match(sw,/alert-center\.css/);assert.match(sw,/android-booking\.js/);});
+test('browser shell cache advances after instant alert registration update',()=>{const sw=read('web/service-worker.js');assert.match(sw,/mileway-shell-v14/);assert.match(sw,/alert-center\.js/);assert.match(sw,/alert-center\.css/);assert.match(sw,/mileway-alert-api\.onrender\.com/);});
 
-test('changed browser scripts parse successfully',()=>{for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/ux-reference-polish.js','web/alert-center.js','web/regional-status.js','web/service-worker.js']){const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);}});
+test('changed browser and server scripts parse successfully',()=>{for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/ux-reference-polish.js','web/alert-center.js','web/regional-status.js','web/service-worker.js','src/alert-api.mjs']){const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);}});
