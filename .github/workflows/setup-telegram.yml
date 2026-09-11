@@ -27,13 +27,22 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node --no-warnings scripts/notify-alerts.mjs --test
-      - name: Save encrypted Telegram target
+      - name: Refresh public alert status
+        env:
+          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+        run: node --no-warnings scripts/write-health.mjs public-data/health.json
+      - name: Save encrypted Telegram target and status
         shell: bash
         run: |
-          if [ ! -f public-data/telegram-target.json ]; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public-data/telegram-target.json
+          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
+          if [ -f public-data/health.json ]; then git add public-data/health.json; fi
           if ! git diff --cached --quiet; then
             git commit -m "Register Telegram alert target"
             git pull --rebase origin main
