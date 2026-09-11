@@ -26,11 +26,11 @@ function syncNav(){
  const alert=nav.querySelector('#cloud-alert-nav');if(alert&&calendar.nextElementSibling!==alert)calendar.after(alert);
  const mode=currentMode();
  for(const button of nav.querySelectorAll('.mobile-mode-nav'))button.classList.toggle('is-selected',button.dataset.mobileMode===mode);
- const explore=nav.querySelector('[data-view="explore"]');if(explore)explore.classList.remove('active');
+ const explore=nav.querySelector('[data-view="explore"]');if(explore?.classList.contains('active'))explore.classList.remove('active');
 }
 function schedule(){if(scheduled)return;scheduled=requestAnimationFrame(()=>{scheduled=0;syncNav();});}
 
 document.addEventListener('click',e=>{if(e.target.closest('#display-mode [data-mode]'))schedule();},true);
-const observer=new MutationObserver(schedule);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+const observer=new MutationObserver(schedule);observer.observe(document.body,{childList:true,subtree:true});
 mobile.addEventListener?.('change',schedule);
 schedule();
