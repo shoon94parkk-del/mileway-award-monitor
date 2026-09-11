@@ -1,5 +1,7 @@
+import {cloudApi} from './cloud-api.js';
+
 const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobileQuery=window.matchMedia('(max-width:850px)');
 
 function moveRecentOpenedBelowResults(){
@@ -102,6 +104,67 @@ function syncMobileFilterState(){
  if(backdrop)backdrop.hidden=!open;
 }
 
+function koreanAirAwardBookingUrl(row){
+ const q=new URLSearchParams({
+  bookingType:'A',
+  tripType:'OW',
+  departure:'ICN',
+  arrival:String(row.destination||''),
+  departureDate:String(row.date||''),
+  adults:'1'
+ });
+ return `https://www.koreanair.com/booking/search?${q.toString()}`;
+}
+
+function simpleCityName(value){
+ let text=String(value||'').trim();
+ if(/발리/.test(text))return '발리';
+ text=text.split('/')[0].replace(/공항$/,'').trim();
+ return text||String(value||'');
+}
+
+async function prepareReserveButton(button){
+ if(!button||button.dataset.reserveLoading)return;
+ button.dataset.reserveLoading='true';
+ button.textContent='예약';
+ try{
+  const row=await cloudApi('/api/seats/'+button.dataset.detail);
+  if(!button.isConnected)return;
+  const link=document.createElement('a');
+  link.className='reserve-button';
+  link.href=koreanAirAwardBookingUrl(row);
+  link.textContent='예약';
+  link.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예매`);
+  link.setAttribute('rel','noreferrer');
+  button.replaceWith(link);
+ }catch{
+  delete button.dataset.reserveLoading;
+ }
+}
+
+function simplifyMobileRows(){
+ if(!mobileQuery.matches)return;
+ const list=$('.flight-list');
+ if(!list)return;
+ if(!list.querySelector('.mobile-award-list-head')){
+  const head=document.createElement('div');
+  head.className='mobile-award-list-head';
+  head.innerHTML='<span>목적지</span><span>날짜</span><span>좌석/시간</span><span>예약</span>';
+  list.prepend(head);
+ }
+ for(const row of list.querySelectorAll('.flight-row')){
+  if(row.dataset.mobileSimple!=='true'){
+   row.dataset.mobileSimple='true';
+   const city=row.querySelector('.city');
+   if(city)city.textContent=simpleCityName(city.textContent);
+   const route=row.querySelector('.city-cell .subline');
+   if(route)route.textContent=route.textContent.split('·')[0].trim();
+  }
+  const detail=row.querySelector('.detail-button[data-detail]');
+  if(detail)prepareReserveButton(detail);
+ }
+}
+
 function bindMobileUi(){
  if(document.documentElement.dataset.mobileUiBound)return;
  document.documentElement.dataset.mobileUiBound='true';
@@ -112,7 +175,7 @@ function bindMobileUi(){
  mobileQuery.addEventListener?.('change',()=>{if(!mobileQuery.matches)setMobileFilterOpen(false);sync();});
 }
 
-function sync(){moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();syncMobileFilterState();}
+function sync(){moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();simplifyMobileRows();syncMobileFilterState();}
 function scheduleSync(){if(scheduleSync.pending)return;scheduleSync.pending=requestAnimationFrame(()=>{scheduleSync.pending=0;sync();});}
 
 bindMobileUi();
