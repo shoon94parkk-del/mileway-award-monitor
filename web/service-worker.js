@@ -1,9 +1,9 @@
-const CACHE='mileway-shell-v12';
-const SHELL=['/','/style.css','/cloud-enhancements.css','/ui-v2.css','/mobile-booking.css','/telegram-setup.css','/ux-reference-polish.css','/app.js','/cloud-api.js','/cloud-enhancements.js','/global-regions.js','/regional-status.js','/ui-v2.js','/android-booking.js','/telegram-setup.js','/ux-reference-polish.js','/favicon.svg','/manifest.webmanifest'];
+const CACHE='mileway-shell-v13';
+const SHELL=['/','/style.css','/cloud-enhancements.css','/ui-v2.css','/mobile-booking.css','/telegram-setup.css','/ux-reference-polish.css','/alert-center.css','/app.js','/cloud-api.js','/cloud-enhancements.js','/global-regions.js','/regional-status.js','/ui-v2.js','/android-booking.js','/telegram-setup.js','/ux-reference-polish.js','/alert-center.js','/favicon.svg','/manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
  const url=new URL(event.request.url);
- if(event.request.method!=='GET'||url.hostname==='raw.githubusercontent.com'||url.pathname.endsWith('/snapshot.json')||url.pathname.endsWith('/health.json')||url.pathname.endsWith('/changes.json'))return;
+ if(event.request.method!=='GET'||url.hostname==='raw.githubusercontent.com'||url.pathname.endsWith('/snapshot.json')||url.pathname.endsWith('/health.json')||url.pathname.endsWith('/changes.json')||url.pathname.endsWith('/telegram-rules.json'))return;
  event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));return response;}).catch(()=>caches.match(event.request).then(r=>r||caches.match('/'))));
 });
