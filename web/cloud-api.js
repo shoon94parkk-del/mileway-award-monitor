@@ -3,6 +3,7 @@ const SNAPSHOT_URL='./snapshot.json';
 const SNAPSHOT_TTL_MS=15000;
 const FAVORITES_KEY='mileway.cloud.favorites.v1';
 const SEARCHES_KEY='mileway.cloud.searches.v1';
+const EXCLUDED_DESTINATIONS=new Set(['GUM']);
 const storage=()=>typeof localStorage==='undefined'?null:localStorage;
 function readJson(key,fallback){try{return JSON.parse(storage()?.getItem(key)||'')||fallback;}catch{return fallback;}}
 function writeJson(key,value){storage()?.setItem(key,JSON.stringify(value));}
@@ -17,11 +18,32 @@ function groupRowsByDate(rows){
  }
  return groups;
 }
+function allowedDestination(value){return !EXCLUDED_DESTINATIONS.has(String(value||''));}
+function sanitizeSnapshot(data){
+ const rows=(data?.rows||[]).filter(r=>allowedDestination(r.destination));
+ const source=data?.bootstrap||{},report=source.report||{};
+ const routes=(source.routes||[]).filter(r=>allowedDestination(r.code));
+ const filterDestinationArray=value=>(value||[]).filter(item=>allowedDestination(item?.destination||item?.code||item));
+ const nextReport={...report,
+  target_routes:(report.target_routes||[]).filter(allowedDestination),
+  routes:filterDestinationArray(report.routes),coverage:filterDestinationArray(report.coverage),
+  unqueryable:filterDestinationArray(report.unqueryable),failed:filterDestinationArray(report.failed)
+ };
+ if(report.region_status?.오세아니아){
+  nextReport.region_status={...report.region_status,오세아니아:{...report.region_status.오세아니아,routes:routes.filter(r=>/대양주|오세아니아/.test(r.region||'')).length}};
+ }
+ const changes=filterDestinationArray(source.changes),recentItems=filterDestinationArray(source.recent_opened?.items);
+ const bootstrap={...source,report:nextReport,routes,destinations:filterDestinationArray(source.destinations),changes,
+  recent_opened:source.recent_opened?{...source.recent_opened,total:recentItems.length,items:recentItems}:source.recent_opened,
+  stats:{...source.stats,available:rows.length,destinations:new Set(rows.map(r=>r.destination)).size,dates:new Set(rows.map(r=>r.date)).size,first:rows.filter(r=>r.cabin==='FIRST').length}
+ };
+ return {bootstrap,rows};
+}
 export function filterRows(rows,f={},favorites=new Set()){
  return rows.filter(r=>(!f.region||r.region===f.region)&&(!f.destination||r.destination===f.destination)&&(!f.cabin||r.cabin===f.cabin)&&(!f.month||r.date.startsWith(f.month))&&(!f.start||r.date>=f.start)&&(!f.end||r.date<=f.end)&&(!f.date||r.date===f.date)&&(f.weekend!=='true'||[0,6].includes(new Date(r.date+'T00:00:00Z').getUTCDay()))&&(!f.q||[r.city,r.destination,r.flight,r.country].some(v=>String(v).toLowerCase().includes(f.q.toLowerCase())))&&(f.saved!=='true'||favorites.has(r.id)));
 }
 async function loadSnapshot(){
- if(!snapshot||Date.now()-loadedAt>SNAPSHOT_TTL_MS){try{const r=await fetch(SNAPSHOT_URL+'?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');snapshot=await r.json();loadedAt=Date.now();}catch(e){if(!snapshot)throw e;loadedAt=Date.now();}}
+ if(!snapshot||Date.now()-loadedAt>SNAPSHOT_TTL_MS){try{const r=await fetch(SNAPSHOT_URL+'?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');snapshot=sanitizeSnapshot(await r.json());loadedAt=Date.now();}catch(e){if(!snapshot)throw e;loadedAt=Date.now();}}
  return snapshot;
 }
 export async function cloudApi(url,method='GET',data){
