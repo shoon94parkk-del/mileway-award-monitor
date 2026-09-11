@@ -9,11 +9,12 @@ export function collectionGroup(region){
   return '아시아';
 }
 
-// Keep the collector intentionally small: Northeast Asia is paused, and Korean Air's
-// combined Southeast/South Asia selector is screened only for Bali (DPS).
+// Keep the collector intentionally small: Northeast Asia is paused, Guam is excluded,
+// and Korean Air's combined Southeast/South Asia selector is screened only for Bali (DPS).
 export function monitoredRoute(route){
   const region=String(route?.region||'');
   const code=String(route?.code||'');
+  if(code==='GUM')return false;
   if(/동북아시아|^일본$|중국\/동북아시아/.test(region))return false;
   if(/동남아시아/.test(region))return code==='DPS';
   return true;
