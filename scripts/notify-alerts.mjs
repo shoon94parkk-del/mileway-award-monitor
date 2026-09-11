@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {normalizeAlertRules,evaluateAlerts,alertSeatKey} from '../src/alert-rules.mjs';
+import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
 
 const arg=name=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:null;};
 const has=name=>process.argv.includes(name);
@@ -20,9 +21,10 @@ function buildMessages(opened,sourceUpdatedAt){
  });
 }
 
-async function sendTelegram(messages){
- const token=process.env.TELEGRAM_BOT_TOKEN,chatId=process.env.TELEGRAM_CHAT_ID;if(!token||!chatId)return false;
- for(const message of messages){const res=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:message.text,disable_web_page_preview:true})});if(!res.ok)throw new Error(`Telegram 알림 전송 실패 (${res.status})`);}return true;
+async function sendTelegram(messages,token,chatId){
+ if(!token||!chatId)return false;
+ for(const message of messages)await sendTelegramText(token,chatId,message.text);
+ return true;
 }
 async function sendEmail(messages){
  const key=process.env.RESEND_API_KEY,to=process.env.ALERT_EMAIL_TO,from=process.env.ALERT_EMAIL_FROM;if(!key||!to||!from)return false;
@@ -31,12 +33,19 @@ async function sendEmail(messages){
 function channelState(result,sourceUpdatedAt){return {version:2,rule_hash:result.rule_hash,rule_meta:result.rule_meta,active:result.active,source_updated_at:sourceUpdatedAt,updated_at:new Date().toISOString()};}
 
 async function main(){
- const telegramReady=!!(process.env.TELEGRAM_BOT_TOKEN&&process.env.TELEGRAM_CHAT_ID),emailReady=!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM);
+ const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
+ let telegramTarget={chatId:null,bot_username:null,source:'none'};
+ if(telegramToken){
+  try{telegramTarget=await resolveTelegramTarget(telegramToken,{explicitChatId:process.env.TELEGRAM_CHAT_ID||'',allowDiscover:true});}
+  catch(error){console.error(`Telegram 연결 확인 실패: ${error.message}`);}
+ }
+ const telegramReady=!!(telegramToken&&telegramTarget.chatId),emailReady=!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM);
+ if(telegramToken&&!telegramReady)console.log('Telegram Bot Token은 있지만 대상 채팅이 아직 없습니다. 봇을 열고 Start를 누르면 다음 실행에서 자동 연결됩니다.');
  if(has('--test')){
-  if(!telegramReady&&!emailReady)throw new Error('알림 채널이 설정되지 않았습니다.');
+  if(!telegramReady&&!emailReady)throw new Error('알림 채널이 설정되지 않았습니다. Telegram은 Bot Token 등록 후 봇에서 Start를 눌러 주세요.');
   const now=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date());
   const messages=[{subject:'[Mileway] 알림 테스트',text:`✅ Mileway 좌석 알림 테스트 성공\n${now} (한국시간)\n\n이 메시지가 보이면 알림 채널 설정이 정상입니다.`,idempotency:`test-${Date.now()}`}];
-  const sent=[];if(telegramReady&&await sendTelegram(messages))sent.push('Telegram');if(emailReady&&await sendEmail(messages))sent.push('Email');console.log(`알림 테스트 성공: ${sent.join(' + ')}`);return;
+  const sent=[];if(telegramReady&&await sendTelegram(messages,telegramToken,telegramTarget.chatId))sent.push('Telegram');if(emailReady&&await sendEmail(messages))sent.push('Email');console.log(`알림 테스트 성공: ${sent.join(' + ')}`);return;
  }
  const rawRules=process.env.ALERT_RULES_JSON;if(!rawRules){console.log('ALERT_RULES_JSON 미설정: 좌석 알림을 건너뜁니다.');return;}
  if(!telegramReady&&!emailReady){console.log('알림 채널 미설정: 상태를 변경하지 않고 건너뜁니다.');return;}
@@ -44,7 +53,8 @@ async function main(){
  const rules=normalizeAlertRules(rawRules),previous=readJson(statePath),channels={...(previous.channels||{})};
  const legacyPrevious=previous.channels?null:previous;
  const failures=[],sentSummary=[];
- for(const [name,ready,sender] of [['telegram',telegramReady,sendTelegram],['email',emailReady,sendEmail]]){
+ const channelDefs=[['telegram',telegramReady,msgs=>sendTelegram(msgs,telegramToken,telegramTarget.chatId)],['email',emailReady,sendEmail]];
+ for(const [name,ready,sender] of channelDefs){
   if(!ready)continue;
   const prior=channels[name]||legacyPrevious||{};const result=evaluateAlerts(rows,rules,prior);const messages=buildMessages(result.opened,sourceUpdatedAt);
   try{if(messages.length)await sender(messages);channels[name]=channelState(result,sourceUpdatedAt);sentSummary.push(`${name}:${result.opened.reduce((n,x)=>n+x.rows.length,0)}`);}catch(error){failures.push(`${name}: ${error.message}`);}
