@@ -42,6 +42,14 @@ test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
  assert.match(cloudApi,/function groupRowsByDate/);
 });
 
+test('mobile UI observer does not create a self-triggering mutation loop',()=>{
+ const js=read('web/ui-v2.js');
+ assert.match(js,/apply&&apply\.textContent!==applyLabel/);
+ assert.match(js,/new MutationObserver\(scheduleSync\)/);
+ assert.match(js,/observe\(document\.body,\{childList:true,subtree:true\}\)/);
+ assert.doesNotMatch(js,/characterData:true/);
+});
+
 test('region labels and copy describe the reduced monitoring scope',()=>{
  const status=read('web/regional-status.js'),html=read('web/index.html'),build=read('scripts/build-cloud.mjs');
  assert.match(status,/발리·기타/);
@@ -54,9 +62,9 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache version advances with calendar compatibility fix',()=>{
+test('browser shell cache advances after mobile freeze fix',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v3/);
+ assert.match(sw,/mileway-shell-v4/);
  assert.match(sw,/cloud-api\.js/);
 });
 
