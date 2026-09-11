@@ -10,12 +10,15 @@ export function collectionGroup(region){
 }
 
 // Keep the collector intentionally small: Northeast Asia is paused, Guam is excluded,
-// and Korean Air's combined Southeast/South Asia selector is screened only for Bali (DPS).
+// Korean Air's combined Southeast/South Asia selector is screened only for Bali (DPS),
+// and the Russia/Mongolia/Central Asia plus Middle East/Africa source groups are excluded.
 export function monitoredRoute(route){
   const region=String(route?.region||'');
   const code=String(route?.code||'');
   if(code==='GUM')return false;
   if(/동북아시아|^일본$|중국\/동북아시아/.test(region))return false;
+  if(/러시아|몽골|중앙아시아/.test(region))return false;
+  if(/중동|아프리카/.test(region)&&!/유럽/.test(region))return false;
   if(/동남아시아/.test(region))return code==='DPS';
   return true;
 }
