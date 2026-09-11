@@ -37,6 +37,13 @@ test('mobile UI prioritizes results with compact summaries and bottom-sheet filt
  assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);
 });
 
+test('mobile award cards use a dense two-row layout',()=>{
+ const css=read('web/ui-v2.css');
+ assert.match(css,/@media\(max-width:520px\).*?\.flight-row\{[^}]*grid-template-rows:auto auto!important[^}]*padding:10px 9px 9px 11px!important/s);
+ assert.match(css,/\.flight-row \.detail-button\{[^}]*grid-row:2!important[^}]*width:34px[^}]*height:28px/s);
+ assert.match(css,/\.flight-row \.cabin-cell \.subline\{display:none\}/);
+});
+
 test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
  const cloudApi=read('web/cloud-api.js');
  assert.doesNotMatch(cloudApi,/Map\.groupBy/);
@@ -76,9 +83,9 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after region filter normalization',()=>{
+test('browser shell cache advances after mobile card compaction',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v7/);
+ assert.match(sw,/mileway-shell-v8/);
  assert.match(sw,/global-regions\.js/);
  assert.match(sw,/cloud-api\.js/);
 });
