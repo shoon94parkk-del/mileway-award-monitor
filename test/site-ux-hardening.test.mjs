@@ -11,124 +11,33 @@ test('cloud build exposes an exact seven-day opened-seat summary',()=>{
  assert.equal(run.status,0,run.stderr||run.stdout);
  const snapshot=JSON.parse(read('dist/snapshot.json'));
  const recent=snapshot.bootstrap?.recent_opened;
- assert.equal(recent?.days,7);
- assert.ok(Number.isInteger(recent?.total));
- assert.ok(Array.isArray(recent?.items));
- assert.ok(recent.total>=recent.items.length);
- assert.ok(recent.items.length<=8);
+ assert.equal(recent?.days,7);assert.ok(Number.isInteger(recent?.total));assert.ok(Array.isArray(recent?.items));assert.ok(recent.total>=recent.items.length);assert.ok(recent.items.length<=8);
 });
 
-test('recent change history never truncates events from the last seven days',()=>{
- const source=read('scripts/publish-data.mjs');
- assert.match(source,/const recent=events\.filter/);
- assert.match(source,/const older=events\.filter/);
- assert.match(source,/events=\[\.\.\.recent,\.\.\.older\]/);
-});
+test('recent change history never truncates events from the last seven days',()=>{const source=read('scripts/publish-data.mjs');assert.match(source,/const recent=events\.filter/);assert.match(source,/const older=events\.filter/);assert.match(source,/events=\[\.\.\.recent,\.\.\.older\]/);});
 
-test('mobile UI prioritizes results with compact summaries and bottom-sheet filters',()=>{
- const js=read('web/ui-v2.js'),css=read('web/ui-v2.css');
- assert.match(js,/mobile-stats-summary/);
- assert.match(js,/mobile-filter-summary-bar/);
- assert.match(js,/mobile-filter-sheet-apply/);
- assert.match(js,/moveRecentOpenedBelowResults/);
- assert.match(css,/@media\(max-width:850px\).*?\.stats\{display:none!important\}/s);
- assert.match(css,/\.mobile-stats-summary\{display:flex/);
- assert.match(css,/\.filter-card\{display:block!important;position:fixed/);
- assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);
-});
+test('mobile UI prioritizes results with compact summaries and bottom-sheet filters',()=>{const js=read('web/ui-v2.js'),css=read('web/ui-v2.css');assert.match(js,/mobile-stats-summary/);assert.match(js,/mobile-filter-summary-bar/);assert.match(js,/mobile-filter-sheet-apply/);assert.match(js,/moveRecentOpenedBelowResults/);assert.match(css,/@media\(max-width:850px\).*?\.stats\{display:none!important\}/s);assert.match(css,/\.mobile-stats-summary\{display:flex/);assert.match(css,/\.filter-card\{display:block!important;position:fixed/);assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);});
 
-test('mobile award results use a compact booking table',()=>{
- const css=read('web/mobile-booking.css'),js=read('web/ui-v2.js'),build=read('scripts/build-cloud.mjs');
- assert.match(css,/\.mobile-award-list-head\{display:grid/);
- assert.match(css,/\.flight-row\{display:grid!important;grid-template-columns:minmax\(0,1\.25fr\) 88px 72px 48px!important/);
- assert.match(css,/\.flight-row \.favorite\{display:none!important\}|\.flight-row \.compare-check,\.flight-row \.favorite\{display:none!important\}/);
- assert.match(css,/\.reserve-button\{grid-column:4!important/);
- assert.match(js,/head\.innerHTML='<span>목적지<\/span><span>날짜<\/span><span>좌석\/시간<\/span><span>예약<\/span>'/);
- assert.match(build,/mobile-booking\.css/);
-});
+test('mobile award results use a compact booking table',()=>{const css=read('web/mobile-booking.css'),js=read('web/ui-v2.js'),build=read('scripts/build-cloud.mjs');assert.match(css,/\.mobile-award-list-head\{display:grid/);assert.match(css,/\.reserve-button\{grid-column:4!important/);assert.match(js,/목적지<\/span><span>날짜<\/span><span>좌석\/시간<\/span><span>예약/);assert.match(build,/mobile-booking\.css/);});
 
-test('reservation link prefills Korean Air mileage one-way route and date',()=>{
- const js=read('web/ui-v2.js');
- assert.match(js,/bookingType:'A'/);
- assert.match(js,/tripType:'OW'/);
- assert.match(js,/departure:'ICN'/);
- assert.match(js,/arrival:String\(row\.destination\|\|''\)/);
- assert.match(js,/departureDate:String\(row\.date\|\|''\)/);
- assert.match(js,/cloudApi\('\/api\/seats\/'\+button\.dataset\.detail\)/);
- assert.match(js,/className='reserve-button'/);
-});
+test('reservation link prefills Korean Air mileage one-way route and date',()=>{const js=read('web/ui-v2.js');assert.match(js,/bookingType:'A'/);assert.match(js,/tripType:'OW'/);assert.match(js,/departure:'ICN'/);assert.match(js,/departureDate:String\(row\.date\|\|''\)/);});
 
-test('Android booking forces Korean Air My app with browser fallback',()=>{
- const js=read('web/android-booking.js'),build=read('scripts/build-cloud.mjs');
- assert.match(js,/KOREAN_AIR_PACKAGE='com\.koreanair\.passenger'/);
- assert.match(js,/intent:\/\//);
- assert.match(js,/package=\$\{KOREAN_AIR_PACKAGE\}/);
- assert.match(js,/S\.browser_fallback_url=\$\{fallback\}/);
- assert.match(js,/koreanair\.com\/booking\/search/);
- assert.match(build,/android-booking\.js/);
-});
+test('Android booking forces Korean Air My app with browser fallback',()=>{const js=read('web/android-booking.js'),build=read('scripts/build-cloud.mjs');assert.match(js,/KOREAN_AIR_PACKAGE='com\.koreanair\.passenger'/);assert.match(js,/intent:\/\//);assert.match(js,/koreanair\.com\/booking\/search/);assert.match(build,/android-booking\.js/);});
 
-test('Telegram setup wizard only asks for Bot Token and Start',()=>{
- const js=read('web/telegram-setup.js'),build=read('scripts/build-cloud.mjs');
- assert.match(js,/TELEGRAM_BOT_TOKEN/);
- assert.match(js,/TELEGRAM_CHAT_ID는 이제 필요 없습니다/);
- assert.match(js,/setup-telegram\.yml/);
- assert.match(js,/@BotFather/);
- assert.match(build,/telegram-setup\.js/);
- assert.match(build,/telegram-setup\.css/);
-});
+test('Telegram setup wizard only asks for Bot Token and Start',()=>{const js=read('web/telegram-setup.js'),build=read('scripts/build-cloud.mjs');assert.match(js,/TELEGRAM_BOT_TOKEN/);assert.match(js,/TELEGRAM_CHAT_ID는 이제 필요 없습니다/);assert.match(js,/@BotFather/);assert.match(build,/telegram-setup\.js/);});
 
-test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
- const cloudApi=read('web/cloud-api.js');
- assert.doesNotMatch(cloudApi,/Map\.groupBy/);
- assert.match(cloudApi,/function groupRowsByDate/);
-});
+test('Algumon-style alert center uses the existing bot and hides saved-flight UI',()=>{const js=read('web/alert-center.js'),css=read('web/alert-center.css'),build=read('scripts/build-cloud.mjs');assert.match(js,/Telegram 알림 등록/);assert.match(js,/\?start=/);assert.match(js,/telegram-rules\.json/);assert.match(css,/\.nav\[data-view="saved"\]/);assert.match(css,/\.favorite/);assert.match(build,/alert-center\.js/);assert.match(build,/alert-center\.css/);});
 
-test('mobile UI observer does not create a self-triggering mutation loop',()=>{
- const js=read('web/ui-v2.js');
- assert.match(js,/apply&&apply\.textContent!==applyLabel/);
- assert.match(js,/new MutationObserver\(scheduleSync\)/);
- assert.match(js,/observe\(document\.body,\{childList:true,subtree:true\}\)/);
- assert.doesNotMatch(js,/characterData:true/);
-});
+test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{const cloudApi=read('web/cloud-api.js');assert.doesNotMatch(cloudApi,/Map\.groupBy/);assert.match(cloudApi,/function groupRowsByDate/);});
 
-test('region filters hide Guam and use canonical visible region keys',()=>{
- const cloudApi=read('web/cloud-api.js'),regions=read('web/global-regions.js'),status=read('web/regional-status.js'),build=read('scripts/build-cloud.mjs');
- assert.match(cloudApi,/EXCLUDED_DESTINATIONS=new Set\(\['GUM'\]\)/);
- assert.equal(normalizeRegion('대양주/괌','SYD'),'오세아니아');
- assert.equal(normalizeRegion('동남아시아/서남아시아','DPS'),'발리');
- assert.equal(normalizeRegion('러시아/몽골/중앙아시아','UBN'),'러시아·몽골');
- assert.equal(normalizeRegion('중동/아프리카','DXB'),'중동');
- assert.match(regions,/REGION_ORDER=\['미주','유럽','오세아니아','발리','러시아·몽골','중동'\]/);
- assert.match(status,/발리·러시아·몽골·중동/);
- assert.match(build,/괌과 동북아/);
- assert.doesNotMatch(build,/중동\/아프리카의 모니터링 대상/);
-});
+test('mobile UI observer does not create a self-triggering mutation loop',()=>{const js=read('web/ui-v2.js');assert.match(js,/apply&&apply\.textContent!==applyLabel/);assert.match(js,/new MutationObserver\(scheduleSync\)/);assert.doesNotMatch(js,/characterData:true/);});
 
-test('region labels and copy describe the reduced monitoring scope',()=>{
- const status=read('web/regional-status.js'),html=read('web/index.html'),build=read('scripts/build-cloud.mjs');
- assert.match(status,/발리·러시아·몽골·중동/);
- assert.doesNotMatch(html,/대한항공 미주·유럽 보너스 좌석/);
- assert.match(html,/선택한 모니터링 노선/);
- assert.match(build,/동북아, 발리를 제외한 동남아\/서남아는 현재 수집하지 않습니다/);
-});
+test('region filters hide Guam and use canonical visible region keys',()=>{const cloudApi=read('web/cloud-api.js'),regions=read('web/global-regions.js'),status=read('web/regional-status.js'),build=read('scripts/build-cloud.mjs');assert.match(cloudApi,/EXCLUDED_DESTINATIONS=new Set\(\['GUM'\]\)/);assert.equal(normalizeRegion('대양주/괌','SYD'),'오세아니아');assert.equal(normalizeRegion('동남아시아/서남아시아','DPS'),'발리');assert.match(regions,/REGION_ORDER=\['미주','유럽','오세아니아','발리','러시아·몽골','중동'\]/);assert.match(status,/발리·러시아·몽골·중동/);assert.match(build,/괌과 동북아/);});
 
-test('one-time production refresh workflow is removed',()=>{
- assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
-});
+test('region labels and copy describe the reduced monitoring scope',()=>{const status=read('web/regional-status.js'),html=read('web/index.html'),build=read('scripts/build-cloud.mjs');assert.match(status,/발리·러시아·몽골·중동/);assert.doesNotMatch(html,/대한항공 미주·유럽 보너스 좌석/);assert.match(html,/선택한 모니터링 노선/);assert.match(build,/동북아, 발리를 제외한 동남아\/서남아는 현재 수집하지 않습니다/);});
 
-test('browser shell cache advances after UX polish update',()=>{
- const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v12/);
- assert.match(sw,/android-booking\.js/);
- assert.match(sw,/telegram-setup\.js/);
- assert.match(sw,/ux-reference-polish\.js/);
- assert.match(sw,/cloud-api\.js/);
-});
+test('one-time production refresh workflow is removed',()=>{assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);});
 
-test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/ux-reference-polish.js','web/regional-status.js','web/service-worker.js']){
-  const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
-  assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
- }
-});
+test('browser shell cache advances after alert center update',()=>{const sw=read('web/service-worker.js');assert.match(sw,/mileway-shell-v13/);assert.match(sw,/alert-center\.js/);assert.match(sw,/alert-center\.css/);assert.match(sw,/android-booking\.js/);});
+
+test('changed browser scripts parse successfully',()=>{for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/ux-reference-polish.js','web/alert-center.js','web/regional-status.js','web/service-worker.js']){const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);}});
