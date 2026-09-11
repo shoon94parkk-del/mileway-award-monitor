@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh} from '../src/public-source-check.mjs';
+import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh,dailySourceIsStale,expectedDailySourceUpdatedAt} from '../src/public-source-check.mjs';
 
 const current='2026년 9월 10일 23:00';
 const scopedRoutes=[
@@ -16,6 +16,18 @@ const scopedRoutes=[
 test('parses Korean Air public source timestamp',()=>{
   assert.equal(parseSourceUpdatedAt('일일 자료 · 대한민국 시간(2026년 9월 10일 23:00) 기준'),current);
   assert.equal(parseSourceUpdatedAt('timestamp missing'),null);
+});
+
+test('selects the newest timestamp when stale and fresh copies coexist in the page',()=>{
+  const body='숨은 이전 안내 대한민국 시간(2026년 9월 10일 23:00) / 현재 안내 대한민국 시간(2026년 9월 11일 23:00)';
+  assert.equal(parseSourceUpdatedAt(body),'2026년 9월 11일 23:00');
+});
+
+test('daily freshness guard recognizes a missed previous-night refresh',()=>{
+  const now=new Date('2026-09-11T23:35:00Z'); // 2026-09-12 08:35 KST
+  assert.equal(expectedDailySourceUpdatedAt(now),'2026년 9월 11일 23:00');
+  assert.equal(dailySourceIsStale('2026년 9월 10일 23:00',now),true);
+  assert.equal(dailySourceIsStale('2026년 9월 11일 23:00',now),false);
 });
 
 test('reads published source timestamp from cloud snapshot',()=>{
