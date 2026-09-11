@@ -5,6 +5,7 @@ import {candidateRegionLabels,parseDestinationButton,prioritizeRoutes,collection
 test('user priority is Europe, Americas, Oceania, then reduced Asian scope',()=>{
  const routes=[
   {code:'NRT',region:'동북아시아'},
+  {code:'GUM',region:'대양주/괌'},
   {code:'SYD',region:'대양주/괌'},
   {code:'JFK',region:'미주'},
   {code:'CDG',region:'유럽'},
@@ -16,10 +17,12 @@ test('user priority is Europe, Americas, Oceania, then reduced Asian scope',()=>
  assert.equal(collectionGroup('동북아시아'),'아시아');
 });
 
-test('monitoring policy skips Northeast Asia and keeps only Bali in combined Southeast/South Asia',()=>{
+test('monitoring policy skips Northeast Asia, Guam, and keeps only Bali in combined Southeast/South Asia',()=>{
  assert.equal(monitoredRoute({code:'NRT',region:'동북아시아'}),false);
  assert.equal(monitoredRoute({code:'PVG',region:'중국/동북아시아'}),false);
  assert.equal(monitoredRoute({code:'HND',region:'일본'}),false);
+ assert.equal(monitoredRoute({code:'GUM',region:'대양주/괌'}),false);
+ assert.equal(monitoredRoute({code:'SYD',region:'대양주/괌'}),true);
  assert.equal(monitoredRoute({code:'BKK',region:'동남아시아/서남아시아'}),false);
  assert.equal(monitoredRoute({code:'SIN',region:'동남아시아/괌'}),false);
  assert.equal(monitoredRoute({code:'DPS',region:'동남아시아/서남아시아'}),true);

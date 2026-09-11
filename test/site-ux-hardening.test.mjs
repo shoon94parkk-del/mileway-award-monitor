@@ -50,26 +50,38 @@ test('mobile UI observer does not create a self-triggering mutation loop',()=>{
  assert.doesNotMatch(js,/characterData:true/);
 });
 
+test('region filters hide Guam and use only meaningful visible labels',()=>{
+ const cloudApi=read('web/cloud-api.js'),regions=read('web/global-regions.js'),status=read('web/regional-status.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(cloudApi,/EXCLUDED_DESTINATIONS=new Set\(\['GUM'\]\)/);
+ assert.match(regions,/return '오세아니아'/);
+ assert.match(regions,/return '발리'/);
+ assert.match(regions,/return '러시아·몽골'/);
+ assert.match(regions,/return '중동'/);
+ assert.match(status,/발리·러시아·몽골·중동/);
+ assert.match(build,/괌과 동북아/);
+ assert.doesNotMatch(build,/중동\/아프리카의 모니터링 대상/);
+});
+
 test('region labels and copy describe the reduced monitoring scope',()=>{
  const status=read('web/regional-status.js'),html=read('web/index.html'),build=read('scripts/build-cloud.mjs');
- assert.match(status,/발리·기타/);
+ assert.match(status,/발리·러시아·몽골·중동/);
  assert.doesNotMatch(html,/대한항공 미주·유럽 보너스 좌석/);
  assert.match(html,/선택한 모니터링 노선/);
- assert.match(build,/동북아와 발리를 제외한 동남아\/서남아는 현재 수집하지 않습니다/);
+ assert.match(build,/동북아, 발리를 제외한 동남아\/서남아는 현재 수집하지 않습니다/);
 });
 
 test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after mobile freeze fix',()=>{
+test('browser shell cache advances after region filter cleanup',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v5/);
- assert.match(sw,/cloud-api\.js/);
+ assert.match(sw,/mileway-shell-v6/);
+ assert.match(sw,/global-regions\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/ui-v2.js','web/regional-status.js','web/service-worker.js']){
+ for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/regional-status.js','web/service-worker.js']){
   const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
  }
