@@ -58,6 +58,16 @@ test('reservation link prefills Korean Air mileage one-way route and date',()=>{
  assert.match(js,/className='reserve-button'/);
 });
 
+test('Android booking forces Korean Air My app with browser fallback',()=>{
+ const js=read('web/android-booking.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(js,/KOREAN_AIR_PACKAGE='com\.koreanair\.passenger'/);
+ assert.match(js,/intent:\/\//);
+ assert.match(js,/package=\$\{KOREAN_AIR_PACKAGE\}/);
+ assert.match(js,/S\.browser_fallback_url=\$\{fallback\}/);
+ assert.match(js,/koreanair\.com\/booking\/search/);
+ assert.match(build,/android-booking\.js/);
+});
+
 test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
  const cloudApi=read('web/cloud-api.js');
  assert.doesNotMatch(cloudApi,/Map\.groupBy/);
@@ -97,15 +107,15 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after mobile booking link update',()=>{
+test('browser shell cache advances after Android app launcher update',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v9/);
- assert.match(sw,/mobile-booking\.css/);
+ assert.match(sw,/mileway-shell-v10/);
+ assert.match(sw,/android-booking\.js/);
  assert.match(sw,/cloud-api\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/regional-status.js','web/service-worker.js']){
+ for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/regional-status.js','web/service-worker.js']){
   const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
  }
