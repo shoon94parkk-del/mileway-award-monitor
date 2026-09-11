@@ -1,5 +1,91 @@
 {
   "version": 1,
-  "rules": [],
-  "updated_at": null
+  "rules": [
+    {
+      "id": "e78cbbab-66ce-4f00-b448-68f6cd55df8f",
+      "name": "모든 목적지 보너스 좌석",
+      "region": "",
+      "destinations": [
+        "AKL",
+        "AMS",
+        "BNE",
+        "BUD",
+        "CDG",
+        "DPS",
+        "FCO",
+        "FRA",
+        "IST",
+        "JFK",
+        "LHR",
+        "LIS",
+        "MAD",
+        "MEL",
+        "MXP",
+        "PRG",
+        "SYD",
+        "VIE",
+        "ZRH"
+      ],
+      "cabins": [],
+      "start": "2027-04-03",
+      "end": "2027-04-04",
+      "weekend": false,
+      "flights": []
+    },
+    {
+      "id": "f5eeec4b-53f2-49af-9dce-99b9a826afa0",
+      "name": "24개 목적지 좌석 알림",
+      "region": "",
+      "destinations": [
+        "AKL",
+        "ATL",
+        "BNE",
+        "BOS",
+        "DFW",
+        "DPS",
+        "GUM",
+        "HNL",
+        "IAD",
+        "IKT",
+        "JFK",
+        "LAS",
+        "LAX",
+        "LED",
+        "MEL",
+        "ORD",
+        "SEA",
+        "SFO",
+        "SVO",
+        "SYD",
+        "UBN",
+        "VVO",
+        "YVR",
+        "YYZ"
+      ],
+      "cabins": [],
+      "start": "2026-09-11",
+      "end": "2026-09-14",
+      "weekend": false,
+      "flights": []
+    },
+    {
+      "id": "tg_99df4787339f",
+      "name": "JFK, HNL, MEL, BNE, SYD, AKL 좌석 알림",
+      "region": "",
+      "destinations": [
+        "AKL",
+        "BNE",
+        "HNL",
+        "JFK",
+        "MEL",
+        "SYD"
+      ],
+      "cabins": [],
+      "start": "2027-04-03",
+      "end": "2027-04-07",
+      "weekend": false,
+      "flights": []
+    }
+  ],
+  "updated_at": "2026-09-11T11:02:49.527Z"
 }
