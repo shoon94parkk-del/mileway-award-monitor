@@ -1,45 +1,78 @@
+const API_URL='https://mileway-alert-api.onrender.com';
+const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const HEALTH_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/health.json';
-const RULES_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/telegram-rules.json';
+const TOKEN_KEY='mileway.alert.manage-token.v1';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const REGION_CODE={'':'A','유럽':'E','미주':'U','오세아니아':'O','발리':'B','러시아·몽골':'R','중동':'M'};
-let health=null,serverRules=[];
+let snapshot=null,health=null,serverRules=[],opening=false;
 
-async function fetchJson(url,fallback){try{const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():fallback;}catch{return fallback;}}
-async function load(){health=await fetchJson(HEALTH_URL,null);const store=await fetchJson(RULES_URL,{rules:[]});serverRules=Array.isArray(store?.rules)?store.rules:[];}
-const shortDate=v=>v?String(v).replaceAll('-','').slice(2):'X';
-function botUsername(){return health?.alerts?.telegram_bot_username||'koreaairseat99_bot';}
-function botLink(payload='mileway'){return `https://t.me/${encodeURIComponent(botUsername())}?start=${encodeURIComponent(payload)}`;}
+function capturePairingToken(){
+ const raw=location.hash.startsWith('#')?location.hash.slice(1):'';if(!raw)return;
+ const params=new URLSearchParams(raw),token=params.get('alert-key');if(!token)return;
+ localStorage.setItem(TOKEN_KEY,token);params.delete('alert-key');
+ history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));
+ setTimeout(()=>toast('이 기기에서 알림 관리가 연결됐어요.'),200);
+}
+function manageToken(){return localStorage.getItem(TOKEN_KEY)||'';}
+function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,3500);}
+async function fetchJson(url,fallback){try{const r=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():fallback;}catch{return fallback;}}
+async function api(path,options={}){
+ const headers={'Content-Type':'application/json',...(options.headers||{})},token=manageToken();if(token)headers.Authorization=`Bearer ${token}`;
+ const r=await fetch(API_URL+path,{...options,headers,cache:'no-store'});let data={};try{data=await r.json();}catch{}
+ if(!r.ok)throw new Error(r.status===401?'이 기기의 알림 관리 연결이 필요합니다.':data.error||'알림 서버 요청에 실패했습니다.');return data;
+}
+async function loadState(){
+ const [s,h,r]=await Promise.all([snapshot?Promise.resolve(snapshot):fetchJson(SNAPSHOT_URL,null),health?Promise.resolve(health):fetchJson(HEALTH_URL,null),api('/rules').catch(()=>({rules:[]}))]);
+ snapshot=s;health=h;serverRules=Array.isArray(r?.rules)?r.rules:[];
+}
 function selectedRegion(){return $('#regions button.selected')?.dataset.region||'';}
-function selectedDestinations(){const select=$('#alert-destinations');if(select)return [...select.selectedOptions].map(o=>o.value).filter(Boolean).slice(0,6);const d=$('#destination')?.value;return d?[d]:[];}
-function alertPayload(){
- const dests=selectedDestinations(),region=dests.length?'':selectedRegion(),code=REGION_CODE[region]||'A';
- const d=dests.length?dests.join('_'):'X',start=shortDate($('#alert-start')?.value||$('#start')?.value||''),end=shortDate($('#alert-end')?.value||$('#end')?.value||''),weekend=($('#alert-weekend')?.checked||$('#weekend')?.checked)?'1':'0';
- return `a-${code}-${d}-${start}-${end}-${weekend}`;
+function filterDates(){
+ const month=$('#month')?.value||'';let start=$('#start')?.value||'',end=$('#end')?.value||'';
+ if(month&&!start&&!end){const [y,m]=month.split('-').map(Number);start=`${month}-01`;end=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);}
+ return {start,end};
+}
+function routeOptions(){
+ const routes=snapshot?.bootstrap?.routes||[],current=$('#destination')?.value||'';
+ return routes.map(r=>`<option value="${esc(r.code)}" ${r.code===current?'selected':''}>${esc(r.city||r.code)} · ${esc(r.code)}</option>`).join('');
 }
 function ruleSummary(r){const parts=[];if(r.region)parts.push(r.region);if(r.destinations?.length)parts.push(r.destinations.join(', '));if(r.start||r.end)parts.push(`${r.start||'오늘'} ~ ${r.end||'전체'}`);if(r.weekend)parts.push('주말만');parts.push('프레스티지+일등석');return parts.join(' · ');}
 function activeRulesMarkup(){
- if(!serverRules.length)return '<div class="alert-center-empty"><b>활성 알림 없음</b><span>아래에서 조건을 고르고 Telegram 알림 등록을 누르세요.</span></div>';
- return `<div class="alert-center-rules">${serverRules.map(r=>`<div class="alert-center-rule"><div><b>${esc(r.name)}</b><span>${esc(ruleSummary(r))}</span></div><a href="${botLink('d-'+r.id)}" target="_blank" rel="noreferrer">삭제</a></div>`).join('')}</div>`;
+ if(!serverRules.length)return '<div class="alert-center-empty"><b>활성 알림 없음</b><span>아래에서 조건을 선택하고 알림 등록을 누르세요.</span></div>';
+ return `<div class="alert-center-rules">${serverRules.map(r=>`<div class="alert-center-rule"><div><b>${esc(r.name)}</b><span>${esc(ruleSummary(r))}</span></div><button type="button" data-direct-alert-delete="${esc(r.id)}">삭제</button></div>`).join('')}</div>`;
 }
-function connectionMarkup(){const a=health?.alerts||{},connected=!!a.telegram_configured;return `<section class="alert-center-connect ${connected?'is-connected':''}"><div><i></i><p><b>${connected?'Telegram 연결됨':'Telegram 연결하기'}</b><span>${connected?'@'+esc(botUsername())+' · Start 한 번이면 끝':'버튼을 누르고 Telegram에서 Start만 누르면 됩니다.'}</span></p></div><a class="${connected?'secondary':'primary'}" href="${botLink('mileway')}" target="_blank" rel="noreferrer">${connected?'Telegram 열기':'연결하기'}</a></section>`;}
-function updateRegisterLink(){const a=$('#telegram-alert-register');if(a)a.href=botLink(alertPayload());}
-async function enhanceDialog(){
- const content=$('#dialog-content');if(!content||!content.querySelector('#alert-json')||content.dataset.alertCenter==='1')return;
- content.dataset.alertCenter='1';content.classList.add('alert-center-modern');await load();
- content.querySelector('.detail-note')?.classList.add('alert-center-hide');
- content.querySelector('.alert-rule-list')?.classList.add('alert-center-hide');
- content.querySelector('#alert-json')?.closest('label')?.classList.add('alert-center-hide');
- content.querySelector('.alert-help')?.classList.add('alert-center-hide');
- content.querySelector('[data-alert-add]')?.classList.add('alert-center-hide');
- const actionRows=[...content.querySelectorAll('.alert-actions')];if(actionRows.length)actionRows.at(-1)?.classList.add('alert-center-hide');
- const heading=content.querySelector('.detail-heading');if(heading)heading.textContent='좌석 알림';
- const panel=document.createElement('div');panel.className='alert-center-panel';panel.innerHTML=`${connectionMarkup()}<section class="alert-center-active"><div class="alert-center-title"><div><b>현재 활성 알림</b><span>Telegram으로 실제 전송되는 조건입니다.</span></div><strong>${serverRules.length}개</strong></div>${activeRulesMarkup()}</section>`;
- heading?.after(panel);
- const weekend=$('#alert-weekend')?.closest('label');const register=document.createElement('div');register.className='alert-center-register';register.innerHTML='<a id="telegram-alert-register" class="primary" target="_blank" rel="noreferrer">Telegram 알림 등록</a><span>Telegram이 열리면 <b>Start</b>를 누르세요. 등록 결과는 봇이 메시지로 알려드립니다.</span>';
- (weekend?.parentNode||content).insertBefore(register,weekend?.nextSibling||null);updateRegisterLink();
- for(const id of ['alert-destinations','alert-start','alert-end','alert-weekend'])$('#'+id)?.addEventListener('change',updateRegisterLink);
+function connectionMarkup(){
+ const connected=!!health?.alerts?.telegram_configured,bot=health?.alerts?.telegram_bot_username||'koreaairseat99_bot',managed=!!manageToken();
+ return `<section class="alert-center-connect ${connected&&managed?'is-connected':''}"><div><i></i><p><b>${connected?'Telegram 연결됨':'Telegram 연결 필요'}</b><span>${connected?'@'+esc(bot)+(managed?' · 이 기기에서 즉시 등록 가능':' · 관리 연결 필요'):'먼저 Telegram 봇 연결을 완료해 주세요.'}</span></p></div>${connected&&!managed?'<span class="alert-device-needed">기기 연결 필요</span>':''}</section>`;
 }
-const observer=new MutationObserver(()=>queueMicrotask(enhanceDialog));observer.observe(document.body,{childList:true,subtree:true});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('#dialog')?.open){delete $('#dialog-content')?.dataset.alertCenter;enhanceDialog();}});
-enhanceDialog();
+function render(){
+ const content=$('#dialog-content');if(!content)return;
+ const {start,end}=filterDates(),weekend=!!$('#weekend')?.checked;
+ content.className='alert-center-modern alert-center-direct';
+ content.innerHTML=`<span class="eyebrow">SEAT ALERT</span><h2 class="detail-heading">좌석 알림</h2>${connectionMarkup()}<section class="alert-center-active"><div class="alert-center-title"><div><b>현재 활성 알림</b><span>실제로 Telegram으로 전송되는 조건입니다.</span></div><strong>${serverRules.length}개</strong></div>${activeRulesMarkup()}</section><section class="alert-direct-form"><label>목적지 · 여러 개 선택 가능<select id="direct-alert-destinations" multiple size="7">${routeOptions()}</select></label><div class="alert-date-grid"><label>시작일<input id="direct-alert-start" type="date" value="${esc(start)}"></label><label>종료일<input id="direct-alert-end" type="date" value="${esc(end)}"></label></div><label class="check"><input id="direct-alert-weekend" type="checkbox" ${weekend?'checked':''}>주말 출발만</label><p class="small muted">목적지를 고르지 않으면 현재 선택한 지역 전체를 감시합니다. 좌석은 프레스티지 + 일등석을 함께 감시합니다.</p><button id="direct-alert-register" class="primary" type="button" ${manageToken()?'':'disabled'}>${manageToken()?'알림 등록':'이 기기 연결 필요'}</button><span class="alert-direct-help">등록 버튼을 누르면 바로 활성화됩니다. JSON이나 GitHub 설정은 필요 없습니다.</span></section>`;
+}
+async function openAlertCenter(){
+ if(opening)return;opening=true;try{await loadState();render();const d=$('#dialog');if(d&&!d.open)d.showModal();}finally{opening=false;}
+}
+function formRule(){
+ const selected=[...($('#direct-alert-destinations')?.selectedOptions||[])].map(o=>o.value).filter(Boolean),region=selected.length?'':selectedRegion();
+ const start=$('#direct-alert-start')?.value||'',end=$('#direct-alert-end')?.value||'',weekend=!!$('#direct-alert-weekend')?.checked;
+ const routes=snapshot?.bootstrap?.routes||[],map=new Map(routes.map(r=>[r.code,r.city||r.code]));
+ const label=selected.length===1?(map.get(selected[0])||selected[0]):selected.length?`${selected.length}개 목적지`:(region||'모든 목적지');
+ return {name:`${label} 좌석 알림`,region,destinations:selected,cabins:[],start,end,weekend,flights:[]};
+}
+async function register(){
+ const button=$('#direct-alert-register');if(!button)return;button.disabled=true;button.textContent='등록 중…';
+ try{const result=await api('/rules',{method:'POST',body:JSON.stringify(formRule())});serverRules=result.rules||serverRules;render();toast('Telegram 좌석 알림이 바로 등록됐어요.');}
+ catch(error){button.disabled=false;button.textContent='알림 등록';toast(error.message);}
+}
+async function removeRule(id){
+ try{const result=await api('/rules/'+encodeURIComponent(id),{method:'DELETE'});serverRules=result.rules||[];render();toast('알림을 삭제했어요.');}catch(error){toast(error.message);}
+}
+
+capturePairingToken();
+document.addEventListener('click',e=>{
+ const trigger=e.target.closest('#cloud-alert-create,#cloud-alert-nav,[data-ux-alert]');
+ if(trigger){e.preventDefault();e.stopImmediatePropagation();openAlertCenter();return;}
+ if(e.target.closest('#direct-alert-register')){e.preventDefault();register();return;}
+ const del=e.target.closest('[data-direct-alert-delete]');if(del){e.preventDefault();removeRule(del.dataset.directAlertDelete);}
+},true);
