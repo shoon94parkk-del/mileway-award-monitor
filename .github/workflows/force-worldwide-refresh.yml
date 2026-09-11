@@ -1,4 +1,4 @@
-name: Force one-time worldwide production refresh
+name: Force reduced-scope production refresh
 on:
   push:
     branches: [main]
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: windows-latest
-    timeout-minutes: 240
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,10 +24,10 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Run tests
         run: npm test
-      - name: Collect and publish all regions
+      - name: Collect and publish monitored regions
         id: collect
         run: node --no-warnings scripts/collect-regions.mjs
-      - name: Validate published worldwide snapshot
+      - name: Validate published monitored snapshot
         shell: pwsh
         run: |
-          node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));const r=s.bootstrap?.report||s.report||{};const routes=r.routes||s.bootstrap?.routes||[];const codes=new Set(routes.map(x=>x.code));const regions=new Set(routes.map(x=>x.region));console.log('PUBLISHED_WORLDWIDE_SUMMARY '+JSON.stringify({source_updated_at:r.source_updated_at,routes:codes.size,regions:[...regions]}));if(codes.size<100)process.exit(1);"
+          node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));const r=s.bootstrap?.report||s.report||{};const routes=r.routes||s.bootstrap?.routes||[];const codes=new Set(routes.map(x=>x.code));const bad=routes.filter(x=>x.region==='동북아시아'||(x.region==='동남아시아/서남아시아'&&x.code!=='DPS'));const summary={source_updated_at:r.source_updated_at,routes:codes.size,regions:[...new Set(routes.map(x=>x.region))],hasDPS:codes.has('DPS'),bad:bad.map(x=>x.code)};console.log('PUBLISHED_MONITORED_SUMMARY '+JSON.stringify(summary));if(!codes.has('DPS')||bad.length||codes.size<30)process.exit(1);"
