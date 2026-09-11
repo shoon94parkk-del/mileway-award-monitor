@@ -1,0 +1,34 @@
+/* UI patterns adapted conceptually from Dub, Plausible, OpenStatus and shadcn/ui. */
+.source-banner{display:none!important}
+.topbar{margin-bottom:12px}
+.ux-status-rail{display:flex;align-items:center;gap:3px;margin:0 0 16px;padding:7px;border:1px solid #e2e8f0;border-radius:14px;background:rgba(255,255,255,.92);box-shadow:0 4px 18px rgba(31,49,83,.04);overflow-x:auto;scrollbar-width:none}
+.ux-status-rail::-webkit-scrollbar{display:none}
+.ux-rail-item{display:inline-flex;align-items:center;gap:6px;min-width:max-content;padding:7px 10px;border-radius:9px;color:#7b8798;font-size:11px;line-height:1;background:transparent}
+.ux-rail-item span{font-weight:600}.ux-rail-item b{color:#263a58;font-size:11px;font-weight:800}
+.ux-rail-item i{width:7px;height:7px;border-radius:50%;background:#aab4c3;box-shadow:0 0 0 3px #eef1f5}
+.ux-health.is-ok i{background:#21a366;box-shadow:0 0 0 3px #e7f7ef}.ux-health.is-warn i{background:#e09a23;box-shadow:0 0 0 3px #fff5df}
+.ux-rail-button:hover,.ux-rail-more:hover{background:#f5f8fc;color:#2764ef}
+.ux-rail-more{margin-left:auto;flex:0 0 auto;padding:7px 10px;border-radius:9px;color:#60718b;font-size:11px;font-weight:700}
+.stats{margin:16px 0 18px;gap:10px}.stat{padding:14px 16px;border-radius:13px;box-shadow:none}.stat-number{font-size:24px}.stat-sub{margin-top:2px}
+.filter-card{box-shadow:none}.results-toolbar{box-shadow:none}
+
+@media(max-width:850px){
+ main{padding-top:12px}
+ .topbar{margin-bottom:8px}.topbar .eyebrow{opacity:.72}h1{margin-top:4px}
+ #mobile-stats-summary{display:none!important}
+ .ux-status-rail{margin:0 0 9px;padding:5px;border-radius:12px;background:#fff;box-shadow:none;gap:1px}
+ .ux-rail-item{padding:7px 8px;font-size:10px}.ux-rail-item b{font-size:10px}.ux-rail-more{display:none}
+ .mobile-filter-summary-bar{margin-bottom:8px;padding:10px 11px;border-radius:11px;box-shadow:none}
+ .mobile-filter-summary-action{padding:5px 9px;border-radius:8px}
+ .results-toolbar{margin-top:6px!important;margin-bottom:6px!important;border-radius:12px!important;box-shadow:none!important}
+ .results-toolbar h2{letter-spacing:-.4px}
+}
+@media(max-width:520px){
+ main{padding-top:10px!important}
+ .topbar{margin-bottom:7px}.topbar .eyebrow{font-size:9px;letter-spacing:1.1px}h1{font-size:21px;line-height:1.25}
+ .ux-status-rail{margin-left:-1px;margin-right:-1px}
+ .ux-rail-item{padding:6px 7px}.ux-rail-item span{display:none}.ux-rail-item b{font-size:10px}
+ .ux-rail-item:first-child span{display:inline}
+ .mobile-filter-summary-text{font-size:11px}.mobile-filter-summary-text strong{font-size:12px}
+ .results-toolbar{padding:8px 9px!important}.results-toolbar h2{font-size:16px!important}.result-count-strong{font-size:10px!important;padding:2px 6px!important}
+}
