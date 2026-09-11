@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh,dailySourceIsStale,expectedDailySourceUpdatedAt} from '../src/public-source-check.mjs';
+import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh,dailySourceIsStale,expectedDailySourceUpdatedAt,staleDailySafetyScanDue} from '../src/public-source-check.mjs';
 
 const current='2026년 9월 10일 23:00';
 const scopedRoutes=[
@@ -18,6 +18,11 @@ test('parses Korean Air public source timestamp',()=>{
   assert.equal(parseSourceUpdatedAt('timestamp missing'),null);
 });
 
+test('parses spacing and full-width parenthesis variants used by responsive UI',()=>{
+  assert.equal(parseSourceUpdatedAt('좌석 상황은 대한민국 시간 （ 2026년 9월 11일 23:00 ） 기준'),'2026년 9월 11일 23:00');
+  assert.equal(parseSourceUpdatedAt('좌석 상황은 대한민국 시간 : 2026년 9월 11일 23:00 기준'),'2026년 9월 11일 23:00');
+});
+
 test('selects the newest timestamp when stale and fresh copies coexist in the page',()=>{
   const body='숨은 이전 안내 대한민국 시간(2026년 9월 10일 23:00) / 현재 안내 대한민국 시간(2026년 9월 11일 23:00)';
   assert.equal(parseSourceUpdatedAt(body),'2026년 9월 11일 23:00');
@@ -28,6 +33,15 @@ test('daily freshness guard recognizes a missed previous-night refresh',()=>{
   assert.equal(expectedDailySourceUpdatedAt(now),'2026년 9월 11일 23:00');
   assert.equal(dailySourceIsStale('2026년 9월 10일 23:00',now),true);
   assert.equal(dailySourceIsStale('2026년 9월 11일 23:00',now),false);
+});
+
+test('stale source forces an independent retry after cooldown even if timestamp detector repeats old value',()=>{
+  const now=new Date('2026-09-11T23:35:00Z');
+  const recent={bootstrap:{report:{finished_at:'2026-09-11T21:35:00Z'}}};
+  const old={bootstrap:{report:{finished_at:'2026-09-11T18:00:00Z'}}};
+  assert.equal(staleDailySafetyScanDue(recent,'2026년 9월 10일 23:00',now),false);
+  assert.equal(staleDailySafetyScanDue(old,'2026년 9월 10일 23:00',now),true);
+  assert.equal(staleDailySafetyScanDue(old,'2026년 9월 11일 23:00',now),false);
 });
 
 test('reads published source timestamp from cloud snapshot',()=>{
