@@ -2,10 +2,15 @@ import fs from 'node:fs';
 import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
 import {parseTelegramRuleCommand,applyTelegramRuleCommand,readCommandState,writeCommandState} from './telegram-rule-commands.mjs';
 
+const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api.onrender.com';
 const routes=()=>{try{return JSON.parse(fs.readFileSync('routes.json','utf8')).routes||[];}catch{return [];}};
 async function fetchUpdates(token,offset){
  const url=`https://api.telegram.org/bot${token}/getUpdates?timeout=0&limit=100&offset=${Math.max(0,Number(offset)||0)}`;
  const res=await fetch(url),data=await res.json();if(!res.ok||!data?.ok)throw new Error('Telegram 업데이트 확인 실패');return data.result||[];
+}
+async function fetchTestRequest(){
+ const res=await fetch(ALERT_API_URL+'/telegram-test',{headers:{Accept:'application/json'}});if(!res.ok)return null;
+ const data=await res.json();return data?.request||null;
 }
 
 async function main(){
@@ -25,8 +30,15 @@ async function main(){
   if(command.type==='delete')await sendTelegramText(token,target.chatId,`🗑️ 알림 삭제 완료\n현재 활성 알림 ${rules.length}개`);
   if(command.type==='clear')await sendTelegramText(token,target.chatId,'🗑️ 모든 좌석 알림을 삭제했습니다.');
  }
- if(last!==state.last_update_id)writeCommandState(last);
- console.log(`Telegram target ready (${target.source}); alert commands=${changed}.`);
+ let lastTest=state.last_test_request_id||null;
+ const request=await fetchTestRequest().catch(()=>null);
+ if(request?.id&&request.id!==lastTest){
+  const now=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date());
+  await sendTelegramText(token,target.chatId,`✅ Mileway 실제 알림 테스트 성공\n${now} (한국시간)\n\n이 메시지가 보이면 Telegram 좌석 알림이 정상입니다.`);
+  lastTest=request.id;
+ }
+ if(last!==state.last_update_id||lastTest!==state.last_test_request_id)writeCommandState(last,{last_test_request_id:lastTest});
+ console.log(`Telegram target ready (${target.source}); alert commands=${changed}; test=${lastTest&&lastTest!==state.last_test_request_id?'sent':'none'}.`);
 }
 
 main().catch(error=>{console.error(error.message);process.exitCode=1;});
