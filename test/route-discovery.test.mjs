@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {candidateRegionLabels,parseDestinationButton,prioritizeRoutes,collectionGroup,monitoredRoute,KOREAN_AIR_REGION_LABELS} from '../src/route-discovery.mjs';
 
-test('user priority is Europe, Americas, Oceania, then reduced Asian scope',()=>{
+test('user priority is Europe, Americas, Oceania, then Bali only in Asian scope',()=>{
  const routes=[
   {code:'NRT',region:'동북아시아'},
   {code:'GUM',region:'대양주/괌'},
@@ -11,13 +11,14 @@ test('user priority is Europe, Americas, Oceania, then reduced Asian scope',()=>
   {code:'CDG',region:'유럽'},
   {code:'BKK',region:'동남아시아/서남아시아'},
   {code:'DPS',region:'동남아시아/서남아시아'},
+  {code:'UBN',region:'러시아/몽골/중앙아시아'},
   {code:'DXB',region:'중동/아프리카'}
  ];
- assert.deepEqual(prioritizeRoutes(routes).map(r=>r.code),['CDG','JFK','SYD','DPS','DXB']);
+ assert.deepEqual(prioritizeRoutes(routes).map(r=>r.code),['CDG','JFK','SYD','DPS']);
  assert.equal(collectionGroup('동북아시아'),'아시아');
 });
 
-test('monitoring policy skips Northeast Asia, Guam, and keeps only Bali in combined Southeast/South Asia',()=>{
+test('monitoring policy skips Northeast Asia, Guam, Russia Mongolia Central Asia and Middle East Africa, and keeps only Bali in combined Southeast South Asia',()=>{
  assert.equal(monitoredRoute({code:'NRT',region:'동북아시아'}),false);
  assert.equal(monitoredRoute({code:'PVG',region:'중국/동북아시아'}),false);
  assert.equal(monitoredRoute({code:'HND',region:'일본'}),false);
@@ -26,8 +27,10 @@ test('monitoring policy skips Northeast Asia, Guam, and keeps only Bali in combi
  assert.equal(monitoredRoute({code:'BKK',region:'동남아시아/서남아시아'}),false);
  assert.equal(monitoredRoute({code:'SIN',region:'동남아시아/괌'}),false);
  assert.equal(monitoredRoute({code:'DPS',region:'동남아시아/서남아시아'}),true);
- assert.equal(monitoredRoute({code:'DEL',region:'서남아시아'}),true);
- assert.equal(monitoredRoute({code:'DXB',region:'중동/아프리카'}),true);
+ assert.equal(monitoredRoute({code:'UBN',region:'러시아/몽골/중앙아시아'}),false);
+ assert.equal(monitoredRoute({code:'TAS',region:'러시아/몽골/중앙아시아'}),false);
+ assert.equal(monitoredRoute({code:'DXB',region:'중동/아프리카'}),false);
+ assert.equal(monitoredRoute({code:'NBO',region:'중동/아프리카'}),false);
 });
 
 test('전 세계 지역 후보에서 국내와 UI 버튼을 제외한다',()=>{
