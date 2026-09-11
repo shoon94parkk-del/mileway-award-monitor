@@ -64,7 +64,7 @@ test('one-time production refresh workflow is removed',()=>{
 
 test('browser shell cache advances after mobile freeze fix',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v4/);
+ assert.match(sw,/mileway-shell-v5/);
  assert.match(sw,/cloud-api\.js/);
 });
 
