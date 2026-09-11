@@ -3,7 +3,7 @@ const groups=[
  {key:'유럽',label:'유럽'},
  {key:'미주',label:'미주'},
  {key:'오세아니아',label:'오세아니아'},
- {key:'아시아',label:'발리·기타',title:'발리(DPS) + 러시아/몽골/중앙아시아 + 중동/아프리카'}
+ {key:'아시아',label:'발리·러시아·몽골·중동',title:'발리(DPS) + 러시아 + 몽골 + 중동'}
 ];
 const shortTime=value=>String(value||'미확인').replace(/^2026년\s*/,'');
 let lastVersion=null;
