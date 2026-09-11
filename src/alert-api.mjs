@@ -9,6 +9,7 @@ const PAIR_CODE=String(process.env.ALERT_PAIR_CODE||'');
 const REDIS_HOST=process.env.REDIS_HOST||'red-dahr62ss728c73d89jbg';
 const REDIS_PORT=Number(process.env.REDIS_PORT||6379);
 const STORE_KEY='mileway:alert-rules:v1';
+const TEST_REQUEST_KEY='mileway:telegram-test-request:v1';
 const DEVICE_PREFIX='mileway:device-token:';
 const PAIR_USED_PREFIX='mileway:pair-used:';
 const ALLOWED_ORIGIN=process.env.ALLOWED_ORIGIN||'https://mileway-award-monitor.onrender.com';
@@ -31,6 +32,8 @@ const digest=value=>crypto.createHash('sha256').update(String(value)).digest('he
 const safeEqual=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&x.length>0&&crypto.timingSafeEqual(x,y);};
 async function readRules(){const raw=await redis(['GET',STORE_KEY]);if(!raw)return [];try{return normalizeAlertRules(JSON.parse(raw));}catch{return [];}}
 async function writeRules(rules){const normalized=normalizeAlertRules(rules).slice(0,50);await redis(['SET',STORE_KEY,JSON.stringify(normalized)]);return normalized;}
+async function readTestRequest(){const raw=await redis(['GET',TEST_REQUEST_KEY]);if(!raw)return null;try{return JSON.parse(raw);}catch{return null;}}
+async function writeTestRequest(){const request={id:crypto.randomUUID(),requested_at:new Date().toISOString()};await redis(['SET',TEST_REQUEST_KEY,JSON.stringify(request)]);return request;}
 function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.writeHead(status);res.end(JSON.stringify(value));}
 function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
 async function authorized(req){
@@ -54,6 +57,11 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/health'){await redis(['PING']);return json(res,200,{ok:true},origin);}
   if(req.method==='POST'&&url.pathname==='/pair'){
    const input=await body(req),result=await pairDevice(String(input.code||''));if(result.error)return json(res,result.status,{error:result.error},origin);return json(res,200,{ok:true,token:result.token},origin);
+  }
+  if(req.method==='GET'&&url.pathname==='/telegram-test'){return json(res,200,{request:await readTestRequest()},origin);}
+  if(req.method==='POST'&&url.pathname==='/telegram-test'){
+   if(!(await authorized(req)))return json(res,401,{error:'Unauthorized'},origin);
+   const request=await writeTestRequest();return json(res,202,{ok:true,request,eta_minutes:5},origin);
   }
   if(req.method==='GET'&&url.pathname==='/rules'){const rules=await readRules();return json(res,200,{version:1,rules,updated_at:new Date().toISOString()},origin);}
   if(req.method==='POST'&&url.pathname==='/rules'){
