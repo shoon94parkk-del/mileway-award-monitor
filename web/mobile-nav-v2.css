@@ -1,7 +1,8 @@
 .nav[data-view="data"]{display:none!important}
 .mobile-mode-nav{display:none!important}
 @media(max-width:850px){
- .sidebar nav{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ .sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .sidebar .nav[data-view="explore"]{display:none!important}
  .sidebar .mobile-mode-nav{display:flex!important}
  .sidebar .nav.active{background:transparent!important;color:#758296!important}
  .sidebar .mobile-mode-nav.is-selected{background:#edf3ff!important;color:#2764ef!important;font-weight:800}
