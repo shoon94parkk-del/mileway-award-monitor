@@ -1,0 +1,41 @@
+name: Connect Telegram
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Find the chat that pressed Start
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/register-telegram.mjs
+      - name: Verify Telegram target
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          node --input-type=module -e "import {resolveTelegramTarget} from './scripts/telegram-target.mjs'; const t=await resolveTelegramTarget(process.env.TELEGRAM_BOT_TOKEN||'',{explicitChatId:process.env.TELEGRAM_CHAT_ID||''}); if(!t.chatId){console.error('Telegram 대상 채팅을 찾지 못했습니다. 봇을 열고 Start를 누른 뒤 다시 실행하세요.');process.exit(1)}"
+      - name: Send connection test
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/notify-alerts.mjs --test
+      - name: Save encrypted Telegram target
+        shell: bash
+        run: |
+          if [ ! -f public-data/telegram-target.json ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public-data/telegram-target.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Register Telegram alert target"
+            git pull --rebase origin main
+            git push
+          fi
