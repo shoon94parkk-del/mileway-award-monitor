@@ -18,11 +18,11 @@ try{
  const bootstrap={...baseBootstrap,changes:recentChanges,cloud:true,scan:{paused:true,running:false,enabled:false,history:[]}};
  const rows=store.list({limit:50000}).rows.map(enrich);
  fs.writeFileSync('dist/snapshot.json',JSON.stringify({bootstrap,rows}));
- for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
+ for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
  fs.writeFileSync('dist/cloud-api.js',fs.readFileSync('web/cloud-api.js','utf8').replace("'./snapshot.json'","'https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json'"));
  let html=fs.readFileSync('web/index.html','utf8').replaceAll('내 PC 전용','브라우저 저장').replaceAll('내 여행 계획은 이곳에만','찜과 검색 조건은 이 브라우저에만 저장');
- html=replaceRequired(html,'</head>','<meta name="theme-color" content="#2764ef"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/cloud-enhancements.css"></head>','cloud head assets');
- html=replaceRequired(html,'</body>','<script type="module" src="/cloud-enhancements.js"></script><script type="module" src="/global-regions.js"></script><script type="module" src="/regional-status.js"></script></body>','cloud enhancement scripts');
+ html=replaceRequired(html,'</head>','<meta name="theme-color" content="#2764ef"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/cloud-enhancements.css"><link rel="stylesheet" href="/ui-v2.css"></head>','cloud head assets');
+ html=replaceRequired(html,'</body>','<script type="module" src="/cloud-enhancements.js"></script><script type="module" src="/global-regions.js"></script><script type="module" src="/regional-status.js"></script><script type="module" src="/ui-v2.js"></script></body>','cloud enhancement scripts');
  fs.writeFileSync('dist/index.html',html);
  let js=fs.readFileSync('web/app.js','utf8');
  js="import {cloudApi} from './cloud-api.js';\n"+js;

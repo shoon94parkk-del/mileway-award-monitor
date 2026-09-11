@@ -1,5 +1,5 @@
 import {validatePublication} from './publication-validation.mjs';
-import {collectionGroup} from './route-discovery.mjs';
+import {collectionGroup,monitoredRoute} from './route-discovery.mjs';
 
 // Replace only a validated, fully attempted region. Other region observations retain their source times.
 export function mergeCompletedRegion(previous,next){
@@ -8,7 +8,8 @@ export function mergeCompletedRegion(previous,next){
   const group=next.collection_group;
   const oldRoutes=previous?.routes||[],oldByCode=new Map(oldRoutes.map(r=>[r.code,r]));
   const keep=record=>{const route=oldByCode.get(record.destination);return route&&collectionGroup(route.region)!==group;};
-  const nextRoutes=next.routes.filter(r=>collectionGroup(r.region)===group);
+  const targets=new Set(next.target_routes||[]);
+  const nextRoutes=next.routes.filter(r=>collectionGroup(r.region)===group&&monitoredRoute(r)&&targets.has(r.code));
   const routes=[...oldRoutes.filter(r=>collectionGroup(r.region)!==group),...nextRoutes];
   const oldRows=(previous?.rows||[]).filter(keep),coverage=(previous?.coverage||[]).filter(keep).map(c=>({...c,source_updated_at:c.source_updated_at||previous.source_updated_at}));
   const unqueryable=(previous?.unqueryable||[]).filter(keep);
