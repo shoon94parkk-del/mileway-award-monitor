@@ -33,5 +33,5 @@ export function applyTelegramRuleCommand(command){
  if(command){writeJson(RULES_FILE,{version:1,rules,updated_at:new Date().toISOString()});}
  return rules;
 }
-export function readCommandState(){return readJson(COMMAND_STATE_FILE,{version:1,last_update_id:0,updated_at:null});}
-export function writeCommandState(lastUpdateId){writeJson(COMMAND_STATE_FILE,{version:1,last_update_id:Number(lastUpdateId)||0,updated_at:new Date().toISOString()});}
+export function readCommandState(){return readJson(COMMAND_STATE_FILE,{version:2,last_update_id:0,last_test_request_id:null,updated_at:null});}
+export function writeCommandState(lastUpdateId,extra={}){const prev=readCommandState();writeJson(COMMAND_STATE_FILE,{...prev,...extra,version:2,last_update_id:Number(lastUpdateId)||0,updated_at:new Date().toISOString()});}
