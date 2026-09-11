@@ -36,6 +36,12 @@ test('mobile UI prioritizes results with compact summaries and bottom-sheet filt
  assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);
 });
 
+test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
+ const cloudApi=read('web/cloud-api.js');
+ assert.doesNotMatch(cloudApi,/Map\.groupBy/);
+ assert.match(cloudApi,/function groupRowsByDate/);
+});
+
 test('region labels and copy describe the reduced monitoring scope',()=>{
  const status=read('web/regional-status.js'),html=read('web/index.html'),build=read('scripts/build-cloud.mjs');
  assert.match(status,/발리·기타/);
@@ -48,12 +54,14 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache version advances with this UI release',()=>{
- assert.match(read('web/service-worker.js'),/mileway-shell-v2/);
+test('browser shell cache version advances with calendar compatibility fix',()=>{
+ const sw=read('web/service-worker.js');
+ assert.match(sw,/mileway-shell-v3/);
+ assert.match(sw,/cloud-api\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-enhancements.js','web/ui-v2.js','web/regional-status.js','web/service-worker.js']){
+ for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/ui-v2.js','web/regional-status.js','web/service-worker.js']){
   const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
  }
