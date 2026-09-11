@@ -1,4 +1,5 @@
 let snapshot,loadedAt=0;
+const SNAPSHOT_URL='./snapshot.json';
 const SNAPSHOT_TTL_MS=15000;
 const FAVORITES_KEY='mileway.cloud.favorites.v1';
 const SEARCHES_KEY='mileway.cloud.searches.v1';
@@ -12,7 +13,7 @@ export function filterRows(rows,f={},favorites=new Set()){
  return rows.filter(r=>(!f.region||r.region===f.region)&&(!f.destination||r.destination===f.destination)&&(!f.cabin||r.cabin===f.cabin)&&(!f.month||r.date.startsWith(f.month))&&(!f.start||r.date>=f.start)&&(!f.end||r.date<=f.end)&&(!f.date||r.date===f.date)&&(f.weekend!=='true'||[0,6].includes(new Date(r.date+'T00:00:00Z').getUTCDay()))&&(!f.q||[r.city,r.destination,r.flight,r.country].some(v=>String(v).toLowerCase().includes(f.q.toLowerCase())))&&(f.saved!=='true'||favorites.has(r.id)));
 }
 async function loadSnapshot(){
- if(!snapshot||Date.now()-loadedAt>SNAPSHOT_TTL_MS){try{const r=await fetch('./snapshot.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');snapshot=await r.json();loadedAt=Date.now();}catch(e){if(!snapshot)throw e;loadedAt=Date.now();}}
+ if(!snapshot||Date.now()-loadedAt>SNAPSHOT_TTL_MS){try{const r=await fetch(SNAPSHOT_URL+'?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');snapshot=await r.json();loadedAt=Date.now();}catch(e){if(!snapshot)throw e;loadedAt=Date.now();}}
  return snapshot;
 }
 export async function cloudApi(url,method='GET',data){
