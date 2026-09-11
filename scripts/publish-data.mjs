@@ -27,7 +27,11 @@ if(previousSnapshot?.bootstrap?.report?.source_updated_at&&(previousSnapshot.boo
  for(const [id,row] of newMap)if(!oldMap.has(id))events.unshift({id,kind:'OPENED',destination:row.destination,date:row.date,flight:row.flight,time:row.departureTime||'',cabin:row.cabin,source_updated_at:safe.source_updated_at,detected_at:detectedAt});
  for(const [id,row] of oldMap)if(!newMap.has(id)&&confidentlyAbsent(row,incoming))events.unshift({id,kind:'CLOSED',destination:row.destination,date:row.date,flight:row.flight,time:row.time||row.departureTime||'',cabin:row.cabin,source_updated_at:safe.source_updated_at,detected_at:detectedAt});
 }
-const cutoff=Date.now()-180*864e5;events=events.filter(e=>Date.parse(e.detected_at)>=cutoff).slice(0,2000);
+const now=Date.now(),historyCutoff=now-180*864e5,recentCutoff=now-7*864e5;
+events=events.filter(e=>Date.parse(e.detected_at)>=historyCutoff);
+const recent=events.filter(e=>Date.parse(e.detected_at)>=recentCutoff);
+const older=events.filter(e=>Date.parse(e.detected_at)<recentCutoff).slice(0,Math.max(0,2000-recent.length));
+events=[...recent,...older];
 fs.writeFileSync(historyPath,JSON.stringify({version:1,source_updated_at:safe.source_updated_at,events},null,2)+'\n');
 fs.writeFileSync(path.join('public-data','results.json.gz'),gzipSync(JSON.stringify(safe)));
-console.log(`Published ${safe.rows.length} observations; retained ${events.length} change events.`);
+console.log(`Published ${safe.rows.length} observations; retained ${events.length} change events (${recent.length} within 7 days).`);
