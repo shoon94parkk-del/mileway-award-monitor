@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
+import {normalizeRegion} from '../web/cloud-api.js';
 
 const read=file=>fs.readFileSync(file,'utf8');
 
@@ -50,13 +51,14 @@ test('mobile UI observer does not create a self-triggering mutation loop',()=>{
  assert.doesNotMatch(js,/characterData:true/);
 });
 
-test('region filters hide Guam and use only meaningful visible labels',()=>{
+test('region filters hide Guam and use canonical visible region keys',()=>{
  const cloudApi=read('web/cloud-api.js'),regions=read('web/global-regions.js'),status=read('web/regional-status.js'),build=read('scripts/build-cloud.mjs');
  assert.match(cloudApi,/EXCLUDED_DESTINATIONS=new Set\(\['GUM'\]\)/);
- assert.match(regions,/return '오세아니아'/);
- assert.match(regions,/return '발리'/);
- assert.match(regions,/return '러시아·몽골'/);
- assert.match(regions,/return '중동'/);
+ assert.equal(normalizeRegion('대양주/괌','SYD'),'오세아니아');
+ assert.equal(normalizeRegion('동남아시아/서남아시아','DPS'),'발리');
+ assert.equal(normalizeRegion('러시아/몽골/중앙아시아','UBN'),'러시아·몽골');
+ assert.equal(normalizeRegion('중동/아프리카','DXB'),'중동');
+ assert.match(regions,/REGION_ORDER=\['미주','유럽','오세아니아','발리','러시아·몽골','중동'\]/);
  assert.match(status,/발리·러시아·몽골·중동/);
  assert.match(build,/괌과 동북아/);
  assert.doesNotMatch(build,/중동\/아프리카의 모니터링 대상/);
@@ -74,10 +76,11 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after region filter cleanup',()=>{
+test('browser shell cache advances after region filter normalization',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v6/);
+ assert.match(sw,/mileway-shell-v7/);
  assert.match(sw,/global-regions\.js/);
+ assert.match(sw,/cloud-api\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
