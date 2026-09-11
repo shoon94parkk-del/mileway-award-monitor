@@ -10,6 +10,6 @@ test('calendar enhancement is idempotent and does not retrigger its own observer
  assert.match(source,/observer\.disconnect\(\);improveCalendar\(\);observer\.observe\(calendar,\{childList:true,subtree:true\}\)/);
 });
 
-test('service worker cache advances after calendar freeze fix',()=>{
- assert.match(read('web/service-worker.js'),/mileway-shell-v5/);
+test('service worker cache remains newer than the calendar freeze fix',()=>{
+ assert.match(read('web/service-worker.js'),/mileway-shell-v6/);
 });
