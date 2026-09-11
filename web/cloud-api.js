@@ -3,7 +3,8 @@ const SNAPSHOT_URL='./snapshot.json';
 const SNAPSHOT_TTL_MS=15000;
 const FAVORITES_KEY='mileway.cloud.favorites.v1';
 const SEARCHES_KEY='mileway.cloud.searches.v1';
-const EXCLUDED_DESTINATIONS=new Set(['GUM']);
+const EXCLUDED_DESTINATIONS=new Set(['GUM','SVO','VVO','LED','UBN','IKT','DXB','TLV']);
+const EXCLUDED_REGION_PATTERN=/(러시아|몽골|중앙아시아|중동|아프리카)/;
 const OCEANIA_DESTINATIONS=new Set(['MEL','BNE','SYD','AKL']);
 const RUSSIA_MONGOLIA_DESTINATIONS=new Set(['SVO','VVO','LED','UBN','IKT']);
 const MIDDLE_EAST_DESTINATIONS=new Set(['DXB','TLV']);
@@ -21,7 +22,7 @@ function groupRowsByDate(rows){
  }
  return groups;
 }
-function allowedDestination(value){return !EXCLUDED_DESTINATIONS.has(String(value||''));}
+function allowedRoute(route){return !EXCLUDED_DESTINATIONS.has(String(route?.code||route?.destination||''))&&!EXCLUDED_REGION_PATTERN.test(String(route?.region||''));}
 export function normalizeRegion(region,destination){
  const code=String(destination||'');
  if(code==='DPS')return '발리';
@@ -33,13 +34,21 @@ export function normalizeRegion(region,destination){
 const normalizeRoute=route=>({...route,region:normalizeRegion(route?.region,route?.code)});
 const normalizeRow=row=>({...row,region:normalizeRegion(row?.region,row?.destination)});
 function sanitizeSnapshot(data){
- const rows=(data?.rows||[]).filter(r=>allowedDestination(r.destination)).map(normalizeRow);
  const source=data?.bootstrap||{},report=source.report||{};
- const routes=(source.routes||[]).filter(r=>allowedDestination(r.code)).map(normalizeRoute);
- const filterDestinationArray=value=>(value||[]).filter(item=>allowedDestination(item?.destination||item?.code||item));
+ const rawRoutes=source.routes||[];
+ const routes=rawRoutes.filter(allowedRoute).map(normalizeRoute);
+ const visibleRouteCodes=new Set(routes.map(r=>r.code));
+ const isVisibleDestination=item=>{
+  const code=String(item?.destination||item?.code||item||'');
+  if(EXCLUDED_DESTINATIONS.has(code))return false;
+  if(item&&typeof item==='object'&&EXCLUDED_REGION_PATTERN.test(String(item.region||'')))return false;
+  return rawRoutes.length?visibleRouteCodes.has(code):true;
+ };
+ const rows=(data?.rows||[]).filter(r=>isVisibleDestination(r)).map(normalizeRow);
+ const filterDestinationArray=value=>(value||[]).filter(isVisibleDestination);
  const normalizeDestinationArray=value=>filterDestinationArray(value).map(item=>item&&typeof item==='object'?(item.code?normalizeRoute(item):item.destination?normalizeRow(item):item):item);
  const nextReport={...report,
-  target_routes:(report.target_routes||[]).filter(allowedDestination),
+  target_routes:(report.target_routes||[]).filter(isVisibleDestination),
   routes:normalizeDestinationArray(report.routes),coverage:filterDestinationArray(report.coverage),
   unqueryable:filterDestinationArray(report.unqueryable),failed:filterDestinationArray(report.failed)
  };
