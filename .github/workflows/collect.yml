@@ -37,6 +37,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Auto-register Telegram target
+        id: telegram
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/register-telegram.mjs
       - name: Install collector dependency
         id: install
         run: npm install --no-save --package-lock=false playwright@1.62.1
@@ -152,6 +159,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public-data/health.json
           if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
+          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
           if ! git diff --cached --quiet; then
             git commit -m "Update Mileway public state"
             git pull --rebase origin main
