@@ -84,9 +84,12 @@ function ensureMobileFilterSheet(){
  const signature=[f.region,f.destination,f.range,f.weekend].join('|');
  if(summary.dataset.signature!==signature){summary.dataset.signature=signature;summary.innerHTML=`<span class="mobile-filter-summary-text"><strong>${esc(f.region)}</strong> · ${esc(f.destination)} · ${esc(f.range)}${esc(f.weekend)}</span><span class="mobile-filter-summary-action">필터</span>`;}
  const count=$('#result-count')?.textContent?.trim();
- const apply=card.querySelector('.mobile-filter-sheet-apply');if(apply)apply.textContent=count?`${count} 결과 보기`:'결과 보기';
+ const apply=card.querySelector('.mobile-filter-sheet-apply');
+ const applyLabel=count?`${count} 결과 보기`:'결과 보기';
+ if(apply&&apply.textContent!==applyLabel)apply.textContent=applyLabel;
  const selected=$('#regions button.selected');
- if(mobileQuery.matches&&selected&&summary.dataset.scrolledRegion!==selected.dataset.region){summary.dataset.scrolledRegion=selected.dataset.region||'all';selected.scrollIntoView({block:'nearest',inline:'center'});}
+ const selectedKey=selected?.dataset.region||'all';
+ if(mobileQuery.matches&&selected&&summary.dataset.scrolledRegion!==selectedKey){summary.dataset.scrolledRegion=selectedKey;requestAnimationFrame(()=>selected.scrollIntoView({block:'nearest',inline:'center'}));}
  syncMobileFilterState();
 }
 
@@ -110,10 +113,11 @@ function bindMobileUi(){
 }
 
 function sync(){moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();syncMobileFilterState();}
+function scheduleSync(){if(scheduleSync.pending)return;scheduleSync.pending=requestAnimationFrame(()=>{scheduleSync.pending=0;sync();});}
 
 bindMobileUi();
-const observer=new MutationObserver(()=>{clearTimeout(observer.t);observer.t=setTimeout(sync,40);});
-observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
-document.addEventListener('change',()=>setTimeout(sync,0),true);
-document.addEventListener('click',()=>setTimeout(sync,50),true);
-for(let i=0;i<30;i++)setTimeout(sync,i*200);
+const observer=new MutationObserver(scheduleSync);
+observer.observe(document.body,{childList:true,subtree:true});
+document.addEventListener('change',scheduleSync,true);
+document.addEventListener('click',scheduleSync,true);
+for(let i=0;i<8;i++)setTimeout(scheduleSync,i*250);
