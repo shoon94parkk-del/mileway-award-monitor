@@ -10,8 +10,7 @@ const scopedRoutes=[
  {code:'CDG',region:'유럽'},
  {code:'JFK',region:'미주'},
  {code:'SYD',region:'대양주/괌'},
- {code:'DPS',region:'동남아시아/서남아시아'},
- {code:'DXB',region:'중동/아프리카'}
+ {code:'DPS',region:'동남아시아/서남아시아'}
 ];
 
 test('parses Korean Air public source timestamp',()=>{
@@ -32,8 +31,8 @@ test('legacy partial snapshot forces refresh even when source time is unchanged'
   assert.equal(publishedSnapshotNeedsRefresh({bootstrap:{report:{routes}}},current),true);
 });
 
-test('old broad Asia snapshot forces one cleanup refresh',()=>{
-  const routes=[...scopedRoutes,{code:'NRT',region:'동북아시아'},{code:'BKK',region:'동남아시아/서남아시아'}];
+test('old broad Asia or removed-region snapshot forces one cleanup refresh',()=>{
+  const routes=[...scopedRoutes,{code:'NRT',region:'동북아시아'},{code:'BKK',region:'동남아시아/서남아시아'},{code:'DXB',region:'중동/아프리카'}];
   assert.equal(publishedSnapshotNeedsRefresh({bootstrap:{report:{scope:'WORLDWIDE',routes}}},current),true);
 });
 
