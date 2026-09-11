@@ -34,26 +34,17 @@ function redis(parts){return new Promise((resolve,reject)=>{
  });
  });}
 
-async function readRules(){
- const raw=await redis(['GET',STORE_KEY]);if(!raw)return [];
- try{return normalizeAlertRules(JSON.parse(raw));}catch{return [];}
-}
+async function readRules(){const raw=await redis(['GET',STORE_KEY]);if(!raw)return [];try{return normalizeAlertRules(JSON.parse(raw));}catch{return [];}}
 async function writeRules(rules){const normalized=normalizeAlertRules(rules).slice(0,50);await redis(['SET',STORE_KEY,JSON.stringify(normalized)]);return normalized;}
-function json(res,status,value,origin){
- if(origin)res.setHeader('Access-Control-Allow-Origin',origin);
- res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');
- res.writeHead(status);res.end(JSON.stringify(value));
-}
+function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.writeHead(status);res.end(JSON.stringify(value));}
 function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
 function authorized(req){if(!ADMIN_TOKEN)return false;const auth=String(req.headers.authorization||'');const supplied=auth.startsWith('Bearer ')?auth.slice(7):'';const a=Buffer.from(supplied),b=Buffer.from(ADMIN_TOKEN);return a.length===b.length&&a.length>0&&crypto.timingSafeEqual(a,b);}
 async function body(req){return new Promise((resolve,reject)=>{let data='';req.on('data',chunk=>{data+=chunk;if(data.length>65536){reject(new Error('Payload too large'));req.destroy();}});req.on('end',()=>{try{resolve(data?JSON.parse(data):{});}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 
 const server=http.createServer(async(req,res)=>{
  const origin=allowedOrigin(req);
- if(req.headers.origin&&!origin){return json(res,403,{error:'Origin not allowed'},'');}
- if(req.method==='OPTIONS'){
-  if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');res.writeHead(204);return res.end();
- }
+ if(req.headers.origin&&!origin)return json(res,403,{error:'Origin not allowed'},'');
+ if(req.method==='OPTIONS'){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');res.writeHead(204);return res.end();}
  try{
   const url=new URL(req.url||'/','http://localhost');
   if(req.method==='GET'&&url.pathname==='/health'){await redis(['PING']);return json(res,200,{ok:true},origin);}
@@ -62,8 +53,7 @@ const server=http.createServer(async(req,res)=>{
    if(!authorized(req))return json(res,401,{error:'Unauthorized'},origin);
    const input=await body(req),current=await readRules();
    const proposed={id:String(input.id||crypto.randomUUID()),name:input.name,region:input.region,destinations:input.destinations,cabins:input.cabins,start:input.start,end:input.end,weekend:input.weekend,flights:input.flights};
-   const rule=normalizeAlertRules([proposed])[0];
-   const rules=await writeRules([...current.filter(r=>r.id!==rule.id),rule]);
+   const rule=normalizeAlertRules([proposed])[0],rules=await writeRules([...current.filter(r=>r.id!==rule.id),rule]);
    return json(res,201,{ok:true,rule,rules},origin);
   }
   if(req.method==='DELETE'&&url.pathname.startsWith('/rules/')){
@@ -74,4 +64,5 @@ const server=http.createServer(async(req,res)=>{
   return json(res,404,{error:'Not found'},origin);
  }catch(error){console.error(error);return json(res,500,{error:'Server error'},origin);}
 });
+redis(['PING']).then(()=>console.log('Mileway alert store ready')).catch(error=>console.error(`Alert store unavailable: ${error.message}`));
 server.listen(PORT,'0.0.0.0',()=>console.log(`Mileway alert API listening on ${PORT}`));
