@@ -19,7 +19,8 @@ try{
  const rows=store.list({limit:50000}).rows.map(enrich);
  fs.writeFileSync('dist/snapshot.json',JSON.stringify({bootstrap,rows}));
  for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
- fs.writeFileSync('dist/cloud-api.js',fs.readFileSync('web/cloud-api.js','utf8').replace("'./snapshot.json'","'https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json'"));
+ const cloudApi=replaceRequired(fs.readFileSync('web/cloud-api.js','utf8'),"const SNAPSHOT_URL='./snapshot.json';","const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';",'live cloud snapshot source');
+ fs.writeFileSync('dist/cloud-api.js',cloudApi);
  let html=fs.readFileSync('web/index.html','utf8').replaceAll('내 PC 전용','브라우저 저장').replaceAll('내 여행 계획은 이곳에만','찜과 검색 조건은 이 브라우저에만 저장');
  html=replaceRequired(html,'</head>','<meta name="theme-color" content="#2764ef"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/cloud-enhancements.css"><link rel="stylesheet" href="/ui-v2.css"></head>','cloud head assets');
  html=replaceRequired(html,'</body>','<script type="module" src="/cloud-enhancements.js"></script><script type="module" src="/global-regions.js"></script><script type="module" src="/regional-status.js"></script><script type="module" src="/ui-v2.js"></script></body>','cloud enhancement scripts');
@@ -37,5 +38,6 @@ try{
  js=replaceRequired(js,'renderDataBase();',cloudPanel,'cloud data panel');
  fs.writeFileSync('dist/app.js',js);
  fs.appendFileSync('dist/style.css','\n.sidebar-foot{font-size:12px}\n');
+ if(!cloudApi.includes('raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json'))throw Error('Cloud build did not wire the live GitHub snapshot');
  console.log(`Cloud build: ${bootstrap.stats.available} available combinations, ${bootstrap.routes.length} worldwide routes, ${recentChanges.length} retained changes`);
 }finally{store.db.close();}
