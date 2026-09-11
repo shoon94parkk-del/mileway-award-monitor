@@ -16,7 +16,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Sync Telegram connection and alert commands
+      - name: Back up instant web alert rules
+        shell: bash
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          try {
+            const res = await fetch('https://mileway-alert-api.onrender.com/rules');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            fs.writeFileSync('public-data/telegram-rules.json', JSON.stringify({version:1,rules:Array.isArray(data.rules)?data.rules:[],updated_at:new Date().toISOString()}, null, 2)+'\n');
+            console.log(`Backed up ${Array.isArray(data.rules)?data.rules.length:0} instant alert rules.`);
+          } catch (error) {
+            console.log(`Instant alert API backup skipped: ${error.message}`);
+          }
+          NODE
+      - name: Sync Telegram connection and fallback alert commands
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
