@@ -2,21 +2,26 @@ import http from 'node:http';
 import net from 'node:net';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import {normalizeAlertRules} from './alert-rules.mjs';
+import {normalizeAlertRules,evaluateAlerts,alertSeatKey} from './alert-rules.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const ADMIN_TOKEN=String(process.env.ALERT_ADMIN_TOKEN||'');
 const PAIR_CODE=String(process.env.ALERT_PAIR_CODE||'');
 const REDIS_HOST=process.env.REDIS_HOST||'red-dahr62ss728c73d89jbg';
 const REDIS_PORT=Number(process.env.REDIS_PORT||6379);
-const STORE_KEY='mileway:alert-rules:v1';
-const TEST_REQUEST_KEY='mileway:telegram-test-request:v1';
-const TELEGRAM_CONFIG_KEY='mileway:telegram-direct-config:v1';
+const LEGACY_STORE_KEY='mileway:alert-rules:v1';
+const OWNERS_KEY='mileway:alert-owners:v2';
+const RULE_PREFIX='mileway:alert-rules:v2:';
+const STATE_PREFIX='mileway:alert-state:v2:';
 const DEVICE_PREFIX='mileway:device-token:';
+const LINK_PREFIX='mileway:telegram-link:';
 const PAIR_USED_PREFIX='mileway:pair-used:';
+const TELEGRAM_CONFIG_KEY='mileway:telegram-direct-config:v2';
 const ALLOWED_ORIGIN=process.env.ALLOWED_ORIGIN||'https://mileway-award-monitor.onrender.com';
+const PUBLIC_API_URL=process.env.PUBLIC_API_URL||'https://mileway-alert-api.onrender.com';
+const BACKUP_URL=process.env.ALERT_BACKUP_URL||'https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/ops-state/ops/alerts.enc.json';
 const CONFIG_SECRET=ADMIN_TOKEN||PAIR_CODE;
-const CONFIG_CONTEXT='mileway.telegram.direct-config.v1';
+const CONFIG_CONTEXT='mileway.telegram.direct-config.v2';
 
 function encodeCommand(parts){return `*${parts.length}\r\n`+parts.map(part=>{const s=String(part);return `$${Buffer.byteLength(s)}\r\n${s}\r\n`;}).join('');}
 function redis(parts){return new Promise((resolve,reject)=>{
@@ -34,72 +39,103 @@ function redis(parts){return new Promise((resolve,reject)=>{
  });}
 const digest=value=>crypto.createHash('sha256').update(String(value)).digest('hex');
 const safeEqual=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&x.length>0&&crypto.timingSafeEqual(x,y);};
-async function readRules(){const raw=await redis(['GET',STORE_KEY]);if(!raw)return [];try{return normalizeAlertRules(JSON.parse(raw));}catch{return [];}}
-async function writeRules(rules){const normalized=normalizeAlertRules(rules).slice(0,50);await redis(['SET',STORE_KEY,JSON.stringify(normalized)]);return normalized;}
-async function readTestRequest(){const raw=await redis(['GET',TEST_REQUEST_KEY]);if(!raw)return null;try{return JSON.parse(raw);}catch{return null;}}
-async function writeTestRequest(){const request={id:crypto.randomUUID(),requested_at:new Date().toISOString()};await redis(['SET',TEST_REQUEST_KEY,JSON.stringify(request)]);return request;}
+const parseJson=(raw,fallback=null)=>{try{return raw?JSON.parse(raw):fallback;}catch{return fallback;}};
+
 function configKey(){if(!CONFIG_SECRET)return null;return crypto.createHash('sha256').update(CONFIG_CONTEXT).update('\0').update(CONFIG_SECRET).digest();}
-function sealConfig(value){const key=configKey();if(!key)throw new Error('Telegram direct config secret unavailable');const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),plain=Buffer.from(JSON.stringify(value),'utf8'),ciphertext=Buffer.concat([cipher.update(plain),cipher.final()]);return {version:1,iv:iv.toString('base64url'),tag:cipher.getAuthTag().toString('base64url'),ciphertext:ciphertext.toString('base64url')};}
-function openConfig(record){const key=configKey();if(!key||!record||record.version!==1)return null;try{const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(record.iv,'base64url'));decipher.setAuthTag(Buffer.from(record.tag,'base64url'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(record.ciphertext,'base64url')),decipher.final()]).toString('utf8'));}catch{return null;}}
-async function writeTelegramConfig(config){await redis(['SET',TELEGRAM_CONFIG_KEY,JSON.stringify(sealConfig(config))]);}
-async function readTelegramConfig(){const raw=await redis(['GET',TELEGRAM_CONFIG_KEY]);if(!raw)return null;try{return openConfig(JSON.parse(raw));}catch{return null;}}
+function sealConfig(value){const key=configKey();if(!key)throw new Error('Alert encryption secret unavailable');const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),plain=Buffer.from(JSON.stringify(value),'utf8'),ciphertext=Buffer.concat([cipher.update(plain),cipher.final()]);return {version:2,iv:iv.toString('base64url'),tag:cipher.getAuthTag().toString('base64url'),ciphertext:ciphertext.toString('base64url')};}
+function openConfig(record){const key=configKey();if(!key||!record||record.version!==2)return null;try{const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(record.iv,'base64url'));decipher.setAuthTag(Buffer.from(record.tag,'base64url'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(record.ciphertext,'base64url')),decipher.final()]).toString('utf8'));}catch{return null;}}
+
+async function readOwners(){const value=parseJson(await redis(['GET',OWNERS_KEY]),[]);return Array.isArray(value)?value.filter(x=>/^[a-f0-9]{64}$/.test(String(x))):[];}
+async function addOwner(owner){const owners=await readOwners();if(!owners.includes(owner)){owners.push(owner);await redis(['SET',OWNERS_KEY,JSON.stringify(owners.slice(-5000))]);}return owners;}
+async function readDevice(owner){const raw=await redis(['GET',DEVICE_PREFIX+owner]);if(!raw)return null;if(raw==='1')return {version:1,legacy:true};return openConfig(parseJson(raw))||null;}
+async function writeDevice(owner,record){await redis(['SET',DEVICE_PREFIX+owner,JSON.stringify(sealConfig({...record,version:2}))]);await addOwner(owner);}
+async function readRules(owner,{migrateLegacy=false}={}){
+ const raw=await redis(['GET',RULE_PREFIX+owner]);if(raw)return normalizeAlertRules(parseJson(raw,[]));
+ if(migrateLegacy){const legacy=await redis(['GET',LEGACY_STORE_KEY]);if(legacy){const rules=normalizeAlertRules(parseJson(legacy,[]));await writeRules(owner,rules);await redis(['DEL',LEGACY_STORE_KEY]);return rules;}}
+ return [];
+}
+async function writeRules(owner,rules){const normalized=normalizeAlertRules(rules).slice(0,50);await redis(['SET',RULE_PREFIX+owner,JSON.stringify(normalized)]);await addOwner(owner);return normalized;}
+async function readState(owner){return parseJson(await redis(['GET',STATE_PREFIX+owner]),{});}
+async function writeState(owner,state){await redis(['SET',STATE_PREFIX+owner,JSON.stringify(state)]);}
+
 async function telegramApi(token,method,payload=null){const res=await fetch(`https://api.telegram.org/bot${token}/${method}`,payload?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}:{});let data=null;try{data=await res.json();}catch{}if(!res.ok||!data?.ok)throw new Error(`Telegram ${method} 요청 실패`);return data.result;}
 function expectedBotUsername(){try{return String(JSON.parse(fs.readFileSync('public-data/telegram-target.json','utf8'))?.bot_username||'');}catch{return '';}}
+async function writeTelegramConfig(config){await redis(['SET',TELEGRAM_CONFIG_KEY,JSON.stringify(sealConfig(config))]);}
+async function readTelegramConfig(){const raw=await redis(['GET',TELEGRAM_CONFIG_KEY]);if(!raw)return null;return openConfig(parseJson(raw));}
 async function bootstrapTelegram(input){
- const token=String(input?.token||''),chatId=String(input?.chat_id||''),claimed=String(input?.bot_username||'');if(!token||!chatId)throw new Error('Telegram bootstrap data missing');
+ const token=String(input?.token||''),defaultChatId=String(input?.chat_id||''),claimed=String(input?.bot_username||'');if(!token)throw new Error('Telegram bootstrap data missing');
  const me=await telegramApi(token,'getMe'),username=String(me?.username||''),expected=expectedBotUsername();
  if(!username||(expected&&username!==expected)||(claimed&&username!==claimed))throw new Error('Telegram bot identity mismatch');
- await writeTelegramConfig({token,chatId,bot_username:username,updated_at:new Date().toISOString()});return {bot_username:username,chat_registered:true};
+ const prior=await readTelegramConfig(),webhookSecret=prior?.webhook_secret||crypto.randomBytes(24).toString('base64url');
+ const config={token,default_chat_id:defaultChatId||prior?.default_chat_id||'',bot_username:username,webhook_secret:webhookSecret,updated_at:new Date().toISOString()};
+ await writeTelegramConfig(config);
+ await telegramApi(token,'setWebhook',{url:`${PUBLIC_API_URL}/telegram/webhook`,secret_token:webhookSecret,allowed_updates:['message'],drop_pending_updates:false});
+ return {bot_username:username,chat_registered:!!config.default_chat_id,webhook:true};
 }
-async function sendDirectTelegram(text){const config=await readTelegramConfig();if(!config?.token||!config?.chatId)return {sent:false,reason:'direct_config_missing'};await telegramApi(config.token,'sendMessage',{chat_id:config.chatId,text,disable_web_page_preview:true});return {sent:true,bot_username:config.bot_username||null};}
-function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.writeHead(status);res.end(JSON.stringify(value));}
-function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
-async function authorized(req){
- const auth=String(req.headers.authorization||''),supplied=auth.startsWith('Bearer ')?auth.slice(7):'';if(!supplied)return false;
- if(ADMIN_TOKEN&&safeEqual(supplied,ADMIN_TOKEN))return true;
- return !!(await redis(['GET',DEVICE_PREFIX+digest(supplied)]));
-}
-async function body(req){return new Promise((resolve,reject)=>{let data='';req.on('data',chunk=>{data+=chunk;if(data.length>65536){reject(new Error('Payload too large'));req.destroy();}});req.on('end',()=>{try{resolve(data?JSON.parse(data):{});}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+async function chatForOwner(owner){const device=await readDevice(owner),config=await readTelegramConfig();if(device?.chat_id)return {chatId:String(device.chat_id),token:config?.token||'',bot_username:config?.bot_username||''};if(device?.legacy&&config?.default_chat_id)return {chatId:String(config.default_chat_id),token:config.token||'',bot_username:config.bot_username||''};return {chatId:'',token:config?.token||'',bot_username:config?.bot_username||''};}
+async function sendDirectTelegram(owner,text){const target=await chatForOwner(owner);if(!target.token||!target.chatId)return {sent:false,reason:'telegram_not_linked'};await telegramApi(target.token,'sendMessage',{chat_id:target.chatId,text,disable_web_page_preview:true});return {sent:true,bot_username:target.bot_username||null};}
+
+async function createDevice(){const token=crypto.randomBytes(32).toString('base64url'),owner=digest(token);await writeDevice(owner,{created_at:new Date().toISOString(),legacy:false});return {token,owner};}
 async function pairDevice(code){
  if(!PAIR_CODE||!safeEqual(code,PAIR_CODE))return {status:401,error:'연결 코드가 올바르지 않습니다.'};
- const usedKey=PAIR_USED_PREFIX+digest(PAIR_CODE),first=await redis(['SETNX',usedKey,'1']);
- if(first!==1)return {status:410,error:'이 연결 링크는 이미 사용됐습니다.'};
- const token=crypto.randomBytes(32).toString('base64url');await redis(['SET',DEVICE_PREFIX+digest(token),'1']);return {status:200,token};
+ const usedKey=PAIR_USED_PREFIX+digest(PAIR_CODE),first=await redis(['SETNX',usedKey,'1']);if(first!==1)return {status:410,error:'이 연결 링크는 이미 사용됐습니다.'};
+ const token=crypto.randomBytes(32).toString('base64url'),owner=digest(token);await writeDevice(owner,{created_at:new Date().toISOString(),legacy:true});return {status:200,token};
+}
+async function authContext(req){
+ const auth=String(req.headers.authorization||''),supplied=auth.startsWith('Bearer ')?auth.slice(7):'';if(!supplied)return null;
+ const owner=digest(supplied);
+ if(ADMIN_TOKEN&&safeEqual(supplied,ADMIN_TOKEN)){if(!(await readDevice(owner)))await writeDevice(owner,{created_at:new Date().toISOString(),legacy:true});return {owner,admin:true,legacy:true};}
+ const device=await readDevice(owner);if(!device)return null;await addOwner(owner);return {owner,admin:false,legacy:!!device.legacy};
+}
+async function internalAuthorized(req){
+ const auth=String(req.headers.authorization||''),supplied=auth.startsWith('Bearer ')?auth.slice(7):'';if(!supplied)return false;
+ if(ADMIN_TOKEN&&safeEqual(supplied,ADMIN_TOKEN))return true;
+ const config=await readTelegramConfig();if(config?.token&&safeEqual(supplied,config.token))return true;
+ try{const me=await telegramApi(supplied,'getMe'),expected=expectedBotUsername();return !!(me?.username&&expected&&me.username===expected);}catch{return false;}
+}
+async function createTelegramLink(owner){const config=await readTelegramConfig();if(!config?.bot_username)throw new Error('Telegram bot is not ready');const code=crypto.randomBytes(9).toString('base64url');await redis(['SETEX',LINK_PREFIX+code,'900',JSON.stringify({owner,created_at:new Date().toISOString()})]);return {code,bot_username:config.bot_username,url:`https://t.me/${config.bot_username}?start=mw_${code}`};}
+async function bindTelegramLink(code,chatId){const key=LINK_PREFIX+String(code||'').replace(/^mw_/,'');const link=parseJson(await redis(['GET',key]));if(!link?.owner||!chatId)return false;const current=await readDevice(link.owner)||{};await writeDevice(link.owner,{...current,legacy:false,chat_id:String(chatId),telegram_linked_at:new Date().toISOString()});await redis(['DEL',key]);return true;}
+async function handleTelegramWebhook(req,input){const config=await readTelegramConfig(),secret=String(req.headers['x-telegram-bot-api-secret-token']||'');if(!config?.webhook_secret||!safeEqual(secret,config.webhook_secret))return false;const msg=input?.message,text=String(msg?.text||''),chatId=String(msg?.chat?.id||'');const match=text.match(/^\/start(?:@\w+)?\s+mw_([A-Za-z0-9_-]+)$/);if(match&&chatId){const linked=await bindTelegramLink(match[1],chatId);if(linked)await telegramApi(config.token,'sendMessage',{chat_id:chatId,text:'✅ Mileway Telegram 연결 완료\n이제 사이트에서 등록한 좌석 알림이 이 채팅으로 즉시 도착합니다.'});return true;}if(/^\/start(?:@\w+)?$/.test(text)&&chatId){await telegramApi(config.token,'sendMessage',{chat_id:chatId,text:'Mileway 사이트의 알림 화면에서 “Telegram 연결”을 누르면 이 채팅을 안전하게 연결할 수 있습니다.'});return true;}return true;}
+
+const cabin=row=>row.cabin==='FIRST'?'일등석':'프레스티지';
+const rowText=row=>`${row.date} · ${row.destination} · ${row.flight}${row.time?' '+row.time:''} · ${cabin(row)}`;
+function buildMessages(opened,sourceUpdatedAt){return opened.map(({rule,rows})=>{const visible=rows.slice(0,12),more=rows.length-visible.length,lines=visible.map(row=>`• ${rowText(row)}`);if(more)lines.push(`• 외 ${more}건`);const ids=rows.map(alertSeatKey).sort().join(',');return {text:`🔔 ${rule.name}\n${lines.join('\n')}\n\n대한항공 공개 일일 자료 기준: ${sourceUpdatedAt}\n예약 전 대한항공에서 최종 확인해 주세요.`,idempotency:`${sourceUpdatedAt}|${rule.id}|${ids}`};});}
+async function notifyAll(input){
+ const rows=Array.isArray(input?.rows)?input.rows:[],sourceUpdatedAt=String(input?.source_updated_at||'미확인'),owners=await readOwners();let users=0,sentSeats=0,skippedUnlinked=0,failures=[];
+ for(const owner of owners){const rules=await readRules(owner);if(!rules.length)continue;const target=await chatForOwner(owner);if(!target.chatId||!target.token){skippedUnlinked++;continue;}const prior=await readState(owner),result=evaluateAlerts(rows,rules,prior),messages=buildMessages(result.opened,sourceUpdatedAt);try{for(const message of messages)await telegramApi(target.token,'sendMessage',{chat_id:target.chatId,text:message.text,disable_web_page_preview:true});await writeState(owner,{version:2,rule_hash:result.rule_hash,rule_meta:result.rule_meta,active:result.active,source_updated_at:sourceUpdatedAt,updated_at:new Date().toISOString()});users++;sentSeats+=result.opened.reduce((n,x)=>n+x.rows.length,0);}catch(error){failures.push(error.message);}}
+ return {users,sent_seats:sentSeats,skipped_unlinked:skippedUnlinked,failures};
 }
 
+async function buildEncryptedBackup(){const owners=await readOwners(),devices={},rules={},states={};for(const owner of owners){devices[owner]=await redis(['GET',DEVICE_PREFIX+owner]);rules[owner]=await redis(['GET',RULE_PREFIX+owner]);states[owner]=await redis(['GET',STATE_PREFIX+owner]);}const payload={version:2,created_at:new Date().toISOString(),owners,devices,rules,states,legacy_store:await redis(['GET',LEGACY_STORE_KEY]),telegram_config:await redis(['GET',TELEGRAM_CONFIG_KEY])};return sealConfig(payload);}
+async function restoreBackupIfEmpty(){
+ try{await redis(['PING']);const owners=await redis(['GET',OWNERS_KEY]);if(owners)return false;const res=await fetch(BACKUP_URL+'?t='+Date.now(),{cache:'no-store'});if(!res.ok)return false;const record=await res.json(),payload=openConfig(record);if(!payload||payload.version!==2||!Array.isArray(payload.owners))return false;await redis(['SET',OWNERS_KEY,JSON.stringify(payload.owners)]);for(const owner of payload.owners){if(payload.devices?.[owner])await redis(['SET',DEVICE_PREFIX+owner,payload.devices[owner]]);if(payload.rules?.[owner])await redis(['SET',RULE_PREFIX+owner,payload.rules[owner]]);if(payload.states?.[owner])await redis(['SET',STATE_PREFIX+owner,payload.states[owner]]);}if(payload.legacy_store)await redis(['SET',LEGACY_STORE_KEY,payload.legacy_store]);if(payload.telegram_config)await redis(['SET',TELEGRAM_CONFIG_KEY,payload.telegram_config]);console.log(`Restored encrypted alert backup for ${payload.owners.length} device(s).`);return true;}catch(error){console.log(`Alert backup restore skipped: ${error.message}`);return false;}
+}
+
+function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.writeHead(status);res.end(JSON.stringify(value));}
+function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
+async function body(req){return new Promise((resolve,reject)=>{let data='';req.on('data',chunk=>{data+=chunk;if(data.length>2_000_000){reject(new Error('Payload too large'));req.destroy();}});req.on('end',()=>{try{resolve(data?JSON.parse(data):{});}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+
+const restorePromise=restoreBackupIfEmpty();
 const server=http.createServer(async(req,res)=>{
  const origin=allowedOrigin(req);if(req.headers.origin&&!origin)return json(res,403,{error:'Origin not allowed'},'');
  if(req.method==='OPTIONS'){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');res.writeHead(204);return res.end();}
  try{
-  const url=new URL(req.url||'/','http://localhost');
-  if(req.method==='GET'&&url.pathname==='/health'){await redis(['PING']);const telegram=await readTelegramConfig();return json(res,200,{ok:true,telegram_direct_configured:!!telegram?.token},origin);}
-  if(req.method==='POST'&&url.pathname==='/pair'){
-   const input=await body(req),result=await pairDevice(String(input.code||''));if(result.error)return json(res,result.status,{error:result.error},origin);return json(res,200,{ok:true,token:result.token},origin);
-  }
-  if(req.method==='POST'&&url.pathname==='/telegram/bootstrap'){
-   const result=await bootstrapTelegram(await body(req));return json(res,200,{ok:true,...result},origin);
-  }
-  if(req.method==='GET'&&url.pathname==='/telegram-test'){return json(res,200,{request:await readTestRequest()},origin);}
-  if(req.method==='POST'&&url.pathname==='/telegram-test'){
-   if(!(await authorized(req)))return json(res,401,{error:'Unauthorized'},origin);
-   const now=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date());
-   const direct=await sendDirectTelegram(`✅ Mileway 실제 알림 테스트 성공\n${now} (한국시간)\n\n이 메시지가 보이면 Telegram 좌석 알림이 정상입니다.`);
-   if(direct.sent)return json(res,200,{ok:true,sent:true,mode:'direct',bot_username:direct.bot_username},origin);
-   const request=await writeTestRequest();return json(res,202,{ok:true,sent:false,mode:'fallback_queue',request,eta_minutes:5},origin);
-  }
-  if(req.method==='GET'&&url.pathname==='/rules'){const rules=await readRules();return json(res,200,{version:1,rules,updated_at:new Date().toISOString()},origin);}
-  if(req.method==='POST'&&url.pathname==='/rules'){
-   if(!(await authorized(req)))return json(res,401,{error:'Unauthorized'},origin);
-   const input=await body(req),current=await readRules();
-   const proposed={id:String(input.id||crypto.randomUUID()),name:input.name,region:input.region,destinations:input.destinations,cabins:input.cabins,start:input.start,end:input.end,weekend:input.weekend,flights:input.flights};
-   const rule=normalizeAlertRules([proposed])[0],rules=await writeRules([...current.filter(r=>r.id!==rule.id),rule]);return json(res,201,{ok:true,rule,rules},origin);
-  }
-  if(req.method==='DELETE'&&url.pathname.startsWith('/rules/')){
-   if(!(await authorized(req)))return json(res,401,{error:'Unauthorized'},origin);
-   const id=decodeURIComponent(url.pathname.slice('/rules/'.length)),current=await readRules(),rules=await writeRules(current.filter(r=>r.id!==id));return json(res,200,{ok:true,rules},origin);
-  }
+  await restorePromise;const url=new URL(req.url||'/','http://localhost');
+  if(req.method==='GET'&&url.pathname==='/health'){await redis(['PING']);const telegram=await readTelegramConfig();return json(res,200,{ok:true,telegram_direct_configured:!!telegram?.token,webhook_configured:!!telegram?.webhook_secret,storage_backup:'encrypted-ops-branch'},origin);}
+  if(req.method==='POST'&&url.pathname==='/device'){const device=await createDevice();return json(res,201,{ok:true,token:device.token},origin);}
+  if(req.method==='POST'&&url.pathname==='/pair'){const input=await body(req),result=await pairDevice(String(input.code||''));if(result.error)return json(res,result.status,{error:result.error},origin);return json(res,200,{ok:true,token:result.token},origin);}
+  if(req.method==='POST'&&url.pathname==='/telegram/bootstrap'){const result=await bootstrapTelegram(await body(req));return json(res,200,{ok:true,...result},origin);}
+  if(req.method==='POST'&&url.pathname==='/telegram/webhook'){const input=await body(req),ok=await handleTelegramWebhook(req,input);return json(res,ok?200:401,{ok},'');}
+  if(req.method==='GET'&&url.pathname==='/me'){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);const target=await chatForOwner(ctx.owner),rules=await readRules(ctx.owner,{migrateLegacy:ctx.legacy});return json(res,200,{ok:true,telegram_linked:!!target.chatId,bot_username:target.bot_username||null,rule_count:rules.length},origin);}
+  if(req.method==='POST'&&url.pathname==='/telegram/link'){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);return json(res,200,{ok:true,...await createTelegramLink(ctx.owner)},origin);}
+  if(req.method==='POST'&&url.pathname==='/telegram-test'){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);const now=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date()),direct=await sendDirectTelegram(ctx.owner,`✅ Mileway 실제 알림 테스트 성공\n${now} (한국시간)\n\n이 메시지가 보이면 Telegram 좌석 알림이 정상입니다.`);if(!direct.sent)return json(res,409,{error:'Telegram 연결이 필요합니다.'},origin);return json(res,200,{ok:true,sent:true,mode:'direct',bot_username:direct.bot_username},origin);}
+  if(req.method==='GET'&&url.pathname==='/rules'){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);const rules=await readRules(ctx.owner,{migrateLegacy:ctx.legacy});return json(res,200,{version:2,rules,updated_at:new Date().toISOString()},origin);}
+  if(req.method==='POST'&&url.pathname==='/rules'){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);const input=await body(req),current=await readRules(ctx.owner,{migrateLegacy:ctx.legacy}),proposed={id:String(input.id||crypto.randomUUID()),name:input.name,region:input.region,destinations:input.destinations,cabins:input.cabins,start:input.start,end:input.end,weekend:input.weekend,flights:input.flights},rule=normalizeAlertRules([proposed])[0],rules=await writeRules(ctx.owner,[...current.filter(r=>r.id!==rule.id),rule]);return json(res,201,{ok:true,rule,rules},origin);}
+  if(req.method==='DELETE'&&url.pathname.startsWith('/rules/')){const ctx=await authContext(req);if(!ctx)return json(res,401,{error:'Unauthorized'},origin);const id=decodeURIComponent(url.pathname.slice('/rules/'.length)),current=await readRules(ctx.owner,{migrateLegacy:ctx.legacy}),rules=await writeRules(ctx.owner,current.filter(r=>r.id!==id));return json(res,200,{ok:true,rules},origin);}
+  if(req.method==='POST'&&url.pathname==='/internal/notify'){if(!(await internalAuthorized(req)))return json(res,401,{error:'Unauthorized'},origin);const result=await notifyAll(await body(req));return json(res,result.failures.length?207:200,{ok:!result.failures.length,...result},origin);}
+  if(req.method==='GET'&&url.pathname==='/internal/backup'){if(!(await internalAuthorized(req)))return json(res,401,{error:'Unauthorized'},origin);return json(res,200,await buildEncryptedBackup(),origin);}
   return json(res,404,{error:'Not found'},origin);
- }catch(error){console.error(error);return json(res,500,{error:'Server error'},origin);}
+ }catch(error){console.error(error);return json(res,500,{error:error?.message==='Payload too large'?'Payload too large':'Server error'},origin);}
 });
-redis(['PING']).then(()=>console.log('Mileway alert store ready')).catch(error=>console.error(`Alert store unavailable: ${error.message}`));
+restorePromise.then(()=>redis(['PING'])).then(()=>console.log('Mileway alert store ready')).catch(error=>console.error(`Alert store unavailable: ${error.message}`));
 server.listen(PORT,'0.0.0.0',()=>console.log(`Mileway alert API listening on ${PORT}`));
