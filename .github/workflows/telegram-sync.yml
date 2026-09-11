@@ -1,6 +1,12 @@
 name: Sync Telegram alerts
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/alert-api.mjs'
+      - 'scripts/register-telegram.mjs'
+      - '.github/workflows/telegram-sync.yml'
   schedule:
     - cron: '*/5 * * * *'
 permissions:
@@ -31,7 +37,7 @@ jobs:
             console.log(`Instant alert API backup skipped: ${error.message}`);
           }
           NODE
-      - name: Sync Telegram connection and fallback alert commands
+      - name: Sync Telegram connection and provision instant delivery
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
