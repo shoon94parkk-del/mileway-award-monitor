@@ -12,6 +12,14 @@ async function fetchTestRequest(){
  const res=await fetch(ALERT_API_URL+'/telegram-test',{headers:{Accept:'application/json'}});if(!res.ok)return null;
  const data=await res.json();return data?.request||null;
 }
+async function bootstrapDirectDelivery(token,target){
+ if(!token||!target?.chatId)return false;
+ try{
+  const res=await fetch(ALERT_API_URL+'/telegram/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,chat_id:String(target.chatId),bot_username:target.bot_username||''})});
+  const data=await res.json().catch(()=>({}));if(!res.ok||!data?.ok)throw new Error(data?.error||`HTTP ${res.status}`);
+  console.log(`Render direct Telegram ready (@${data.bot_username||target.bot_username||'bot'}).`);return true;
+ }catch(error){console.log(`Render direct Telegram bootstrap skipped: ${error.message}`);return false;}
+}
 
 async function main(){
  const token=process.env.TELEGRAM_BOT_TOKEN||'';
@@ -23,6 +31,7 @@ async function main(){
   console.log(`Telegram 봇은 확인됐지만 개인 채팅을 찾지 못했습니다. ${bot}을 열고 Start를 누르면 다음 실행에서 자동 연결됩니다.`);
   return;
  }
+ await bootstrapDirectDelivery(token,target);
  if(target.source==='auto-registered')await sendTelegramText(token,target.chatId,'✅ Mileway 텔레그램 연결 완료\n사이트에서 원하는 좌석 조건을 고른 뒤 “Telegram 알림 등록”만 누르면 됩니다.');
  const state=readCommandState(),updates=await fetchUpdates(token,(state.last_update_id||0)+1);let last=state.last_update_id||0,changed=0;
  for(const update of updates){last=Math.max(last,Number(update.update_id)||0);const msg=update.message;if(String(msg?.chat?.id)!==String(target.chatId))continue;const command=parseTelegramRuleCommand(msg?.text,routes());if(!command)continue;const rules=applyTelegramRuleCommand(command);changed++;
@@ -38,7 +47,7 @@ async function main(){
   lastTest=request.id;
  }
  if(last!==state.last_update_id||lastTest!==state.last_test_request_id)writeCommandState(last,{last_test_request_id:lastTest});
- console.log(`Telegram target ready (${target.source}); alert commands=${changed}; test=${lastTest&&lastTest!==state.last_test_request_id?'sent':'none'}.`);
+ console.log(`Telegram target ready (${target.source}); alert commands=${changed}; fallback-test=${lastTest&&lastTest!==state.last_test_request_id?'sent':'none'}.`);
 }
 
 main().catch(error=>{console.error(error.message);process.exitCode=1;});
