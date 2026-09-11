@@ -68,6 +68,16 @@ test('Android booking forces Korean Air My app with browser fallback',()=>{
  assert.match(build,/android-booking\.js/);
 });
 
+test('Telegram setup wizard only asks for Bot Token and Start',()=>{
+ const js=read('web/telegram-setup.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(js,/TELEGRAM_BOT_TOKEN/);
+ assert.match(js,/TELEGRAM_CHAT_ID는 이제 필요 없습니다/);
+ assert.match(js,/setup-telegram\.yml/);
+ assert.match(js,/@BotFather/);
+ assert.match(build,/telegram-setup\.js/);
+ assert.match(build,/telegram-setup\.css/);
+});
+
 test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
  const cloudApi=read('web/cloud-api.js');
  assert.doesNotMatch(cloudApi,/Map\.groupBy/);
@@ -107,15 +117,16 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after Android app launcher update',()=>{
+test('browser shell cache advances after Telegram setup update',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v10/);
+ assert.match(sw,/mileway-shell-v11/);
  assert.match(sw,/android-booking\.js/);
+ assert.match(sw,/telegram-setup\.js/);
  assert.match(sw,/cloud-api\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/regional-status.js','web/service-worker.js']){
+ for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/regional-status.js','web/service-worker.js']){
   const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
  }
