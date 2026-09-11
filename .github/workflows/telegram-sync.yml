@@ -1,0 +1,44 @@
+name: Sync Telegram alerts
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: telegram-alert-sync
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Sync Telegram connection and alert commands
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/register-telegram.mjs
+      - name: Refresh public alert status
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+        run: node --no-warnings scripts/write-health.mjs public-data/health.json
+      - name: Persist Telegram alert state
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public-data/health.json public-data/telegram-rules.json public-data/telegram-command-state.json
+          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Sync Telegram alert settings"
+            git pull --rebase origin main
+            git push
+          fi
