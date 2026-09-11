@@ -8,6 +8,7 @@ on:
       - 'scripts/register-telegram.mjs'
       - '.github/workflows/telegram-sync.yml'
   schedule:
+    # Keeps the free alert API warm and refreshes an encrypted recovery backup.
     - cron: '*/5 * * * *'
 permissions:
   contents: write
@@ -22,44 +23,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Back up instant web alert rules
-        shell: bash
-        run: |
-          node --input-type=module - <<'NODE'
-          import fs from 'node:fs';
-          try {
-            const res = await fetch('https://mileway-alert-api.onrender.com/rules');
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            fs.writeFileSync('public-data/telegram-rules.json', JSON.stringify({version:1,rules:Array.isArray(data.rules)?data.rules:[],updated_at:new Date().toISOString()}, null, 2)+'\n');
-            console.log(`Backed up ${Array.isArray(data.rules)?data.rules.length:0} instant alert rules.`);
-          } catch (error) {
-            console.log(`Instant alert API backup skipped: ${error.message}`);
-          }
-          NODE
-      - name: Sync Telegram connection and provision instant delivery
+      - name: Provision direct Telegram webhook
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node --no-warnings scripts/register-telegram.mjs
-      - name: Refresh public alert status
+      - name: Fetch encrypted alert recovery backup
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
-        run: node --no-warnings scripts/write-health.mjs public-data/health.json
-      - name: Persist Telegram alert state
         shell: bash
         run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const token=process.env.TELEGRAM_BOT_TOKEN||'';
+          if(!token) throw new Error('TELEGRAM_BOT_TOKEN missing');
+          const res=await fetch('https://mileway-alert-api.onrender.com/internal/backup',{headers:{Authorization:`Bearer ${token}`}});
+          if(!res.ok) throw new Error(`Encrypted backup failed: HTTP ${res.status}`);
+          const record=await res.json();
+          if(!record?.ciphertext) throw new Error('Encrypted backup payload missing');
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/alerts.enc.json',JSON.stringify(record,null,2)+'\n');
+          console.log('Encrypted alert recovery backup ready. No user rules are written to main.');
+          NODE
+      - name: Persist encrypted backup on isolated ops-state branch
+        shell: bash
+        run: |
+          git fetch origin ops-state
+          git worktree add "$RUNNER_TEMP/ops-state" origin/ops-state
+          cd "$RUNNER_TEMP/ops-state"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public-data/health.json public-data/telegram-rules.json public-data/telegram-command-state.json
-          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
+          mkdir -p ops
+          cp "$RUNNER_TEMP/alerts.enc.json" ops/alerts.enc.json
+          git add ops/alerts.enc.json
           if ! git diff --cached --quiet; then
-            git commit -m "Sync Telegram alert settings"
-            git pull --rebase origin main
-            git push
+            git commit -m "Back up encrypted alert state"
+            git pull --rebase origin ops-state
+            git push origin HEAD:ops-state
           fi
