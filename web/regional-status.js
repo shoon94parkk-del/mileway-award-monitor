@@ -1,5 +1,10 @@
 import {cloudApi} from './cloud-api.js';
-const groups=['유럽','미주','오세아니아','아시아'];
+const groups=[
+ {key:'유럽',label:'유럽'},
+ {key:'미주',label:'미주'},
+ {key:'오세아니아',label:'오세아니아'},
+ {key:'아시아',label:'발리·기타',title:'발리(DPS) + 러시아/몽골/중앙아시아 + 중동/아프리카'}
+];
 const shortTime=value=>String(value||'미확인').replace(/^2026년\s*/,'');
 let lastVersion=null;
 async function render(){
@@ -18,11 +23,11 @@ async function render(){
   let summary=document.querySelector('#region-update-summary');
   if(!summary){summary=document.createElement('div');summary.id='region-update-summary';summary.setAttribute('aria-label','지역별 업데이트 현황');banner.appendChild(summary);}
   if(report.scope==='REGIONAL_COMPOSITE'){
-   summary.innerHTML=groups.map(group=>{const state=report.region_status?.[group],done=state?.status==='success',label=state?(done?'업데이트 완료':'이전 정상 자료'):'수집 대기';return `<div class="region-update-item ${done?'is-done':''}"><strong>${group} · ${label}</strong><span>${shortTime(state?.source_updated_at)}</span></div>`;}).join('');
+   summary.innerHTML=groups.map(group=>{const state=report.region_status?.[group.key],done=state?.status==='success',label=state?(done?'업데이트 완료':'이전 정상 자료'):'수집 대기';return `<div class="region-update-item ${done?'is-done':''}"${group.title?` title="${group.title}"`:''}><strong>${group.label} · ${label}</strong><span>${shortTime(state?.source_updated_at)}</span></div>`;}).join('');
    const note=document.querySelector('#coverage-note');
    if(note)note.textContent='지역별 수집이 끝나는 즉시 새 자료를 반영합니다. 아직 진행 중인 지역은 마지막 정상 자료를 유지합니다.';
   }else{
-   summary.innerHTML=groups.map(group=>`<div class="region-update-item is-done"><strong>${group} · 업데이트 완료</strong><span>${shortTime(report.source_updated_at)}</span></div>`).join('');
+   summary.innerHTML=groups.map(group=>`<div class="region-update-item is-done"${group.title?` title="${group.title}"`:''}><strong>${group.label} · 업데이트 완료</strong><span>${shortTime(report.source_updated_at)}</span></div>`).join('');
   }
  }catch{/* Keep the last visible regional status when offline. */}
 }
