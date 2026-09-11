@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {openPublicPage} from './public-navigation.mjs';
+import {readLatestSourceUpdatedAt} from './source-observer.mjs';
 import {collectionGroup,monitoredRoute} from './route-discovery.mjs';
 import {parseSourceUpdatedAt,sourceTimestampKey,dailySourceIsStale,expectedDailySourceUpdatedAt} from './source-timestamp.mjs';
 
@@ -11,6 +12,7 @@ export {parseSourceUpdatedAt,sourceTimestampKey,dailySourceIsStale,expectedDaily
 const require=createRequire(import.meta.url);
 const NETWORK_ARGS=['--disable-http2','--disable-quic'];
 const REQUIRED_GROUPS=['유럽','미주','오세아니아','아시아'];
+const STALE_RETRY_COOLDOWN_MS=4*60*60*1000;
 
 export function readPublishedSourceUpdatedAt(file){
   if(!file||!fs.existsSync(file))return null;
@@ -33,6 +35,13 @@ export function publishedSnapshotNeedsRefresh(data,current){
   return false;
 }
 
+export function staleDailySafetyScanDue(data,current,now=new Date(),cooldownMs=STALE_RETRY_COOLDOWN_MS){
+  if(!dailySourceIsStale(current,now))return false;
+  const report=data?.bootstrap?.report||data?.report||{};
+  const finishedAt=Date.parse(report.finished_at||report.last_successful_scan_at||'');
+  return !Number.isFinite(finishedAt)||now.getTime()-finishedAt>=cooldownMs;
+}
+
 async function dismissCookie(page){
   const cookie=page.locator('kc-global-cookie-banner');
   if(!await cookie.count())return;
@@ -42,19 +51,6 @@ async function dismissCookie(page){
     const close=cookie.getByRole('button',{name:/닫기|Close/i}).first();
     if(await close.count())await close.click().catch(()=>{});
   }
-}
-
-async function sampleSourceUpdatedAt(page,{sampleMs=6000,intervalMs=500}={}){
-  const deadline=Date.now()+sampleMs;
-  let best=null,bestKey=-Infinity;
-  do{
-    const body=await page.locator('body').innerText();
-    const candidate=parseSourceUpdatedAt(body);
-    const key=sourceTimestampKey(candidate);
-    if(key!==null&&key>bestKey){best=candidate;bestKey=key;}
-    if(Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,intervalMs));
-  }while(Date.now()<deadline);
-  return best;
 }
 
 export async function fetchSourceUpdatedAt(){
@@ -71,7 +67,7 @@ export async function fetchSourceUpdatedAt(){
     page.setDefaultTimeout(20000);
     await openPublicPage(page);
     await dismissCookie(page);
-    const sourceUpdatedAt=await sampleSourceUpdatedAt(page);
+    const sourceUpdatedAt=await readLatestSourceUpdatedAt(page,{sampleMs:12000,intervalMs:750});
     if(!sourceUpdatedAt)throw new Error('Missing public data update timestamp');
     return sourceUpdatedAt;
   }finally{await browser.close();}
@@ -85,16 +81,18 @@ async function main(){
   const snapshotData=fs.existsSync(snapshot)?JSON.parse(fs.readFileSync(snapshot,'utf8')):null;
   const coverageNeedsRefresh=publishedSnapshotNeedsRefresh(snapshotData,current);
   const staleDaily=dailySourceIsStale(current);
+  const periodicStaleRetry=staleDailySafetyScanDue(snapshotData,current);
   const forceIfStaleDaily=process.argv.includes('--force-if-stale-daily');
-  const changed=!previous||previous!==current||coverageNeedsRefresh||(forceIfStaleDaily&&staleDaily);
+  const changed=!previous||previous!==current||coverageNeedsRefresh||periodicStaleRetry||(forceIfStaleDaily&&staleDaily);
   console.log(`Published source: ${previous||'none'}`);
   console.log(`Korean Air source: ${current}`);
   if(staleDaily)console.log(`Daily freshness warning: observed ${current}, expected at least ${expectedDailySourceUpdatedAt()}`);
+  if(periodicStaleRetry)console.log('Daily stale-source retry: last completed scan is old enough to force an independent refresh attempt');
   if(coverageNeedsRefresh)console.log('Published monitoring scope is incomplete/stale: collection required');
   if(forceIfStaleDaily&&staleDaily)console.log('Daily fail-safe: stale source marker forces a fresh collection attempt');
   console.log(changed?'Source changed: full collection required':'Source unchanged: skip full collection');
   if(process.env.GITHUB_OUTPUT){
-    fs.appendFileSync(process.env.GITHUB_OUTPUT,`changed=${changed}\ncurrent=${current}\nprevious=${previous||''}\nstale_daily=${staleDaily}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT,`changed=${changed}\ncurrent=${current}\nprevious=${previous||''}\nstale_daily=${staleDaily}\nperiodic_stale_retry=${periodicStaleRetry}\n`);
   }
 }
 
