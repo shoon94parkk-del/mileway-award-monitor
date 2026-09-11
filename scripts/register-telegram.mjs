@@ -1,4 +1,12 @@
+import fs from 'node:fs';
 import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
+import {parseTelegramRuleCommand,applyTelegramRuleCommand,readCommandState,writeCommandState} from './telegram-rule-commands.mjs';
+
+const routes=()=>{try{return JSON.parse(fs.readFileSync('routes.json','utf8')).routes||[];}catch{return [];}};
+async function fetchUpdates(token,offset){
+ const url=`https://api.telegram.org/bot${token}/getUpdates?timeout=0&limit=100&offset=${Math.max(0,Number(offset)||0)}`;
+ const res=await fetch(url),data=await res.json();if(!res.ok||!data?.ok)throw new Error('Telegram 업데이트 확인 실패');return data.result||[];
+}
 
 async function main(){
  const token=process.env.TELEGRAM_BOT_TOKEN||'';
@@ -10,12 +18,15 @@ async function main(){
   console.log(`Telegram 봇은 확인됐지만 개인 채팅을 찾지 못했습니다. ${bot}을 열고 Start를 누르면 다음 실행에서 자동 연결됩니다.`);
   return;
  }
- if(target.source==='auto-registered'){
-  await sendTelegramText(token,target.chatId,'✅ Mileway 텔레그램 연결 완료\n이제 저장한 좌석 알림 조건에 맞는 새 좌석이 확인되면 이 채팅으로 알려드릴게요.');
-  console.log(`Telegram target auto-registered${target.bot_username?` (@${target.bot_username})`:''}.`);
- }else{
-  console.log(`Telegram target ready (${target.source}).`);
+ if(target.source==='auto-registered')await sendTelegramText(token,target.chatId,'✅ Mileway 텔레그램 연결 완료\n사이트에서 원하는 좌석 조건을 고른 뒤 “Telegram 알림 등록”만 누르면 됩니다.');
+ const state=readCommandState(),updates=await fetchUpdates(token,(state.last_update_id||0)+1);let last=state.last_update_id||0,changed=0;
+ for(const update of updates){last=Math.max(last,Number(update.update_id)||0);const msg=update.message;if(String(msg?.chat?.id)!==String(target.chatId))continue;const command=parseTelegramRuleCommand(msg?.text,routes());if(!command)continue;const rules=applyTelegramRuleCommand(command);changed++;
+  if(command.type==='add')await sendTelegramText(token,target.chatId,`✅ 알림 등록 완료\n${command.rule.name}\n${command.rule.start||'오늘'} ~ ${command.rule.end||'전체 기간'}${command.rule.weekend?' · 주말만':''}\n\n현재 활성 알림 ${rules.length}개`);
+  if(command.type==='delete')await sendTelegramText(token,target.chatId,`🗑️ 알림 삭제 완료\n현재 활성 알림 ${rules.length}개`);
+  if(command.type==='clear')await sendTelegramText(token,target.chatId,'🗑️ 모든 좌석 알림을 삭제했습니다.');
  }
+ if(last!==state.last_update_id)writeCommandState(last);
+ console.log(`Telegram target ready (${target.source}); alert commands=${changed}.`);
 }
 
 main().catch(error=>{console.error(error.message);process.exitCode=1;});
