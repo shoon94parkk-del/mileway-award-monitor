@@ -117,16 +117,17 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after Telegram setup update',()=>{
+test('browser shell cache advances after UX polish update',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v11/);
+ assert.match(sw,/mileway-shell-v12/);
  assert.match(sw,/android-booking\.js/);
  assert.match(sw,/telegram-setup\.js/);
+ assert.match(sw,/ux-reference-polish\.js/);
  assert.match(sw,/cloud-api\.js/);
 });
 
 test('changed browser scripts parse successfully',()=>{
- for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/regional-status.js','web/service-worker.js']){
+ for(const file of ['web/cloud-api.js','web/cloud-enhancements.js','web/global-regions.js','web/ui-v2.js','web/android-booking.js','web/telegram-setup.js','web/ux-reference-polish.js','web/regional-status.js','web/service-worker.js']){
   const run=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(run.status,0,`${file}: ${run.stderr||run.stdout}`);
  }
