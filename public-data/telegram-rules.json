@@ -67,25 +67,7 @@
       "end": "2026-09-14",
       "weekend": false,
       "flights": []
-    },
-    {
-      "id": "tg_99df4787339f",
-      "name": "JFK, HNL, MEL, BNE, SYD, AKL 좌석 알림",
-      "region": "",
-      "destinations": [
-        "AKL",
-        "BNE",
-        "HNL",
-        "JFK",
-        "MEL",
-        "SYD"
-      ],
-      "cabins": [],
-      "start": "2027-04-03",
-      "end": "2027-04-07",
-      "weekend": false,
-      "flights": []
     }
   ],
-  "updated_at": "2026-09-11T11:02:49.527Z"
+  "updated_at": "2026-09-11T12:15:19.241Z"
 }

@@ -3,7 +3,7 @@
   "status": "degraded",
   "alerts": {
     "rules_configured": true,
-    "telegram_rule_count": 3,
+    "telegram_rule_count": 2,
     "telegram_bot_configured": true,
     "telegram_target_registered": true,
     "telegram_configured": true,
