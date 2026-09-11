@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {readTelegramTarget} from './telegram-target.mjs';
 const file=path.resolve(process.argv[2]||'public-data/health.json');
 const read=()=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return {version:1,status:'unknown'};}};
 const readSnapshotSource=()=>{try{const s=JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));return s?.bootstrap?.report?.source_updated_at||null;}catch{return null;}};
@@ -7,7 +8,19 @@ const now=new Date().toISOString(),prev=read();
 const install=process.env.INSTALL_OUTCOME||'skipped',source=process.env.SOURCE_OUTCOME||'skipped',tests=process.env.TESTS_OUTCOME||'skipped',collect=process.env.COLLECT_OUTCOME||'skipped',build=process.env.BUILD_OUTCOME||'skipped',notify=process.env.NOTIFY_OUTCOME||'skipped';
 const fullScan=process.env.FULL_SCAN==='true';
 const publish=process.env.PUBLISH_OUTCOME||'skipped';
-const alerts={rules_configured:!!process.env.ALERT_RULES_JSON,telegram_configured:!!(process.env.TELEGRAM_BOT_TOKEN&&process.env.TELEGRAM_CHAT_ID),email_configured:!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM)};
+const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
+const explicitChat=process.env.TELEGRAM_CHAT_ID||'';
+const savedTelegram=telegramToken&&!explicitChat?readTelegramTarget(telegramToken):null;
+const telegramTargetReady=!!(explicitChat||savedTelegram?.chatId);
+const telegramRecord=savedTelegram?.record||null;
+const alerts={
+ rules_configured:!!process.env.ALERT_RULES_JSON,
+ telegram_bot_configured:!!telegramToken,
+ telegram_target_registered:telegramTargetReady,
+ telegram_configured:!!(telegramToken&&telegramTargetReady),
+ telegram_bot_username:telegramRecord?.bot_username||null,
+ email_configured:!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM)
+};
 let status='healthy',error_step=null;
 for(const [outcome,step] of [[install,'dependency_install'],[source,'source_check'],[tests,'tests'],[collect,'collection'],[publish,'publication'],[build,'build'],[notify,'notification']]){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
 const next={...prev,version:1,status,alerts};
