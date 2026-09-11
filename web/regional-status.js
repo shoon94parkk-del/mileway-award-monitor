@@ -1,9 +1,13 @@
 import {cloudApi} from './cloud-api.js';
 const groups=['유럽','미주','오세아니아','아시아'];
 const shortTime=value=>String(value||'미확인').replace(/^2026년\s*/,'');
+let lastVersion=null;
 async function render(){
  try{
   const {report}=await cloudApi('/api/bootstrap');
+  const version=report.publication_id||report.source_updated_at||null;
+  if(lastVersion&&version&&version!==lastVersion){location.reload();return;}
+  lastVersion=version||lastVersion;
   const banner=document.querySelector('.source-banner');
   if(!banner)return;
   const badge=banner.querySelector('.daily-badge');
