@@ -37,11 +37,25 @@ test('mobile UI prioritizes results with compact summaries and bottom-sheet filt
  assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);
 });
 
-test('mobile award cards use a dense two-row layout',()=>{
- const css=read('web/ui-v2.css');
- assert.match(css,/@media\(max-width:520px\).*?\.flight-row\{[^}]*grid-template-rows:auto auto!important[^}]*padding:10px 9px 9px 11px!important/s);
- assert.match(css,/\.flight-row \.detail-button\{[^}]*grid-row:2!important[^}]*width:34px[^}]*height:28px/s);
- assert.match(css,/\.flight-row \.cabin-cell \.subline\{display:none\}/);
+test('mobile award results use a compact booking table',()=>{
+ const css=read('web/mobile-booking.css'),js=read('web/ui-v2.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(css,/\.mobile-award-list-head\{display:grid/);
+ assert.match(css,/\.flight-row\{display:grid!important;grid-template-columns:minmax\(0,1\.25fr\) 88px 72px 48px!important/);
+ assert.match(css,/\.flight-row \.favorite\{display:none!important\}|\.flight-row \.compare-check,\.flight-row \.favorite\{display:none!important\}/);
+ assert.match(css,/\.reserve-button\{grid-column:4!important/);
+ assert.match(js,/head\.innerHTML='<span>목적지<\/span><span>날짜<\/span><span>좌석\/시간<\/span><span>예약<\/span>'/);
+ assert.match(build,/mobile-booking\.css/);
+});
+
+test('reservation link prefills Korean Air mileage one-way route and date',()=>{
+ const js=read('web/ui-v2.js');
+ assert.match(js,/bookingType:'A'/);
+ assert.match(js,/tripType:'OW'/);
+ assert.match(js,/departure:'ICN'/);
+ assert.match(js,/arrival:String\(row\.destination\|\|''\)/);
+ assert.match(js,/departureDate:String\(row\.date\|\|''\)/);
+ assert.match(js,/cloudApi\('\/api\/seats\/'\+button\.dataset\.detail\)/);
+ assert.match(js,/className='reserve-button'/);
 });
 
 test('calendar API avoids unsupported Map.groupBy on mobile browsers',()=>{
@@ -83,10 +97,10 @@ test('one-time production refresh workflow is removed',()=>{
  assert.equal(fs.existsSync('.github/workflows/force-worldwide-refresh.yml'),false);
 });
 
-test('browser shell cache advances after mobile card compaction',()=>{
+test('browser shell cache advances after mobile booking link update',()=>{
  const sw=read('web/service-worker.js');
- assert.match(sw,/mileway-shell-v8/);
- assert.match(sw,/global-regions\.js/);
+ assert.match(sw,/mileway-shell-v9/);
+ assert.match(sw,/mobile-booking\.css/);
  assert.match(sw,/cloud-api\.js/);
 });
 
