@@ -12,7 +12,7 @@
   },
   "source_updated_at": "2026년 9월 10일 23:00",
   "last_successful_scan_at": "2026-09-11T01:35:49.711Z",
-  "last_error_at": "2026-09-11T16:41:25.393Z",
-  "last_error_step": "collection",
+  "last_error_at": "2026-09-11T17:29:40.384Z",
+  "last_error_step": "tests",
   "recovered_at": "2026-09-11T01:35:49.711Z"
 }
