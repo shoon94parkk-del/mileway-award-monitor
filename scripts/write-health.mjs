@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {readTelegramTarget} from './telegram-target.mjs';
+import {readTelegramRules} from './telegram-rule-commands.mjs';
 const file=path.resolve(process.argv[2]||'public-data/health.json');
 const read=()=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return {version:1,status:'unknown'};}};
 const readSnapshotSource=()=>{try{const s=JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));return s?.bootstrap?.report?.source_updated_at||null;}catch{return null;}};
@@ -13,8 +14,10 @@ const explicitChat=process.env.TELEGRAM_CHAT_ID||'';
 const savedTelegram=telegramToken&&!explicitChat?readTelegramTarget(telegramToken):null;
 const telegramTargetReady=!!(explicitChat||savedTelegram?.chatId);
 const telegramRecord=savedTelegram?.record||null;
+let telegramRuleCount=0;try{telegramRuleCount=readTelegramRules().length;}catch{}
 const alerts={
- rules_configured:!!process.env.ALERT_RULES_JSON,
+ rules_configured:!!process.env.ALERT_RULES_JSON||telegramRuleCount>0,
+ telegram_rule_count:telegramRuleCount,
  telegram_bot_configured:!!telegramToken,
  telegram_target_registered:telegramTargetReady,
  telegram_configured:!!(telegramToken&&telegramTargetReady),
@@ -33,4 +36,4 @@ if(error_step){next.last_error_at=now;next.last_error_step=error_step;}
 if(hasOperationalOutcome&&status==='healthy'&&prev.status==='degraded')next.recovered_at=now;
 fs.mkdirSync(path.dirname(file),{recursive:true});
 const before=JSON.stringify(prev),after=JSON.stringify(next);if(before!==after)fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');
-console.log(`health=${status}${error_step?` step=${error_step}`:''}`);
+console.log(`health=${status}${error_step?` step=${error_step}`:''} telegram_rules=${telegramRuleCount}`);
