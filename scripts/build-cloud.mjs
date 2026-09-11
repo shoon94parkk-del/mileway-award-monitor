@@ -14,8 +14,11 @@ try{
  const routeMap=new Map((baseBootstrap.routes||[]).map(r=>[r.code,r]));
  const enrich=row=>{const route=routeMap.get(row.destination)||{};return {...row,city:route.city||row.city||row.destination,country:route.country||row.country||route.region||''};};
  const changeHistory=readJson('public-data/changes.json',{events:[]});
- const recentChanges=(changeHistory.events||[]).slice(0,100).map(c=>enrich(c));
- const bootstrap={...baseBootstrap,changes:recentChanges,cloud:true,scan:{paused:true,running:false,enabled:false,history:[]}};
+ const allChanges=(changeHistory.events||[]).map(c=>enrich(c));
+ const sevenDayCutoff=Date.now()-7*864e5;
+ const recentOpened=allChanges.filter(c=>c.kind==='OPENED'&&Date.parse(c.detected_at)>=sevenDayCutoff);
+ const recentChanges=allChanges.slice(0,100);
+ const bootstrap={...baseBootstrap,changes:recentChanges,recent_opened:{days:7,total:recentOpened.length,items:recentOpened.slice(0,8)},cloud:true,scan:{paused:true,running:false,enabled:false,history:[]}};
  const rows=store.list({limit:50000}).rows.map(enrich);
  fs.writeFileSync('dist/snapshot.json',JSON.stringify({bootstrap,rows}));
  for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
@@ -33,11 +36,11 @@ try{
  js=replaceRequired(js,"location.href='/api/export?'+params","location.href='/snapshot.json';return;void params",'cloud export');
  const cloudPanel=`renderDataBase(); if(boot.cloud){
    $('#scan').hidden=true;
-   $('#data-view').insertAdjacentHTML('afterbegin','<section class="data-card"><h2>GitHub 자동 수집 · 전 세계 노선</h2><p>대한항공 공개 좌석 페이지에 현재 노출되는 인천 출발 해외 목적지를 자동 탐색해 전 지역을 수집합니다.</p><p>평소 약 1시간 간격, 22:30~00:30 KST에는 약 5분 간격으로 대한항공 원자료 갱신을 확인합니다. 23:31 KST 안전망 전체 수집은 원자료 시각 확인과 독립적으로 실행됩니다.</p><p>상단 상태 표시에서 최근 수집 실패와 알림 설정 여부를 확인할 수 있습니다.</p><a href="https://github.com/shoon94parkk-del/mileway-award-monitor/actions" target="_blank" rel="noreferrer">수집 실행 이력 확인 ↗</a></section>');return;
+   $('#data-view').insertAdjacentHTML('afterbegin','<section class="data-card"><h2>GitHub 자동 수집 · 선택 노선</h2><p>유럽·미주·오세아니아와 발리(DPS), 러시아/몽골/중앙아시아, 중동/아프리카의 모니터링 대상 노선을 수집합니다. 동북아와 발리를 제외한 동남아/서남아는 현재 수집하지 않습니다.</p><p>평소 약 1시간 간격, 22:30~00:30 KST에는 약 5분 간격으로 대한항공 원자료 갱신을 확인합니다. 원자료가 갱신되면 지역별로 수집 완료 즉시 반영합니다.</p><p>상단 일일 업데이트 현황에서 최근 수집 상태와 알림 설정 여부를 확인할 수 있습니다.</p><a href="https://github.com/shoon94parkk-del/mileway-award-monitor/actions" target="_blank" rel="noreferrer">수집 실행 이력 확인 ↗</a></section>');return;
  }`;
  js=replaceRequired(js,'renderDataBase();',cloudPanel,'cloud data panel');
  fs.writeFileSync('dist/app.js',js);
  fs.appendFileSync('dist/style.css','\n.sidebar-foot{font-size:12px}\n');
  if(!cloudApi.includes('raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json'))throw Error('Cloud build did not wire the live GitHub snapshot');
- console.log(`Cloud build: ${bootstrap.stats.available} available combinations, ${bootstrap.routes.length} worldwide routes, ${recentChanges.length} retained changes`);
+ console.log(`Cloud build: ${bootstrap.stats.available} available combinations, ${bootstrap.routes.length} monitored routes, ${recentOpened.length} opened in 7 days, ${recentChanges.length} retained changes`);
 }finally{store.db.close();}
