@@ -21,14 +21,16 @@ const alerts={
  telegram_bot_username:telegramRecord?.bot_username||null,
  email_configured:!!(process.env.RESEND_API_KEY&&process.env.ALERT_EMAIL_TO&&process.env.ALERT_EMAIL_FROM)
 };
-let status='healthy',error_step=null;
-for(const [outcome,step] of [[install,'dependency_install'],[source,'source_check'],[tests,'tests'],[collect,'collection'],[publish,'publication'],[build,'build'],[notify,'notification']]){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
+const outcomes=[[install,'dependency_install'],[source,'source_check'],[tests,'tests'],[collect,'collection'],[publish,'publication'],[build,'build'],[notify,'notification']];
+const hasOperationalOutcome=outcomes.some(([outcome])=>outcome!=='skipped');
+let status=hasOperationalOutcome?'healthy':(prev.status||'unknown'),error_step=null;
+if(hasOperationalOutcome)for(const [outcome,step] of outcomes){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
 const next={...prev,version:1,status,alerts};
 const currentSource=process.env.CURRENT_SOURCE||readSnapshotSource();if(currentSource)next.source_updated_at=currentSource;
 if(fullScan&&collect==='success'&&build==='success')next.last_successful_scan_at=now;
 if(notify==='success'&&alerts.rules_configured&&(alerts.telegram_configured||alerts.email_configured))next.last_notification_check_at=now;
 if(error_step){next.last_error_at=now;next.last_error_step=error_step;}
-if(status==='healthy'&&prev.status==='degraded')next.recovered_at=now;
+if(hasOperationalOutcome&&status==='healthy'&&prev.status==='degraded')next.recovered_at=now;
 fs.mkdirSync(path.dirname(file),{recursive:true});
 const before=JSON.stringify(prev),after=JSON.stringify(next);if(before!==after)fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');
 console.log(`health=${status}${error_step?` step=${error_step}`:''}`);
