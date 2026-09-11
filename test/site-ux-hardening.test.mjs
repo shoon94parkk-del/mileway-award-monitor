@@ -24,12 +24,16 @@ test('recent change history never truncates events from the last seven days',()=
  assert.match(source,/events=\[\.\.\.recent,\.\.\.older\]/);
 });
 
-test('mobile UI prioritizes filters and results while keeping stats expandable',()=>{
+test('mobile UI prioritizes results with compact summaries and bottom-sheet filters',()=>{
  const js=read('web/ui-v2.js'),css=read('web/ui-v2.css');
  assert.match(js,/mobile-stats-summary/);
+ assert.match(js,/mobile-filter-summary-bar/);
+ assert.match(js,/mobile-filter-sheet-apply/);
  assert.match(js,/moveRecentOpenedBelowResults/);
  assert.match(css,/@media\(max-width:850px\).*?\.stats\{display:none!important\}/s);
- assert.match(css,/\.mobile-stats-summary\{display:block/);
+ assert.match(css,/\.mobile-stats-summary\{display:flex/);
+ assert.match(css,/\.filter-card\{display:block!important;position:fixed/);
+ assert.match(css,/\.filter-top \.segments\{display:flex;.*?overflow-x:auto/s);
 });
 
 test('region labels and copy describe the reduced monitoring scope',()=>{
