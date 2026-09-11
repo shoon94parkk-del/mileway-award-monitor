@@ -8,6 +8,7 @@ import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
 import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
 import {openPublicPage} from './public-navigation.mjs';
+import {readLatestSourceUpdatedAt} from './source-observer.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const require=createRequire(import.meta.url);
@@ -95,13 +96,17 @@ async function initializeSearchPage(expectedSourceUpdatedAt=null) {
   await regionList('departure','대한민국');
   await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
   await page.locator('label[for="bonusTripType_OW"]').click();
-  const note=await page.locator('body').innerText();
-  const sourceUpdatedAt=note.match(/대한민국 시간\(([^)]+)\)/)?.[1] || null;
+  const sourceUpdatedAt=await readLatestSourceUpdatedAt(page,{sampleMs:8000,intervalMs:750});
   if(!sourceUpdatedAt) throw new Error('Missing public data update timestamp');
   if(expectedSourceUpdatedAt&&sourceUpdatedAt!==expectedSourceUpdatedAt) {
     throw new Error(`Public source timestamp changed during collection: ${expectedSourceUpdatedAt} -> ${sourceUpdatedAt}`);
   }
   return sourceUpdatedAt;
+}
+async function assertSourceStillCurrent() {
+  const observed=await readLatestSourceUpdatedAt(page,{sampleMs:1800,intervalMs:600});
+  if(!observed)throw new Error('Missing public data update timestamp during collection');
+  if(report.source_updated_at&&observed!==report.source_updated_at)throw new Error(`Public source timestamp changed during collection: ${report.source_updated_at} -> ${observed}`);
 }
 async function selectDestination(route) {
   await regionList('destination',route.region);
@@ -210,6 +215,7 @@ try {
     const group=collectionGroup(route.region);
     if(group!==activeGroup){activeGroup=group;console.log(`COLLECTION GROUP: ${group}`);}
     checkStop();
+    await assertSourceStillCurrent();
     const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&!report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
     if(!routeMonths.length) continue;
     await selectDestination(route);
