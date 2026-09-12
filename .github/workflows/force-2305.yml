@@ -1,0 +1,67 @@
+name: Force daily scan by 23:05 KST
+on:
+  schedule:
+    - cron: '5 14 * * *'
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+jobs:
+  force-start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure full collection has started by 23:05 KST
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          workflow="collect.yml"
+          already_progressing=false
+          cancel_ids=""
+
+          for status in in_progress queued; do
+            ids=$(gh api "repos/$repo/actions/workflows/$workflow/runs?status=$status&per_page=20" --jq '.workflow_runs[].id')
+            for id in $ids; do
+              if [ "$status" = "queued" ]; then
+                cancel_ids="$cancel_ids $id"
+                continue
+              fi
+
+              jobs=$(gh api "repos/$repo/actions/runs/$id/jobs?per_page=20")
+              source_status=$(printf '%s' "$jobs" | jq -r '[.jobs[].steps[]? | select(.name=="Watch/check Korean Air source timestamp") | .status][0] // ""')
+              collect_status=$(printf '%s' "$jobs" | jq -r '[.jobs[].steps[]? | select(.name=="Collect and publish Europe, Americas, Oceania, then Asia") | .status][0] // ""')
+
+              if [ "$collect_status" = "in_progress" ] || [ "$collect_status" = "completed" ]; then
+                already_progressing=true
+              elif [ "$source_status" = "completed" ]; then
+                # The 22:57 watcher only finishes early when it has detected a source change.
+                already_progressing=true
+              else
+                # Still waiting for the source timestamp at 23:05: replace it with a forced run.
+                cancel_ids="$cancel_ids $id"
+              fi
+            done
+          done
+
+          if [ "$already_progressing" = "true" ]; then
+            echo "Daily collection pipeline has already started; no 23:05 force run needed."
+            exit 0
+          fi
+
+          for id in $cancel_ids; do
+            echo "Cancelling pre-23:05 watcher/queued run $id"
+            gh api --method POST "repos/$repo/actions/runs/$id/cancel" >/dev/null || true
+          done
+
+          if [ -n "${cancel_ids// /}" ]; then
+            for attempt in $(seq 1 12); do
+              blocking=$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=20" --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length')
+              [ "$blocking" -eq 0 ] && break
+              sleep 5
+            done
+          fi
+
+          echo "23:05 KST interlock: dispatching forced full scan."
+          gh workflow run "$workflow" --repo "$repo" --ref main -f force_full_scan=true
