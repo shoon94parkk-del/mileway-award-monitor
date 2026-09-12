@@ -1,8 +1,8 @@
 name: Force daily scan by 23:05 KST
 on:
   schedule:
-    # Wake the interlock two minutes early to reduce GitHub cron start-delay risk.
-    - cron: '3 14 * * *'
+    # Start well before the top-of-hour congestion window, then wait inside the runner.
+    - cron: '50 13 * * *'
   workflow_dispatch:
 permissions:
   actions: write
@@ -10,6 +10,7 @@ permissions:
 jobs:
   force-start:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Ensure full collection has started by 23:05 KST
         env:
@@ -20,60 +21,25 @@ jobs:
           repo="$GITHUB_REPOSITORY"
           workflow="collect.yml"
 
-          # Scheduled run wakes at 23:03 KST and waits locally until 23:05 KST.
-          # A delayed GitHub runner skips the wait and evaluates the interlock immediately.
+          # The scheduled runner is intentionally allocated around 22:50 KST.
+          # Waiting inside an already-running job is much more reliable than asking
+          # GitHub to start a new scheduled run exactly around 23:00 KST.
           if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
             target=$(date -u -d "$(date -u +%F) 14:05:00" +%s)
             now=$(date -u +%s)
             if [ "$now" -lt "$target" ]; then
+              echo "Interlock prewarmed; waiting until 23:05 KST."
               sleep "$((target-now))"
             fi
           fi
 
-          already_progressing=false
-          cancel_ids=""
+          active=$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=30" \
+            --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length')
 
-          for status in in_progress queued; do
-            ids=$(gh api "repos/$repo/actions/workflows/$workflow/runs?status=$status&per_page=20" --jq '.workflow_runs[].id')
-            for id in $ids; do
-              if [ "$status" = "queued" ]; then
-                cancel_ids="$cancel_ids $id"
-                continue
-              fi
-
-              jobs=$(gh api "repos/$repo/actions/runs/$id/jobs?per_page=20")
-              source_status=$(printf '%s' "$jobs" | jq -r '[.jobs[].steps[]? | select(.name=="Watch/check Korean Air source timestamp") | .status][0] // ""')
-              collect_status=$(printf '%s' "$jobs" | jq -r '[.jobs[].steps[]? | select(.name=="Collect and publish Europe, Americas, Oceania, then Asia") | .status][0] // ""')
-
-              if [ "$collect_status" = "in_progress" ] || [ "$collect_status" = "completed" ]; then
-                already_progressing=true
-              elif [ "$source_status" = "completed" ]; then
-                # Before 23:05 the 22:57 watcher only finishes early after detecting a source change.
-                already_progressing=true
-              else
-                # Still waiting for the source timestamp at 23:05: replace it with a forced run.
-                cancel_ids="$cancel_ids $id"
-              fi
-            done
-          done
-
-          if [ "$already_progressing" = "true" ]; then
-            echo "Daily collection pipeline has already started; no 23:05 force run needed."
+          if [ "$active" -gt 0 ]; then
+            echo "A full collection is already queued/running; no duplicate force scan needed."
             exit 0
           fi
 
-          for id in $cancel_ids; do
-            echo "Cancelling pre-23:05 watcher/queued run $id"
-            gh api --method POST "repos/$repo/actions/runs/$id/cancel" >/dev/null || true
-          done
-
-          if [ -n "${cancel_ids// /}" ]; then
-            for attempt in $(seq 1 12); do
-              blocking=$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=20" --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length')
-              [ "$blocking" -eq 0 ] && break
-              sleep 5
-            done
-          fi
-
-          echo "23:05 KST interlock: dispatching forced full scan."
+          echo "23:05 KST interlock: dispatching forced full scan regardless of the DOM timestamp."
           gh workflow run "$workflow" --repo "$repo" --ref main -f force_full_scan=true
