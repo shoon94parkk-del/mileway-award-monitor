@@ -1,9 +1,26 @@
 const HEALTH_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/health.json';
+const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const $=s=>document.querySelector(s);
 
 function compactSource(text=''){
  const m=String(text).match(/(\d{1,2})월\s*(\d{1,2})일\s*(\d{1,2}:\d{2})/);
  return m?`${Number(m[1])}/${Number(m[2])} ${m[3]}`:String(text).replace(/\s*기준.*$/,'').trim()||'확인 중';
+}
+function sourceStamp(value){
+ const m=String(value||'').match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(\d{1,2}):(\d{2})/);
+ if(!m)return NaN;
+ return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4])-9,Number(m[5]));
+}
+function expectedDailySourceStamp(now=new Date()){
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(now);
+ const get=type=>Number(parts.find(p=>p.type===type)?.value||0);
+ const y=get('year'),m=get('month'),d=get('day'),h=get('hour');
+ const todayAt23=Date.UTC(y,m-1,d,14,0);
+ return h<23?todayAt23-864e5:todayAt23;
+}
+function sourceIsStale(value,now=new Date()){
+ const observed=sourceStamp(value);
+ return Number.isFinite(observed)&&observed<expectedDailySourceStamp(now);
 }
 function ensureRail(){
  if($('#ux-status-rail'))return $('#ux-status-rail');
@@ -25,11 +42,20 @@ function syncVisibleValues(){
 }
 async function syncHealth(){
  try{
-  const r=await fetch(HEALTH_URL+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;
-  const h=await r.json(),a=h?.alerts||{},health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
-  const ok=h?.status==='healthy';
-  if(value)value.textContent=ok?'정상':h?.status==='degraded'?'주의':'확인 중';
-  health?.classList.toggle('is-ok',ok);health?.classList.toggle('is-warn',h?.status==='degraded');
+  const [healthResponse,snapshotResponse]=await Promise.all([
+   fetch(HEALTH_URL+'?t='+Date.now(),{cache:'no-store'}).catch(()=>null),
+   fetch(SNAPSHOT_URL+'?t='+Date.now(),{cache:'no-store'}).catch(()=>null)
+  ]);
+  const h=healthResponse?.ok?await healthResponse.json():null;
+  const s=snapshotResponse?.ok?await snapshotResponse.json():null;
+  const source=s?.bootstrap?.report?.source_updated_at||h?.source_updated_at||'';
+  const stale=sourceIsStale(source);
+  const a=h?.alerts||{},health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
+  if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source);
+  const ok=h?.status==='healthy'&&!stale;
+  if(value)value.textContent=stale?'원자료 지연':ok?'정상':h?.status==='degraded'?'주의':'확인 중';
+  health?.classList.toggle('is-ok',ok);
+  health?.classList.toggle('is-warn',stale||h?.status==='degraded');
   if(alert){
    if(a.rules_configured&&a.telegram_configured)alert.textContent='Telegram ON';
    else if(a.telegram_bot_configured||a.telegram_configured)alert.textContent='조건 설정 필요';
