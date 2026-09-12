@@ -33,6 +33,13 @@ export function normalizeRegion(region,destination){
 }
 const normalizeRoute=route=>({...route,region:normalizeRegion(route?.region,route?.code)});
 const normalizeRow=row=>({...row,region:normalizeRegion(row?.region,row?.destination)});
+export function departureTimeMs(row){
+ const date=String(row?.date||'');
+ const time=/^\d{2}:\d{2}$/.test(String(row?.time||''))?String(row.time):'23:59';
+ const value=Date.parse(`${date}T${time}:00+09:00`);
+ return Number.isFinite(value)?value:Infinity;
+}
+export function isPastDeparture(row,nowMs=Date.now()){return departureTimeMs(row)<nowMs;}
 function sanitizeSnapshot(data){
  const source=data?.bootstrap||{},report=source.report||{};
  const rawRoutes=source.routes||[];
@@ -45,6 +52,7 @@ function sanitizeSnapshot(data){
   return rawRoutes.length?visibleRouteCodes.has(code):true;
  };
  const rows=(data?.rows||[]).filter(r=>isVisibleDestination(r)).map(normalizeRow);
+ const activeRows=rows.filter(r=>!isPastDeparture(r));
  const filterDestinationArray=value=>(value||[]).filter(isVisibleDestination);
  const normalizeDestinationArray=value=>filterDestinationArray(value).map(item=>item&&typeof item==='object'?(item.code?normalizeRoute(item):item.destination?normalizeRow(item):item):item);
  const nextReport={...report,
@@ -56,14 +64,22 @@ function sanitizeSnapshot(data){
   nextReport.region_status={...report.region_status,오세아니아:{...report.region_status.오세아니아,routes:routes.filter(r=>r.region==='오세아니아').length}};
  }
  const changes=normalizeDestinationArray(source.changes),recentItems=normalizeDestinationArray(source.recent_opened?.items);
- const bootstrap={...source,report:nextReport,routes,destinations:normalizeDestinationArray(source.destinations),changes,
+ const destinationMap=new Map();
+ for(const row of activeRows){
+  const current=destinationMap.get(row.destination)||{destination:row.destination,city:row.city||row.destination,region:row.region,count:0,next_date:row.date};
+  current.count++;
+  if(row.date<current.next_date)current.next_date=row.date;
+  destinationMap.set(row.destination,current);
+ }
+ const destinations=[...destinationMap.values()].sort((a,b)=>a.next_date.localeCompare(b.next_date)||String(a.city).localeCompare(String(b.city)));
+ const bootstrap={...source,report:nextReport,routes,destinations,changes,
   recent_opened:source.recent_opened?{...source.recent_opened,total:recentItems.length,items:recentItems}:source.recent_opened,
-  stats:{...source.stats,available:rows.length,destinations:new Set(rows.map(r=>r.destination)).size,dates:new Set(rows.map(r=>r.date)).size,first:rows.filter(r=>r.cabin==='FIRST').length}
+  stats:{...source.stats,available:activeRows.length,destinations:new Set(activeRows.map(r=>r.destination)).size,dates:new Set(activeRows.map(r=>r.date)).size,first:activeRows.filter(r=>r.cabin==='FIRST').length}
  };
  return {bootstrap,rows};
 }
-export function filterRows(rows,f={},favorites=new Set()){
- return rows.filter(r=>(!f.region||r.region===f.region)&&(!f.destination||r.destination===f.destination)&&(!f.cabin||r.cabin===f.cabin)&&(!f.month||r.date.startsWith(f.month))&&(!f.start||r.date>=f.start)&&(!f.end||r.date<=f.end)&&(!f.date||r.date===f.date)&&(f.weekend!=='true'||[0,6].includes(new Date(r.date+'T00:00:00Z').getUTCDay()))&&(!f.q||[r.city,r.destination,r.flight,r.country].some(v=>String(v).toLowerCase().includes(f.q.toLowerCase())))&&(f.saved!=='true'||favorites.has(r.id)));
+export function filterRows(rows,f={},favorites=new Set(),nowMs=Date.now()){
+ return rows.filter(r=>(f.saved==='true'||!isPastDeparture(r,nowMs))&&(!f.region||r.region===f.region)&&(!f.destination||r.destination===f.destination)&&(!f.cabin||r.cabin===f.cabin)&&(!f.month||r.date.startsWith(f.month))&&(!f.start||r.date>=f.start)&&(!f.end||r.date<=f.end)&&(!f.date||r.date===f.date)&&(f.weekend!=='true'||[0,6].includes(new Date(r.date+'T00:00:00Z').getUTCDay()))&&(!f.q||[r.city,r.destination,r.flight,r.country].some(v=>String(v).toLowerCase().includes(f.q.toLowerCase())))&&(f.saved!=='true'||favorites.has(r.id)));
 }
 async function loadSnapshot(){
  if(!snapshot||Date.now()-loadedAt>SNAPSHOT_TTL_MS){try{const r=await fetch(SNAPSHOT_URL+'?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');snapshot=sanitizeSnapshot(await r.json());loadedAt=Date.now();}catch(e){if(!snapshot)throw e;loadedAt=Date.now();}}
