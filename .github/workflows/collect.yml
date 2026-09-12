@@ -21,9 +21,12 @@ on:
     # Normal hours: lightweight source check about once per hour.
     - cron: '17 0-12,16-23 * * *'
     # 22:57 KST: start one watcher before the observed 23:00 Korean Air daily refresh.
-    # The watcher polls every 30 seconds until 23:12 KST and launches collection immediately when the source changes.
+    # The watcher polls every 30 seconds and starts immediately on source change.
+    # If no change is visible by 23:05 KST, it force-starts the full collection anyway.
     - cron: '57 13 * * *'
-    # 23:10 KST backup check in case the watcher did not start on time or ended early.
+    # 23:05 KST independent force-start backup in case the 22:57 watcher did not start or exited unexpectedly.
+    - cron: '5 14 * * *'
+    # 23:10 KST backup check after the forced-start interlock.
     - cron: '10 14 * * *'
     # GitHub-hosted US runners can receive the Korean Air daily source later than Korean clients.
     # Keep checking every five minutes through 01:15 KST so regional propagation does not create a long blind spot.
@@ -66,16 +69,17 @@ jobs:
         run: |
           $schedule = '${{ github.event.schedule }}'
           $watchSchedule = '57 13 * * *'
+          $forceStartSchedule = '5 14 * * *'
           $safetySchedule = '31 14 * * *'
           $dailyFailSafeSchedule = '35 15 * * *'
 
           if ($schedule -eq $watchSchedule) {
-            $deadline = [DateTime]::UtcNow.Date.AddHours(14).AddMinutes(12)
+            $deadline = [DateTime::UtcNow.Date.AddHours(14).AddMinutes(5)
             $successfulChecks = 0
             $check = 0
             do {
-              $check++
-              Write-Host "Fast source watcher check $check (30-second cadence, deadline 23:12 KST)"
+              $check ++
+              Write-Host "Fast source watcher check $check (30-second cadence, force-start deadline 23:05 KST)"
               $lines = & node --no-warnings src/public-source-check.mjs --snapshot public-data/snapshot.json 2>&1
               $exitCode = $LASTEXITCODE
               $lines | ForEach-Object { Write-Host $_ }
@@ -92,22 +96,20 @@ jobs:
               Start-Sleep -Seconds 30
             } while ($true)
 
+            Write-Warning "23:05 KST force-start interlock reached; starting full collection even without a visible source change."
+            Add-Content -Path $env:GITHUB_OUTPUT -Value 'changed=true'
             if ($successfulChecks -eq 0) {
-              Write-Warning "Watcher could not complete a single timestamp check; force a collection attempt as fail-safe."
-              Add-Content -Path $env:GITHUB_OUTPUT -Value 'changed=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'current='
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'previous='
-            } else {
-              Write-Host "No source change detected before watcher deadline; post-midnight fallback checks remain armed."
             }
             exit 0
           }
 
           $success = $false
           for ($attempt = 1; $attempt -le 2; $attempt++) {
-            Write-Host "Source check attempt $attempt/2"
+            Write-Host "Source check attemp $attempt/2"
             $sourceArgs = @('--snapshot','public-data/snapshot.json')
-            if ($schedule -eq $dailyFailSafeSchedule) { $sourceArgs += '--force-if-stale-daily' }
+            if ($schedule -eq $forceStartSchedule -or $schedule -eq $dailyFailSafeSchedule) { $sourceArgs += '--force-if-stale-daily' }
             node --no-warnings src/public-source-check.mjs @sourceArgs
             if ($LASTEXITCODE -eq 0) {
               $success = $true
@@ -117,7 +119,7 @@ jobs:
           }
 
           if (-not $success) {
-            if ($schedule -eq $safetySchedule -or $schedule -eq $dailyFailSafeSchedule) {
+            if ($schedule -eq $forceStartSchedule -or $schedule -eq $safetySchedule -or $schedule -eq $dailyFailSafeSchedule) {
               Write-Warning "Safety source check failed; forcing a collection attempt rather than silently missing the day."
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'changed=true'
               Add-Content -Path $env:GITHUB_OUTPUT -Value 'current='
@@ -162,7 +164,7 @@ jobs:
           ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY y}
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
           ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
         run: node --no-warnings scripts/write-health.mjs public-data/health.json
