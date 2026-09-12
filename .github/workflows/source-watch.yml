@@ -1,0 +1,108 @@
+name: Watch Korean Air daily source
+on:
+  schedule:
+    # Allocate a runner before the 23:00 KST refresh window, then poll inside it.
+    - cron: '47 13 * * *'
+    # Independent late backups in case the primary schedule is delayed/dropped or a US edge is stale.
+    - cron: '33 14 * * *'
+    - cron: '3 15 * * *'
+    - cron: '33 15 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/source-watch.yml'
+      - 'src/public-source-check.mjs'
+      - 'src/source-observer.mjs'
+      - 'src/source-timestamp.mjs'
+      - 'src/public-navigation.mjs'
+      - 'test/public-source-check.test.mjs'
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: public-source-watch
+  cancel-in-progress: false
+jobs:
+  watch:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install lightweight watcher dependency
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Test source freshness logic
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs
+      - name: Poll Korean Air source and dispatch collector
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $schedule = '${{ github.event.schedule }}'
+          $primary = '47 13 * * *'
+
+          function Start-CollectorIfIdle {
+            $activeRaw = & gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/collect.yml/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect collector workflow state' }
+            $active = [int]$activeRaw
+            if ($active -gt 0) {
+              Write-Host "Collector already queued/running; watcher will not create a duplicate run."
+              return
+            }
+            Write-Host "Fresh Korean Air source detected; dispatching collector immediately."
+            & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main -f force_full_scan=true
+            if ($LASTEXITCODE -ne 0) { throw 'Collector dispatch failed' }
+          }
+
+          if ($schedule -eq $primary) {
+            $pollStart = [DateTime]::UtcNow.Date.AddHours(13).AddMinutes(57)  # 22:57 KST
+            $deadline = [DateTime]::UtcNow.Date.AddHours(14).AddMinutes(20)   # 23:20 KST
+            if ([DateTime]::UtcNow -lt $pollStart) {
+              $wait = [int][Math]::Ceiling(($pollStart - [DateTime]::UtcNow).TotalSeconds)
+              Write-Host "Watcher prewarmed before 23:00 KST; waiting $wait seconds before polling."
+              Start-Sleep -Seconds $wait
+            }
+            if ([DateTime]::UtcNow -gt $deadline) {
+              # If GitHub started this schedule very late, still perform a short immediate check.
+              $deadline = [DateTime]::UtcNow.AddMinutes(2)
+            }
+            $intervalSeconds = 30
+          } else {
+            # Manual/push/backup runs are short independent checks.
+            $deadline = [DateTime]::UtcNow.AddMinutes(2)
+            $intervalSeconds = 20
+          }
+
+          $successfulChecks = 0
+          $attempt = 0
+          do {
+            $attempt++
+            Write-Host "Source watcher attempt $attempt"
+            $lines = & node --no-warnings src/public-source-check.mjs --snapshot public-data/snapshot.json 2>&1
+            $exitCode = $LASTEXITCODE
+            $lines | ForEach-Object { Write-Host $_ }
+
+            if ($exitCode -eq 0) {
+              $successfulChecks++
+              if (($lines -join "`n") -match 'Source changed: full collection required') {
+                Start-CollectorIfIdle
+                exit 0
+              }
+            } else {
+              Write-Warning "Source check failed; retrying within the watcher window."
+            }
+
+            if ([DateTime]::UtcNow -ge $deadline) { break }
+            Start-Sleep -Seconds $intervalSeconds
+          } while ($true)
+
+          if ($successfulChecks -eq 0) {
+            throw 'Watcher could not complete a successful Korean Air source check'
+          }
+
+          Write-Host "No new DOM source marker observed in this watcher window. The separate 23:05 interlock will still force a fresh API scan."
