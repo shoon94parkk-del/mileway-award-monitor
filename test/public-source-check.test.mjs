@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh,dailySourceIsStale,expectedDailySourceUpdatedAt,staleDailySafetyScanDue} from '../src/public-source-check.mjs';
+import {parseSourceUpdatedAt,readPublishedSourceUpdatedAt,publishedSnapshotNeedsRefresh,dailySourceIsStale,expectedDailySourceUpdatedAt,staleDailySafetyScanDue,sourceCheckDecision} from '../src/public-source-check.mjs';
 
 const current='2026년 9월 10일 23:00';
 const scopedRoutes=[
@@ -33,6 +33,30 @@ test('daily freshness guard recognizes a missed previous-night refresh',()=>{
   assert.equal(expectedDailySourceUpdatedAt(now),'2026년 9월 11일 23:00');
   assert.equal(dailySourceIsStale('2026년 9월 10일 23:00',now),true);
   assert.equal(dailySourceIsStale('2026년 9월 11일 23:00',now),false);
+});
+
+test('KST 23:00 boundary switches the expected source to the same calendar date',()=>{
+  const before=new Date('2026-09-13T13:59:59Z'); // 2026-09-13 22:59:59 KST
+  const at=new Date('2026-09-13T14:00:00Z'); // 2026-09-13 23:00:00 KST
+  assert.equal(expectedDailySourceUpdatedAt(before),'2026년 9월 12일 23:00');
+  assert.equal(expectedDailySourceUpdatedAt(at),'2026년 9월 13일 23:00');
+  assert.equal(dailySourceIsStale('2026년 9월 12일 23:00',before),false);
+  assert.equal(dailySourceIsStale('2026년 9월 12일 23:00',at),true);
+});
+
+test('refresh window waits for the real new marker instead of starting a stale full scan',()=>{
+  const now=new Date('2026-09-13T14:00:05Z'); // 23:00:05 KST
+  const snapshotData={bootstrap:{report:{scope:'WORLDWIDE',routes:scopedRoutes,finished_at:'2026-09-12T14:20:00Z'}}};
+  const old='2026년 9월 12일 23:00';
+  const fresh='2026년 9월 13일 23:00';
+  const staleDecision=sourceCheckDecision({previous:old,current:old,snapshotData,now});
+  assert.equal(staleDecision.staleDaily,true);
+  assert.equal(staleDecision.staleRetryDue,true);
+  assert.equal(staleDecision.changed,false);
+  const freshDecision=sourceCheckDecision({previous:old,current:fresh,snapshotData,now});
+  assert.equal(freshDecision.changed,true);
+  const failSafeDecision=sourceCheckDecision({previous:old,current:old,snapshotData,now,forceIfStaleDaily:true});
+  assert.equal(failSafeDecision.changed,true);
 });
 
 test('stale source forces an independent retry after cooldown even if timestamp detector repeats old value',()=>{

@@ -42,6 +42,18 @@ export function staleDailySafetyScanDue(data,current,now=new Date(),cooldownMs=S
   return !Number.isFinite(finishedAt)||now.getTime()-finishedAt>=cooldownMs;
 }
 
+export function sourceCheckDecision({previous,current,snapshotData,now=new Date(),forceIfStaleDaily=false,allowPeriodicStaleRetry=false}={}){
+  const coverageNeedsRefresh=publishedSnapshotNeedsRefresh(snapshotData,current);
+  const staleDaily=dailySourceIsStale(current,now);
+  const staleRetryDue=staleDailySafetyScanDue(snapshotData,current,now);
+  // Do not let an old marker trigger a long full scan during the 23:00 refresh window.
+  // The scheduled watcher/backups should keep checking until the marker actually advances.
+  // Periodic stale retries remain opt-in, while the explicit 00:35 fail-safe can still force a scan.
+  const periodicStaleRetry=allowPeriodicStaleRetry&&staleRetryDue;
+  const changed=!previous||previous!==current||coverageNeedsRefresh||periodicStaleRetry||(forceIfStaleDaily&&staleDaily);
+  return {changed,coverageNeedsRefresh,staleDaily,staleRetryDue,periodicStaleRetry};
+}
+
 async function dismissCookie(page){
   const cookie=page.locator('kc-global-cookie-banner');
   if(!await cookie.count())return;
@@ -79,14 +91,13 @@ async function main(){
   const previous=readPublishedSourceUpdatedAt(snapshot);
   const current=await fetchSourceUpdatedAt();
   const snapshotData=fs.existsSync(snapshot)?JSON.parse(fs.readFileSync(snapshot,'utf8')):null;
-  const coverageNeedsRefresh=publishedSnapshotNeedsRefresh(snapshotData,current);
-  const staleDaily=dailySourceIsStale(current);
-  const periodicStaleRetry=staleDailySafetyScanDue(snapshotData,current);
   const forceIfStaleDaily=process.argv.includes('--force-if-stale-daily');
-  const changed=!previous||previous!==current||coverageNeedsRefresh||periodicStaleRetry||(forceIfStaleDaily&&staleDaily);
+  const allowPeriodicStaleRetry=process.argv.includes('--allow-periodic-stale-retry');
+  const {changed,coverageNeedsRefresh,staleDaily,staleRetryDue,periodicStaleRetry}=sourceCheckDecision({previous,current,snapshotData,forceIfStaleDaily,allowPeriodicStaleRetry});
   console.log(`Published source: ${previous||'none'}`);
   console.log(`Korean Air source: ${current}`);
   if(staleDaily)console.log(`Daily freshness warning: observed ${current}, expected at least ${expectedDailySourceUpdatedAt()}`);
+  if(staleRetryDue&&!allowPeriodicStaleRetry)console.log('Daily stale-source retry deferred: waiting for the Korean Air source marker to advance');
   if(periodicStaleRetry)console.log('Daily stale-source retry: last completed scan is old enough to force an independent refresh attempt');
   if(coverageNeedsRefresh)console.log('Published monitoring scope is incomplete/stale: collection required');
   if(forceIfStaleDaily&&staleDaily)console.log('Daily fail-safe: stale source marker forces a fresh collection attempt');
