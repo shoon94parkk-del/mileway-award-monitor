@@ -24,8 +24,11 @@ export function parseSourceUpdatedAt(text){
 }
 
 export function expectedDailySourceUpdatedAt(now=new Date()){
+  // Korean Air's public daily snapshot is labeled with the KST calendar date
+  // of the 23:00 refresh. Before 23:00 KST, yesterday 23:00 is the latest
+  // expected snapshot; from 23:00 KST onward, today's 23:00 is expected.
   const kst=new Date(now.getTime()+9*60*60*1000);
-  kst.setUTCDate(kst.getUTCDate()-1);
+  if(kst.getUTCHours()<23)kst.setUTCDate(kst.getUTCDate()-1);
   return `${kst.getUTCFullYear()}년 ${kst.getUTCMonth()+1}월 ${kst.getUTCDate()}일 23:00`;
 }
 
