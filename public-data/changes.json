@@ -4,6 +4,39 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "69279f8b4715bd55328bc73e",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-09-06",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 11일 23:00",
+      "detected_at": "2026-09-12T00:13:55.388Z"
+    },
+    {
+      "id": "079871ca1e37bf0404684075",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-09-06",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 11일 23:00",
+      "detected_at": "2026-09-12T00:13:55.388Z"
+    },
+    {
+      "id": "55cf9e4c958d1c0c9a0d84f2",
+      "kind": "CLOSED",
+      "destination": "AKL",
+      "date": "2027-09-06",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 11일 23:00",
+      "detected_at": "2026-09-12T00:13:55.388Z"
+    },
+    {
       "id": "5891e70ca24805b8ae8744a4",
       "kind": "CLOSED",
       "destination": "YVR",
