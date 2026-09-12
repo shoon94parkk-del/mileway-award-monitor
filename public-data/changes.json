@@ -4,6 +4,28 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "b5aa4813491edea153e6c8f2",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-06",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 11일 23:00",
+      "detected_at": "2026-09-12T00:15:34.535Z"
+    },
+    {
+      "id": "6abafb3822fa87054f16f5a8",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-06",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 11일 23:00",
+      "detected_at": "2026-09-12T00:15:34.535Z"
+    },
+    {
       "id": "69279f8b4715bd55328bc73e",
       "kind": "CLOSED",
       "destination": "BNE",
