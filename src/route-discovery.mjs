@@ -58,12 +58,14 @@ export function candidateRegionLabels(texts){
 }
 
 export function validateDiscovery(regions,routes){
-  if(!Array.isArray(regions)||regions.length<3||!Array.isArray(routes)||routes.length<20)throw Error('Suspiciously small monitored route discovery');
+  if(!Array.isArray(regions)||regions.length<3||!Array.isArray(routes)||routes.length<20)throw Error('Suspiciously small route discovery');
   const seen=new Set();
   for(const route of routes){
-    if(!/^[A-Z]{3}$/.test(route.code)||DOMESTIC.has(route.code)||seen.has(route.code)||!regions.includes(route.region)||!monitoredRoute(route))throw Error('Invalid, domestic, duplicate or excluded discovered airport');
+    // Historical/publication snapshots may still contain intentionally excluded routes.
+    // Live discovery already removes them in parseDestinationButton(), so keep this validator structural only.
+    if(!/^[A-Z]{3}$/.test(route.code)||DOMESTIC.has(route.code)||seen.has(route.code)||!regions.includes(route.region))throw Error('Invalid, domestic or duplicate discovered airport');
     seen.add(route.code);
   }
-  if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered monitored region has no airports');
+  if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered region has no airports');
   return true;
 }
