@@ -7,6 +7,9 @@ on:
     - cron: '33 14 * * *'
     - cron: '3 15 * * *'
     - cron: '33 15 * * *'
+    - cron: '3 16 * * *'
+    - cron: '33 16 * * *'
+    - cron: '3 17 * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -46,15 +49,43 @@ jobs:
           $schedule = '${{ github.event.schedule }}'
           $primary = '47 13 * * *'
 
+          $now = [DateTime]::UtcNow
+          $cycleStart = $now.Date.AddHours(14) # 23:00 KST
+          if ($now -lt $cycleStart) { $cycleStart = $cycleStart.AddDays(-1) }
+          # The dedicated 23:05 interlock owns the first forced scan. If that fails,
+          # the watcher becomes a second independent fail-safe three minutes later.
+          $watcherFailSafeAt = $cycleStart.AddMinutes(8)
+          $staleRetryCooldown = [TimeSpan]::FromMinutes(55)
+
           function Start-CollectorIfIdle {
-            $activeRaw = & gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/collect.yml/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length'
+            param(
+              [Parameter(Mandatory=$true)][string]$Reason,
+              [switch]$RespectStaleCooldown
+            )
+
+            $runsJson = & gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/collect.yml/runs?per_page=30"
             if ($LASTEXITCODE -ne 0) { throw 'Could not inspect collector workflow state' }
-            $active = [int]$activeRaw
-            if ($active -gt 0) {
+            $runs = ($runsJson | ConvertFrom-Json).workflow_runs
+
+            $active = @($runs | Where-Object { $_.status -eq 'in_progress' -or $_.status -eq 'queued' })
+            if ($active.Count -gt 0) {
               Write-Host "Collector already queued/running; watcher will not create a duplicate run."
               return
             }
-            Write-Host "Fresh Korean Air source detected; dispatching collector immediately."
+
+            if ($RespectStaleCooldown) {
+              $recent = @($runs | Where-Object {
+                $created = [DateTime]::Parse($_.created_at).ToUniversalTime()
+                $created -ge $cycleStart -and ([DateTime]::UtcNow - $created) -lt $staleRetryCooldown
+              })
+              if ($recent.Count -gt 0) {
+                $latest = $recent | Sort-Object { [DateTime]::Parse($_.created_at) } -Descending | Select-Object -First 1
+                Write-Host "A stale-source safety scan already started recently ($($latest.created_at)); waiting before another expensive full scan."
+                return
+              }
+            }
+
+            Write-Host "$Reason; dispatching full collector."
             & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main -f force_full_scan=true
             if ($LASTEXITCODE -ne 0) { throw 'Collector dispatch failed' }
           }
@@ -80,18 +111,30 @@ jobs:
 
           $successfulChecks = 0
           $attempt = 0
+          $sawStaleDailyMarker = $false
           do {
             $attempt++
             Write-Host "Source watcher attempt $attempt"
             $lines = & node --no-warnings src/public-source-check.mjs --snapshot public-data/snapshot.json 2>&1
             $exitCode = $LASTEXITCODE
             $lines | ForEach-Object { Write-Host $_ }
+            $text = $lines -join "`n"
 
             if ($exitCode -eq 0) {
               $successfulChecks++
-              if (($lines -join "`n") -match 'Source changed: full collection required') {
-                Start-CollectorIfIdle
+              $isStale = $text -match 'Daily freshness warning:'
+              if ($isStale) { $sawStaleDailyMarker = $true }
+
+              if ($text -match 'Source changed: full collection required') {
+                Start-CollectorIfIdle -Reason 'Fresh Korean Air daily source detected'
                 exit 0
+              }
+
+              # A US edge can keep serving yesterday's DOM marker even after Korea has refreshed.
+              # After 23:08 KST, stale DOM is advisory only: make sure an actual bonusSeatView
+              # full scan is retried, with a cooldown so we never stack expensive collectors.
+              if ($isStale -and [DateTime]::UtcNow -ge $watcherFailSafeAt) {
+                Start-CollectorIfIdle -Reason 'Korean Air DOM marker is still stale after the daily refresh window' -RespectStaleCooldown
               }
             } else {
               Write-Warning "Source check failed; retrying within the watcher window."
@@ -105,4 +148,8 @@ jobs:
             throw 'Watcher could not complete a successful Korean Air source check'
           }
 
-          Write-Host "No new DOM source marker observed in this watcher window. The separate 23:05 interlock will still force a fresh API scan."
+          if ($sawStaleDailyMarker) {
+            Write-Host 'Korean Air US-edge DOM is still stale. Late backup watchers remain armed through 02:03 KST.'
+          } else {
+            Write-Host 'No new source marker observed in this watcher window.'
+          }
