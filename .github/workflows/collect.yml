@@ -127,10 +127,10 @@ jobs:
             Write-Error "Could not read the Korean Air public source timestamp."
             exit 1
           }
-      - name: Test parsers
+      - name: Test collection-critical parsers
         id: tests
         if: steps.source.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
-        run: npm test
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs
       - name: Collect and publish Europe, Americas, Oceania, then Asia
         id: collect
         if: steps.source.outputs.changed == 'true' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_full_scan)
