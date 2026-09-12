@@ -1,6 +1,7 @@
 const IATA=/^([A-Z]{3})\b/;
 const DOMESTIC=new Set('ICN GMP PUS CJU TAE CJJ KWJ USN RSU HIN KPO KUV WJU YNY MWX'.split(' '));
 export const KOREAN_AIR_REGION_LABELS=['미주','동북아시아','동남아시아/서남아시아','유럽','대양주/괌','러시아/몽골/중앙아시아','중동/아프리카'];
+export const MONITORED_REGION_LABELS=['미주','동남아시아/서남아시아','유럽','대양주/괌'];
 
 export function collectionGroup(region){
   if(/유럽|Europe/i.test(region))return '유럽';
@@ -19,8 +20,16 @@ export function monitoredRoute(route){
   if(/동북아시아|^일본$|중국\/동북아시아/.test(region))return false;
   if(/러시아|몽골|중앙아시아/.test(region))return false;
   if(/중동|아프리카/.test(region)&&!/유럽/.test(region))return false;
-  if(/동남아시아/.test(region))return code==='DPS';
+  if(/동남아시아|서남아시아/.test(region))return code==='DPS';
   return true;
+}
+
+export function monitoredRegion(region){
+  const value=String(region||'');
+  if(/동북아시아|^일본$|중국\/동북아시아/.test(value))return false;
+  if(/러시아|몽골|중앙아시아/.test(value))return false;
+  if(/중동|아프리카/.test(value)&&!/유럽/.test(value))return false;
+  return /미주|America|유럽|Europe|대양주|오세아니아|Oceania|동남아시아|서남아시아/.test(value);
 }
 
 export function prioritizeRoutes(routes){
@@ -33,26 +42,28 @@ export function parseDestinationButton(text,region){
   const code=label.match(IATA)?.[1];
   if(!code||DOMESTIC.has(code))return null;
   const city=label.replace(IATA,'').trim().replace(/^[-·|]\s*/,'')||code;
-  return {code,region,label,city};
+  const route={code,region,label,city};
+  // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
+  return monitoredRoute(route)?route:null;
 }
 
 export function candidateRegionLabels(texts){
   const controls=new Set(['닫기','이전','모든 지역 보기','대한민국','선택','확인','취소','검색','출발지','도착지']);
   const parsed=[...new Set((texts||[]).map(t=>String(t||'').replace(/\s+/g,' ').trim()).filter(t=>t&&!controls.has(t)&&!IATA.test(t)))];
-  // Korean Air's current mobile/web accordion exposes region names on acc-button-mobile-web*,
-  // while older collector code looked inside the collapsed panels and can therefore see no labels.
-  // If that DOM locator yields too little information, fall back to the region labels observed on
-  // the public selector instead of silently shrinking worldwide coverage.
-  return parsed.length>=3?parsed:[...KOREAN_AIR_REGION_LABELS];
+  const monitored=parsed.filter(monitoredRegion);
+  // Discover only source groups that can contain a user-monitored route. This avoids repeatedly opening
+  // Northeast Asia, Russia/Mongolia/Central Asia and Middle East/Africa on every regional collection.
+  // If the responsive DOM hides region labels, fall back to the four current monitored source groups.
+  return monitored.length>=3?monitored:[...MONITORED_REGION_LABELS];
 }
 
 export function validateDiscovery(regions,routes){
-  if(!Array.isArray(regions)||regions.length<3||!Array.isArray(routes)||routes.length<20)throw Error('Suspiciously small worldwide route discovery');
+  if(!Array.isArray(regions)||regions.length<3||!Array.isArray(routes)||routes.length<20)throw Error('Suspiciously small monitored route discovery');
   const seen=new Set();
   for(const route of routes){
-    if(!/^[A-Z]{3}$/.test(route.code)||DOMESTIC.has(route.code)||seen.has(route.code)||!regions.includes(route.region))throw Error('Invalid, domestic or duplicate discovered airport');
+    if(!/^[A-Z]{3}$/.test(route.code)||DOMESTIC.has(route.code)||seen.has(route.code)||!regions.includes(route.region)||!monitoredRoute(route))throw Error('Invalid, domestic, duplicate or excluded discovered airport');
     seen.add(route.code);
   }
-  if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered region has no airports');
+  if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered monitored region has no airports');
   return true;
 }
