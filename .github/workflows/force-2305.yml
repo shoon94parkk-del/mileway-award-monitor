@@ -1,7 +1,8 @@
 name: Force daily scan by 23:05 KST
 on:
   schedule:
-    - cron: '5 14 * * *'
+    # Wake the interlock two minutes early to reduce GitHub cron start-delay risk.
+    - cron: '3 14 * * *'
   workflow_dispatch:
 permissions:
   actions: write
@@ -18,6 +19,17 @@ jobs:
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
           workflow="collect.yml"
+
+          # Scheduled run wakes at 23:03 KST and waits locally until 23:05 KST.
+          # A delayed GitHub runner skips the wait and evaluates the interlock immediately.
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            target=$(date -u -d "$(date -u +%F) 14:05:00" +%s)
+            now=$(date -u +%s)
+            if [ "$now" -lt "$target" ]; then
+              sleep "$((target-now))"
+            fi
+          fi
+
           already_progressing=false
           cancel_ids=""
 
@@ -36,7 +48,7 @@ jobs:
               if [ "$collect_status" = "in_progress" ] || [ "$collect_status" = "completed" ]; then
                 already_progressing=true
               elif [ "$source_status" = "completed" ]; then
-                # The 22:57 watcher only finishes early when it has detected a source change.
+                # Before 23:05 the 22:57 watcher only finishes early after detecting a source change.
                 already_progressing=true
               else
                 # Still waiting for the source timestamp at 23:05: replace it with a forced run.
