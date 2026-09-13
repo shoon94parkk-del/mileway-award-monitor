@@ -12,17 +12,17 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    # Only source-freshness/interlock changes need an immediate watcher run.
+    # Collector implementation changes are validated by CI/smoke and must not
+    # create competing Korean Air browser traffic during development.
     paths:
       - '.github/workflows/source-watch.yml'
-      - '.github/workflows/collect.yml'
       - 'src/public-source-check.mjs'
       - 'src/source-observer.mjs'
       - 'src/source-timestamp.mjs'
       - 'src/collection-cycle.mjs'
       - 'scripts/cycle-info.mjs'
       - 'src/public-navigation.mjs'
-      - 'src/public-extract.mjs'
-      - 'scripts/collect-regions.mjs'
       - 'test/public-source-check.test.mjs'
       - 'test/collection-cycle.test.mjs'
 permissions:
