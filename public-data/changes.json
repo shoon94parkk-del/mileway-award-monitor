@@ -4,6 +4,39 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "38a19007ea29517b16c24e0b",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-07",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:54.802Z"
+    },
+    {
+      "id": "073226e98b5881788e4c791f",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-07",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:54.802Z"
+    },
+    {
+      "id": "c0e2714c8d9d2cff226b292f",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2026-11-05",
+      "flight": "KE433",
+      "time": "17:50",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:54.802Z"
+    },
+    {
       "id": "e1b8f535a79df42c72924c02",
       "kind": "CLOSED",
       "destination": "SYD",
