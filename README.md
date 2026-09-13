@@ -1,66 +1,103 @@
 # Mileway
 
-Korean Air public **daily** award-seat explorer. Not realtime inventory; counts are flight/date/cabin combinations, not remaining seats. First class public data combines award and upgrade availability.
+Korean Air public **daily** award-seat explorer. It does not claim realtime inventory. A displayed result is a flight/date/cabin combination, not a remaining-seat count, and final availability must be confirmed on Korean Air.
 
-## Free cloud setup
+## Current monitored scope
 
-- The collector now discovers **all overseas destination regions and airports currently exposed by Korean Air's public award-seat selector**, instead of limiting collection to North America and Europe.
-- GitHub Actions checks the Korean Air public source timestamp about once per hour during normal hours and about every five minutes around the observed daily refresh window (roughly 22:30-00:30 KST).
-- If the source timestamp is unchanged, the expensive full collection is skipped. A daily 23:31 KST safety-net full scan bypasses the source-timestamp gate entirely.
-- Full worldwide collection uses one route/month per request with a 3-second interval, up to three retries per route/month, `--resume` recovery, headless Chromium, and a 180-minute workflow ceiling.
-- Only the Korean Air public award-seat API is treated as the monitored API. API route/month/class are validated and API availability is cross-checked with the rendered calendar.
-- Completed sanitized snapshots live in `public-data/results.json.gz` and `public-data/snapshot.json`. Failed/incomplete collections never replace the last good snapshot.
-- `public-data/health.json` records collector/notification health and alert-channel configuration without exposing secrets. `public-data/changes.json` retains up to 180 days of opened/closed seat changes.
-- Render serves the static site built by `node --no-warnings scripts/build-cloud.mjs`. The site reads live snapshot/health data from GitHub and checks for new snapshots every five minutes while open.
+Mileway intentionally monitors the reduced verified scope below:
+
+- Europe
+- Americas
+- Oceania: MEL/BNE/SYD/AKL
+- Bali: DPS
+
+Collection start priority is **Europe → Americas → Oceania → Bali**. Excluded regions are not silently re-added by display-name migration.
+
+## Daily collection architecture
+
+- `source-watch.yml` is a lightweight source watcher, separate from the expensive collector.
+- `force-2305.yml` is the 23:05 KST recovery interlock.
+- Both use the shared KST cycle calculation in `src/collection-cycle.mjs`; the prewarmed 22:47/22:50 jobs target the upcoming same-day 23:00 cycle rather than the previous day.
+- A stale Korean Air DOM timestamp is not treated as proof that the API is stale. After the refresh window, a guarded safety collection can run even if a US edge still serves the previous marker.
+- Duplicate active collectors are blocked, and the 23:05 interlock does not start another collector when that cycle already has a successful run.
+- Regional collection uses two browser lanes by default. 403/429 access limits stop parallel mode and fall back conservatively rather than increasing concurrency.
+- A completed region is queued to one isolated publisher immediately. The publisher uses a separate Git worktree, so Git rebases/pushes never replace source files underneath still-running collectors.
+- Failed or incomplete regions never replace the last good published region.
+
+GitHub scheduled workflows can still start late; schedule success, collection success, fresh airline source and notification success are separate states.
+
+## Public operating state
+
+`public-data/status.json` is the public status contract. Important fields include:
+
+- `cycle_id`
+- `collector_status`
+- `source_status`
+- `expected_source_at` / `observed_source_at`
+- `last_successful_collection_at`
+- `last_fresh_publication_at`
+- `publication_id`
+- `notification_status`
+- region status records
+
+The UI must not call stale airline source data “normal” just because a collection process completed successfully. `source_status=delayed` is displayed separately from collector health.
+
+`public-data/health.json` remains an operational compatibility file; `status.json` is the preferred public interpretation layer.
 
 ## Public-site UX
 
-- Region tabs are generated from the regions actually found in the latest Korean Air snapshot, so Japan/Asia/Oceania/etc. appear automatically when collected.
-- The main filter is intentionally simple: region, destination, departure month/date, weekend and sort. The redundant free-text search and cabin selector are hidden; Prestige award + First award results are always shown together.
-- Quick filters cover the next 3/6 months, weekends, and ±3/±7-day flexible date windows.
-- Search/filter state is mirrored into the URL so a filtered result can be bookmarked or shared.
-- Favorites and saved searches are stored only in the current browser with `localStorage`; no login or server database is required.
-- Mobile navigation becomes a bottom tab bar and the filter panel can be collapsed.
-- Calendar states distinguish available, no matching seat, airline-unqueryable, and not-yet-confirmed periods.
-- A recent-openings panel highlights seats that newly appeared in the last seven days.
-- The page auto-checks for a newer published source every five minutes and refreshes itself when the Korean Air source timestamp changes.
-- The site includes a web-app manifest and network-first service worker so supported phones can install it like an app without caching live snapshot/health data.
+- Past departures are excluded from normal search/calendar/stats while saved historical items can remain visible in their saved context.
+- Prestige is the default visible cabin filter. Users can switch to Prestige + First or First only.
+- Region, destination, month/date, weekend, cabin and sort are shared by the active filter summary.
+- The download button exports the **current live publication and current filters**, not a stale Render copy of `/snapshot.json`.
+- Mobile filter state and scroll position are preserved without forcing a whole-page reload for ordinary data refreshes.
+- The status rail separates **collection / airline source / current result / my alerts**.
 
 ## Seat alerts
 
-The static site can build alert rules using region, destination(s), date range and weekend conditions. Region rules accept any region discovered from Korean Air rather than only America/Europe. Cabin selection is fixed to both Prestige award and First award. Browser-saved rules are **not** automatically synchronized to GitHub Secrets; after editing rules, copy the generated JSON into `ALERT_RULES_JSON` again.
+Alerts are private per device and delivered through the Render alert API. Do not put user rules or secret values in the public repository.
 
-Required rule secret:
+Canonical region IDs are independent of display/source labels:
 
-- `ALERT_RULES_JSON` — JSON array generated by the website's **좌석 알림** dialog.
+| region_id | Display | Source examples |
+|---|---|---|
+| `europe` | 유럽 | 유럽 |
+| `americas` | 미주 | 미주 |
+| `oceania` | 오세아니아 | 대양주/괌 |
+| `bali` | 발리 | 동남아시아/서남아시아 + DPS |
 
-Telegram (recommended):
+Legacy `발리`, `오세아니아`, `대양주/괌` rules are normalized to the canonical IDs. This prevents whole-region Bali/Oceania alert misses while keeping the intentionally reduced route scope.
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
+The status rail shows the **current device's** Telegram link/rule state, not merely whether the global bot exists.
 
-Email (optional, through Resend):
+## Data integrity
 
-- `RESEND_API_KEY`
-- `ALERT_EMAIL_TO`
-- `ALERT_EMAIL_FROM`
+- Prestige award class `O` and public First class `A` are preserved; Prestige upgrade class `Z` is excluded.
+- `UNQUERYABLE` and collector failures are never converted to “no seats”.
+- Incomplete collections cannot replace a completed published region.
+- Both legitimate `OPENED` and `CLOSED` history events are supported; CLOSED events are not deleted to make CI green.
+- Publication uses a single writer for Git/public-data updates.
 
-After each successful full scan, `scripts/notify-alerts.mjs` compares each alert rule independently with its previous state and sends only newly matching/re-opened seats. Notification identity is stable across airline time/fare-class metadata edits. Telegram and email keep independent delivery states so one channel failing does not incorrectly mark the other as delivered.
+## CI and deployment
 
-Use **Actions → Test Mileway alert → Run workflow** to send a test notification without waiting for a real seat opening.
+CI runs all unit tests, source syntax checks and a complete cloud-site build. A GitHub push alone is not treated as production completion.
 
-## Data integrity and health
+Render services:
 
-- Prestige award class `O` and first-class public `A` are preserved; Prestige upgrade class `Z` is intentionally excluded.
-- Airline `UNQUERYABLE` responses and collector `FAILED` states are never converted into “no seats”.
-- Incomplete collections cannot replace the published snapshot.
-- `health.json` can report source-check, collection, or notification degradation on the public UI.
-- CI runs unit tests, source syntax checks, worldwide route-discovery regression tests, alert-rule regression tests, PWA asset checks, and a full cloud-site build on pushes to `main`.
+- Static site: `mileway-award-monitor`
+- Alert API: `mileway-alert-api`
 
-## Manual run
+After an operational change, verify the actual Render Live commit because auto-deploy has previously lagged behind `main` even while configured as enabled.
 
-Actions → **Collect public daily award seats** → **Run workflow**. Manual runs force a full collection by default; disable `force_full_scan` to perform only the source check. No airline login or credentials are used. Cloud IP access may be rejected by the airline. Never bypass authentication or CAPTCHA.
+## Manual collection
 
-## Limits
+Actions → **Collect public daily award seats** → **Run workflow**.
 
-The underlying Korean Air source is a public daily dataset, not guaranteed realtime inventory. GitHub scheduled workflows can start late. Worldwide collection takes materially longer than the old America/Europe-only scan. Alerts only know about seats present in a successfully published snapshot, and final booking availability must be confirmed on Korean Air.
+The collector uses only Korean Air's public daily award-seat source. No airline login, CAPTCHA bypass or authentication circumvention is used.
+
+## Known work still in progress
+
+- Persisting route/month checkpoints across separate GitHub runner executions.
+- Coverage-aware `available / unavailable / unknown` alert state so an unqueryable gap never creates a false reopen notification.
+- Message-level notification outbox/atomic claim for partial Telegram delivery failures.
+- Full device-size browser QA and 7-day 23:00 operational validation.
