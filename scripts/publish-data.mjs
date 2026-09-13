@@ -14,7 +14,7 @@ const safe=pick(report,['source','source_type','source_updated_at','start_date',
 safe.routes=report.routes.map(r=>pick(r,['code','region','label','city','country']));
 safe.coverage=report.coverage.map(r=>pick(r,['destination','month','days','flightClassRows','source_updated_at']));
 safe.unqueryable=(report.unqueryable||[]).map(r=>pick(r,['destination','month','status','reason','checked_at']));
-safe.rows=report.rows.map(r=>pick(r,['date','origin','destination','flight','departureTime','cabin','fareClass','available','region','sourceUpdatedAt','checkedAt','availabilityType']));
+safe.rows=report.rows.map(r=>pick(r,['date','origin','destination','flight','departureTime','aircraft','cabin','fareClass','available','region','sourceUpdatedAt','checkedAt','availabilityType']));
 fs.mkdirSync('public-data',{recursive:true});
 const key=r=>createHash('sha256').update([r.destination,r.date,r.flight,r.cabin].join('|')).digest('hex').slice(0,24);
 const previousSnapshot=(()=>{try{return JSON.parse(fs.readFileSync('public-data/snapshot.json','utf8'));}catch{return null;}})();
@@ -36,4 +36,4 @@ events=[...recent,...older];
 const baselineResetAt=oldHistory.baseline_reset_at||null;
 fs.writeFileSync(historyPath,JSON.stringify({version:1,source_updated_at:safe.source_updated_at,...(baselineResetAt?{baseline_reset_at:baselineResetAt}:{}),events},null,2)+'\n');
 fs.writeFileSync(path.join('public-data','results.json.gz'),gzipSync(JSON.stringify(safe)));
-console.log(`Published ${safe.rows.length} observations; retained ${events.length} change events (${recent.length} within 7 days).`);
+console.log(`Published ${safe.rows.length} observations; retained ${events.length} change events (${recent.length} within 7 days); ${safe.rows.filter(r=>r.aircraft).length} rows include aircraft metadata.`);
