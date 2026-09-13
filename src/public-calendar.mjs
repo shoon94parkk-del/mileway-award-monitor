@@ -1,6 +1,19 @@
 export const PUBLIC_URL = 'https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
 export const PUBLIC_API = 'https://www.koreanair.com/api/hmp/bonusSeatView/bonusSeatView';
 
+function extractAircraft(flight) {
+  const preferred=['aircraftType','aircraftTypeCode','aircraftCode','aircraft','equipmentType','equipmentCode','equipment','equipType'];
+  for(const key of preferred) {
+    const value=flight?.[key];
+    if((typeof value==='string'||typeof value==='number')&&String(value).trim()) return String(value).trim();
+  }
+  for(const [key,value] of Object.entries(flight||{})) {
+    if(!/(aircraft|equipment|equip|acft)/i.test(key)) continue;
+    if((typeof value==='string'||typeof value==='number')&&String(value).trim()) return String(value).trim();
+  }
+  return null;
+}
+
 export function parsePublicApi(data, {origin, destination, month, startDate, endDate, sourceUpdatedAt}) {
   if(data.departureAirport!==origin || data.arrivalAirport!==destination || !Array.isArray(data.flightList)) throw new Error('Unexpected public API route or schema');
   const rows=[];
@@ -13,6 +26,7 @@ export function parsePublicApi(data, {origin, destination, month, startDate, end
       if(!['O','A'].includes(flight.bookingClass)) continue;
       if(typeof flight.availableSeat!=='boolean'||!flight.flightNumber) throw new Error('Missing flight availability');
       rows.push({date,origin,destination,flight:flight.flightNumber,departureTime:flight.departureTime,
+        aircraft:extractAircraft(flight),
         cabin:flight.bookingClass==='O'?'PRESTIGE':'FIRST',fareClass:flight.bookingClass,
         available:flight.availableSeat,availabilityType:flight.bookingClass==='O'?'AWARD':'AWARD_OR_UPGRADE',
         seats:null,sourcePath:PUBLIC_API,sourceUpdatedAt,checkedAt:new Date().toISOString(),source:'KOREAN_AIR_PUBLIC_DAILY'});
