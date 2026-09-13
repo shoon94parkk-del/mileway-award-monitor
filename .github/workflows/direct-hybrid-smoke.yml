@@ -8,41 +8,35 @@ on:
 permissions:
   contents: read
 concurrency:
-  # Use the exact production collector lock so a smoke probe never competes
-  # with the daily full collection for Korean Air browser/API traffic.
   group: public-daily-collection
   cancel-in-progress: false
 jobs:
   smoke:
     if: github.event.repository.private == false
-    runs-on: windows-latest
-    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install Playwright
-        run: npm install --no-save --package-lock=false playwright@1.62.1
-      - name: Run two-month LAX self-verified hybrid smoke
-        shell: pwsh
+      - name: Install Playwright Chromium
         run: |
-          $start = node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});console.log(f.format(new Date()))"
-          $end = node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit'});const [y,m]=f.format(new Date()).split('-').map(Number);console.log(new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10))"
-          Write-Host "Hybrid smoke range: $start -> $end"
-          node --no-warnings src/public-extract.mjs --headless --route LAX --start $start --end $end --output data/direct-smoke --max-retries 1 --interval-ms 2500 --direct-after-first --direct-interval-ms 1000
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install chromium --with-deps
+      - name: Run two-month LAX self-verified hybrid smoke
+        shell: bash
+        run: |
+          start=$(node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});console.log(f.format(new Date()))")
+          end=$(node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit'});const [y,m]=f.format(new Date()).split('-').map(Number);console.log(new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10))")
+          echo "Hybrid smoke range: $start -> $end"
+          node --no-warnings src/public-extract.mjs --headless --route LAX --start "$start" --end "$end" --output data/direct-smoke --max-retries 1 --interval-ms 2500 --direct-after-first --direct-interval-ms 1000
       - name: Summarize hybrid engine usage
         if: always()
-        shell: pwsh
+        shell: bash
         run: |
-          if (Test-Path data/direct-smoke/results.json) {
-            $r = Get-Content data/direct-smoke/results.json -Raw | ConvertFrom-Json
-            Write-Host "ENGINE=$($r.collection_engine) SOURCE=$($r.source_updated_at) ELAPSED_MS=$($r.elapsed_ms)"
-            if ($r.acceleration) {
-              Write-Host "ACCEL UI=$($r.acceleration.ui_months) DIRECT=$($r.acceleration.direct_months) VERIFIED=$($r.acceleration.direct_templates_verified)/$($r.acceleration.direct_verification_calls) FALLBACKS=$($r.acceleration.direct_fallbacks) VERIFY_FAIL=$($r.acceleration.direct_verification_failures)"
-            }
-            $r.coverage | ForEach-Object { Write-Host "COVERAGE $($_.destination) $($_.month) engine=$($_.engine) rows=$($_.flightClassRows)" }
-            $r.unqueryable | ForEach-Object { Write-Host "UNQUERYABLE $($_.destination) $($_.month) engine=$($_.engine)" }
-          } else {
-            Write-Host 'No smoke results.json was produced.'
-          }
+          if [ -f data/direct-smoke/results.json ]; then
+            node -e "const r=require('./data/direct-smoke/results.json'); console.log('ENGINE='+r.collection_engine+' SOURCE='+r.source_updated_at+' ELAPSED_MS='+r.elapsed_ms); const a=r.acceleration||{}; console.log('ACCEL UI='+a.ui_months+' DIRECT='+a.direct_months+' VERIFIED='+a.direct_templates_verified+'/'+a.direct_verification_calls+' FALLBACKS='+a.direct_fallbacks+' VERIFY_FAIL='+a.direct_verification_failures); for(const x of r.coverage||[]) console.log('COVERAGE '+x.destination+' '+x.month+' engine='+x.engine+' rows='+x.flightClassRows); for(const x of r.unqueryable||[]) console.log('UNQUERYABLE '+x.destination+' '+x.month+' engine='+x.engine);"
+          else
+            echo 'No smoke results.json was produced.'
+          fi
