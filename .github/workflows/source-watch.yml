@@ -87,7 +87,7 @@ jobs:
             }
 
             Write-Host "$Reason; dispatching full collector."
-            & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main -f force_full_scan=true
+            & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main
             if ($LASTEXITCODE -ne 0) { throw 'Collector dispatch failed' }
           }
 
