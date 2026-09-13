@@ -1,7 +1,8 @@
-import {prestigeSeatInfo} from './seat-metadata.js';
+import {prestigeSeatInfo,prestigeSeatCatalog} from './seat-metadata.js';
 
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const AWARD_URL='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
+const SCHEDULE_URL='https://www.koreanair.com/flight-status?isSchedule=T';
 const mobileQuery=window.matchMedia('(max-width:850px)');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seatRowsPromise=null;
@@ -88,18 +89,25 @@ function variantsHtml(meta){
  return `<section class="seat-variants"><h3>같은 기종 안에서도 좌석이 달라요</h3>${meta.variants.map(v=>`<a href="${esc(v.official_url)}" target="_blank" rel="noreferrer"><b>${esc(v.name)} · ${esc(v.seat_name)}</b><span>${esc(v.bed)} · ${esc(v.layout)} · ${esc(v.direct_aisle)}</span><em>공식 정보 ↗</em></a>`).join('')}</section>`;
 }
 
+function unknownPrestigeGuide(){
+ const catalog=prestigeSeatCatalog();
+ const products=[catalog['B787-10'],catalog['B787-9'],catalog.A321NEO].filter(Boolean);
+ return `<div class="seat-source-note"><strong>이 항공편의 실제 기종은 아직 확인되지 않았습니다.</strong><p>대한항공 공개 마일리지 좌석 자료에는 현재 항공편별 기종값이 포함되지 않습니다. 편명만으로 기종을 추정하지 않고, 예약 전에 비교할 수 있도록 대한항공의 대표 프레스티지 좌석을 보여드립니다.</p></div><section class="seat-guide-section"><div class="seat-guide-heading"><h3>대한항공 프레스티지 좌석 비교</h3><span>대표 좌석 · 실제 투입 기재와 다를 수 있음</span></div><div class="seat-guide-grid">${products.map(meta=>`<a class="seat-guide-card" href="${esc(meta.official_url)}" target="_blank" rel="noreferrer"><div class="seat-guide-image"><img src="${esc(meta.image_url)}" alt="${esc(meta.seat_name)}" loading="lazy" referrerpolicy="no-referrer"><span class="seat-guide-image-fallback" hidden>공식 사진 보기 ↗</span></div><div class="seat-guide-body"><strong>${esc(meta.seat_name)}</strong><small>${esc(meta.aircraft)} 대표</small><p>${esc(meta.bed)} · ${esc(meta.direct_aisle)}</p><em>대한항공 공식 사진·상세 ↗</em></div></a>`).join('')}</div></section>`;
+}
+
+function attachImageFallbacks(content){
+ content.querySelectorAll('.seat-photo img,.seat-guide-card img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;const f=img.parentElement?.querySelector('.seat-image-fallback,.seat-guide-image-fallback');if(f)f.hidden=false;},{once:true}));
+}
+
 function renderSeatDialog(row){
  const d=document.querySelector('#dialog'),content=document.querySelector('#dialog-content');if(!d||!content)return;
  const prestige=row.cabin!=='FIRST';
  const meta=prestige?prestigeSeatInfo(row.aircraft):{aircraft:row.aircraft||'기종 미확인',seat_name:'일등석 좌석',bed:'기재별 상이',direct_aisle:'기재별 상이',layout:'기재별 상이',privacy:'기재별 상이',summary:'현재 Mileway의 좌석 품질 메타데이터는 프레스티지석을 우선 제공합니다. 일등석은 대한항공 공식 기종 페이지에서 확인해 주세요.',image_url:'',image_note:'',official_url:'https://www.koreanair.com/contents/plan-your-travel/in-flight-experience/fleet',confidence:'unknown'};
  const exact=meta.confidence==='exact',unknown=meta.confidence==='unknown';
- content.innerHTML=`<span class="eyebrow">SEAT GUIDE · ${esc(row.flight||'KOREAN AIR')}</span><div class="seat-dialog-title"><div><h2>${esc(row.city||row.destination)}행 ${prestige?'프레스티지':'일등석'} 좌석</h2><p>${esc(row.date)} · ${esc(row.flight)} ${esc(row.time||'')} · ${esc(meta.aircraft||row.aircraft||'기종 미확인')}</p></div><span class="seat-confidence ${exact?'exact':'check'}">${exact?'기종 기준 확인':unknown?'기종 미확인':'구성 확인 필요'}</span></div>
- ${meta.image_url?`<figure class="seat-photo"><img src="${esc(meta.image_url)}" alt="${esc(meta.image_note||meta.seat_name)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(meta.image_note||'대한항공 공식 좌석 이미지')}</figcaption><div class="seat-image-fallback" hidden>이미지를 불러오지 못했습니다. 아래 공식 좌석 정보에서 사진을 확인해 주세요.</div></figure>`:''}
- <div class="seat-product"><strong>${esc(meta.seat_name)}</strong><p>${esc(meta.summary)}</p></div>${seatFacts(meta)}${variantsHtml(meta)}
- <div class="seat-caution">예정 기종과 실제 투입 기재는 운항 사정으로 바뀔 수 있습니다. 특히 B777-300ER·A330-300은 같은 기종 안에서도 좌석 구성이 다르므로 예약 화면에서 최종 기재를 확인해 주세요.</div>
- <div class="dialog-actions seat-dialog-actions"><a class="secondary" href="${esc(meta.official_url)}" target="_blank" rel="noreferrer">대한항공 공식 좌석 사진 ↗</a><a class="primary book-button" href="${esc(bookingUrl(row))}" target="_blank" rel="noreferrer">예약하기 ↗</a></div>`;
+ const main=prestige&&unknown?unknownPrestigeGuide():`${meta.image_url?`<figure class="seat-photo"><img src="${esc(meta.image_url)}" alt="${esc(meta.image_note||meta.seat_name)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(meta.image_note||'대한항공 공식 좌석 이미지')}</figcaption><div class="seat-image-fallback" hidden>이미지를 불러오지 못했습니다. 아래 공식 좌석 정보에서 사진을 확인해 주세요.</div></figure>`:''}<div class="seat-product"><strong>${esc(meta.seat_name)}</strong><p>${esc(meta.summary)}</p></div>${seatFacts(meta)}${variantsHtml(meta)}`;
+ content.innerHTML=`<span class="eyebrow">SEAT GUIDE · ${esc(row.flight||'KOREAN AIR')}</span><div class="seat-dialog-title"><div><h2>${esc(row.city||row.destination)}행 ${prestige?'프레스티지':'일등석'} 좌석</h2><p>${esc(row.date)} · ${esc(row.flight)} ${esc(row.time||'')} · ${esc(meta.aircraft||row.aircraft||'기종 미확인')}</p></div><span class="seat-confidence ${exact?'exact':'check'}">${exact?'기종 기준 확인':unknown?'실제 기종 미확인':'구성 확인 필요'}</span></div>${main}<div class="seat-caution">예정 기종과 실제 투입 기재는 운항 사정으로 바뀔 수 있습니다. 특히 B777-300ER·A330-300은 같은 기종 안에서도 좌석 구성이 다르므로 예약 화면에서 최종 기재를 확인해 주세요.</div><div class="dialog-actions seat-dialog-actions"><a class="secondary" href="${unknown?SCHEDULE_URL:esc(meta.official_url)}" target="_blank" rel="noreferrer">${unknown?'대한항공 주간 스케줄 확인 ↗':'대한항공 공식 좌석 사진 ↗'}</a><a class="primary book-button" href="${esc(bookingUrl(row))}" target="_blank" rel="noreferrer">예약하기 ↗</a></div>`;
  d.classList.add('seat-info-dialog');if(!d.open)d.showModal();
- const img=content.querySelector('.seat-photo img');if(img)img.addEventListener('error',()=>{img.hidden=true;const f=content.querySelector('.seat-image-fallback');if(f)f.hidden=false;},{once:true});
+ attachImageFallbacks(content);
 }
 
 async function openSeatInfo(id){
