@@ -57,7 +57,25 @@ test('shared dialog state is reset after the seat guide closes',()=>{
  assert.match(seat,/classList\.remove\('seat-info-dialog'\)/);
 });
 
-test('service worker cache is advanced for the final audit bundle',()=>{
+test('mobile first paint keeps the filter sheet closed before enhancement modules run',()=>{
+ const html=read('web/index.html');
+ assert.match(html,/filter-card cloud-collapsed/);
+ assert.match(html,/max-width:850px/);
+ assert.match(html,/MutationObserver/);
+ assert.match(html,/setTimeout\(\(\)=>\{const batch=pending\.splice\(0\);timer=0;callback\(batch,self\|\|observer\)\},80\)/);
+});
+
+test('cloud startup uses bundled snapshot immediately and refreshes live data with a timeout',()=>{
+ const api=read('web/cloud-api.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(api,/FALLBACK_SNAPSHOT_URL='\.\/snapshot\.json'/);
+ assert.match(api,/fetchSnapshot\(FALLBACK_SNAPSHOT_URL,2500\)/);
+ assert.match(api,/void refreshLiveSnapshot\(\)/);
+ assert.match(api,/new AbortController\(\)/);
+ assert.match(api,/fetchSnapshot\(SNAPSHOT_URL,5000\)/);
+ assert.match(build,/live cloud snapshot source/);
+});
+
+test('service worker cache is advanced for the mobile stability bundle',()=>{
  const sw=read('web/service-worker.js');
- const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=23);
+ const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=24);
 });
