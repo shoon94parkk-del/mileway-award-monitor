@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'public-data/status.json'
+      - 'public-data/**'
 permissions:
   contents: read
 concurrency:
