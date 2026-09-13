@@ -3,7 +3,7 @@ import {prestigeSeatInfo} from './seat-metadata.js';
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const AWARD_URL='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
 const mobileQuery=window.matchMedia('(max-width:850px)');
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seatRowsPromise=null;
 
 async function rowsById(){
