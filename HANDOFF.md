@@ -1,47 +1,101 @@
-# Worldwide follow-up — 2026-09-10
+# Mileway handoff — 2026-09-13
 
-## Latest override: regional immediate publication
+## Current production goal
 
-Final local verification: npm test 34/34 passed, cloud build passed (existing 92 combinations / 26 routes), modified orchestrator and generated regional-status/cloud-enhancements syntax checks passed, git diff --check passed. git diff --exit-code -- public-data confirmed no production-data modifications. No remote upload succeeded and no deployment was performed.
+Mileway monitors Korean Air's public **daily** mileage-seat dataset without airline login. The current intentionally reduced scope is Europe, Americas, Oceania (MEL/BNE/SYD/AKL), and Bali (DPS), with collection-start priority Europe → Americas → Oceania → Bali.
 
-User now explicitly wants Europe completed -> publish immediately, Americas completed -> publish immediately, Oceania, Asia. This overrides all-worldwide-before-publication statements below. New --group flag marks REGION scope; only a complete validated region may replace that region. mergeCompletedRegion preserves all other region observations and their real source timestamps. Coverage is source-specific; app-store query now matches destination/month/source rather than a single global source. Composite report exposes region_status, mixed_sources, worldwide_complete, publication_id. Regional status UI shows region timestamps; snapshot refresh reacts to publication_id even on the same airline day.
+Do not describe the service as realtime inventory. A result is a flight/date/cabin combination, not remaining seats.
 
-scripts/collect-regions.mjs is the GitHub-only publishing orchestrator. It sequentially collects each group (bounded retry/resume), validates/merges, builds, then commits/pushes immediately before the next group. Publication staging failure restores only three known files from in-memory backups. No force push; external branch race stops publishing. Workflow now uses this script. Individual region failure retains old data and continues next group; access-limit exit 75 stops. Notifications currently run after the regional loop, not immediately after every group. Region-only successful publication is allowed; incomplete region publication is not.
+## 2026-09-13 audit implementation
 
-These changes remain LOCAL ONLY pending Edge upload permission. No regional GitHub run or live deployment has been verified. Tests added for preserving America while updating Europe and refusing incomplete/failed regional reports. Next: finish local tests and upload all coordinated src/scripts/web/test/workflow changes together via authenticated git or a PR; do not deploy a partial set. Existing publication and UI files depend on new regional modules. Validate discovery remotely before full regional scan. Legacy script discover-public-routes.mjs is not the shared path.
+The audit baseline was `a95d745532c294004336c7faf063d84012511251`. The following findings have been addressed on `main`:
 
-Base: origin/main 6c81151c0ee4a0181e12b9fa6adfb9262551be18. Fresh checkout; do not reuse the older divergent cloud-checkout.
+### Alert region contract
 
-## Current status
+`src/alert-rules.mjs` now normalizes display/source labels to canonical region IDs:
 
-Changes in this checkout are NOT uploaded/committed to remote. Production public-data has not changed. Existing main CI run 34486392913 succeeded. Local original 26 tests passed; new navigation/publication tests passed (31), then regional priority test passed independently. Run complete npm test before upload.
+- `europe`
+- `americas`
+- `oceania`
+- `bali`
 
-Actual local headless guest navigation failed at page.goto waitUntil:commit timeout=30000. Repeated with bounded retry: both attempts timed out before departureBtn. No destination list or worldwide snapshot was obtained. This is not proof of an airline block; HTTP status was not returned. Do not assert discovery/full collection succeeded. Do not publish partial or fabricated results.
+DPS maps to Bali regardless of its raw `동남아시아/서남아시아` label. MEL/BNE/SYD/AKL map to Oceania even when raw rows use `대양주/괌`. Legacy `발리`, `오세아니아`, and `대양주/괌` rules migrate through normalization. Dedicated tests cover Bali and Oceania whole-region rules.
 
-## Latest user preference
+### OPENED/CLOSED CI model
 
-Collection order: Europe -> Americas -> Oceania -> Asia. prioritizeRoutes() orders discovered routes in stable regional batches. Existing month checkpoint/resume remains sequential. Dynamic selector region labels remain unchanged (e.g. Europe/Middle East, Oceania, Japan, Southeast Asia/Guam). Unknown regions currently fall into the final Asia group; review if airline adds Africa as a separate region.
+The old baseline test incorrectly required every change-history event to be `OPENED`. Legitimate `CLOSED` events are now accepted and publisher behavior for both transitions is verified. Production CLOSED history must never be deleted just to make CI pass.
 
-## Changes prepared
+### Explicit freshness state
 
-- Shared public-navigation: commit + visible departureBtn, at most two attempts, 10-second backoff, immediate 403/429 stop. Collector exits 75 on access limits; workflow stops process recovery on 75.
-- Discovery-only flag emits region/code lists without writing production results. Domestic airports rejected; structural discovery sanity gate; production collector uses same discovery. Dedicated manual read-only workflow discovery.yml (no publication/secrets/artifacts).
-- Worldwide publication validator rejects smoke/partial scopes, failed/incomplete scans, missing/duplicate month coverage, wrong route/source/class/cabin observations. Empty O/A result can be legitimate if every request was validated and covered. Last production snapshot untouched on rejection.
-- CLOSED changes require normal coverage for the seat month/date, not UNQUERYABLE or a date rolling outside range.
-- Resume drops obsolete routes; collection groups follow user order.
-- Alert set filters normalized in stable sorted order; calendar dates validated rather than regex only.
-- Manual force scan bypasses failed timestamp precheck; health notices publication failure/cancellation.
+`public-data/status.json` is now generated by `Refresh Mileway public status` and separates:
 
-## Publication blocker
+- collector status
+- source freshness status
+- expected vs observed source timestamp
+- last successful collection
+- last fresh publication
+- publication ID
+- notification status
+- regional status
 
-GitHub connector is unavailable in current tools. Public git clone/read works; local noninteractive Git credential helper cannot authenticate for push. Edge is signed into correct GitHub owner and upload UI is open, but fileChooser.setFiles failed with Not allowed. Browser extension needs Allow access to file URLs enabled by user. Do not extract browser cookies/tokens or broaden authentication permissions. No files were uploaded.
+A successful collector with an old airline marker is `collector_status=succeeded` + `source_status=delayed`, not simply “healthy”. The UI status rail consumes this contract and separately shows collection, source, result count, and the current device's alert state.
 
-## Next
+### 23:00 cycle boundary
 
-1. After upload permission/auth is available, upload changed src/test/scripts/workflows preserving paths, or use authenticated git. Never force push. Validate entire diff and rerun npm test/syntax/cloud build first.
-2. Run discovery.yml on GitHub; inspect visible departureBtn log, region count, exact airport codes. Fix selectors based on actual UI evidence. Old scripts/discover-public-routes.mjs remains legacy; use src/public-extract.mjs --discover-only for the shared path.
-3. Only if discovery passes, smoke-test one month for a small route set in a separate output (scope SMOKE cannot publish), then full worldwide sequential scan.
-4. Whole successful scan -> publication/build -> verify snapshot. If blocked keep old 92-combination/26-route snapshot and degraded health.
-5. Review remaining alerts unknown-coverage state handling, notification idempotency and timeout, cloud export stale snapshot, health recovery semantics, adapter refactor, mobile UX. These were NOT fixed this turn.
-6. Verify Render service srv-dah8gkdbedkc739jdlbg manual/auto deployment and exact deployed SHA; live site https://mileway-award-monitor.onrender.com/. No deployment or live UI QA of these changes yet. Never claim complete from GitHub commit alone.
-7. Public health currently reports no configured rule/Telegram/email secrets. Real notifications not activated or tested. Secrets registration requires user-supplied channel credentials; never publish credentials.
+`src/collection-cycle.mjs` is the common KST cycle calculation. Prewarmed 22:47/22:50 runs resolve to the upcoming same-day 23:00 cycle. Tests cover 22:44, 22:47, 22:57, 23:00, 23:05, 00:05 and year-end boundaries.
+
+`source-watch.yml` and `force-2305.yml` use this shared cycle. The 23:05 interlock checks both active collector runs and successful runs already started in the same cycle before dispatching a forced scan.
+
+### Regional immediate publication
+
+`scripts/collect-regions.mjs` still uses two collector lanes by default, but completed regions no longer wait for every other region to finish before publication.
+
+A single publication queue consumes completed regions. Publication runs in an isolated Git worktree under the runner temp directory. Therefore a `pull --rebase`/push performed by the publisher cannot replace code files underneath browser collectors that are still running. The main collector checkout is advanced to the latest published `origin/main` only after all browser collection work and publication jobs have completed, so subsequent notification/health steps read the final published snapshot.
+
+403/429 access limits still stop parallel mode and trigger conservative sequential recovery. Failed/incomplete regions retain their previous published state.
+
+### Public-site behavior
+
+- Past departures are hidden from ordinary search/calendar/stat counts while saved history can remain.
+- Prestige is the default visible cabin filter; First and combined modes remain available.
+- Current filter/cabin state is surfaced in the active-filter summary.
+- Export now reads the same live GitHub-backed publication through `cloudApi` and applies the current filters. It no longer redirects to the potentially stale Render `/snapshot.json` copy.
+- Developer-only network error copy was removed from the user-facing path.
+- The status rail rechecks public state every 30 seconds and on returning to the tab.
+
+## Deployment facts
+
+Render resources:
+
+- Static site: `srv-dah8gkdbedkc739jdlbg` (`mileway-award-monitor`)
+- Alert API: `srv-dahr6pqd0e5s738jbt2g` (`mileway-alert-api`, Singapore Free)
+
+The audit found both services stuck on `e9487d8e…` even though auto-deploy was configured. During the 2026-09-13 implementation both services were manually redeployed and their Live commit was checked. Because subsequent commits can again outrun Render auto-deploy, do not claim production completion from a GitHub commit alone: always inspect the actual Render Live deploy SHA after the final code change.
+
+## Verification completed
+
+A full `Validate collector` CI run passed after the region-alert/baseline fixes. Another full CI run passed after the isolated immediate-publisher refactor, including unit tests, source syntax checks and cloud build.
+
+`public-data/status.json` is being generated successfully. At the time of this handoff it correctly reported the operationally important combination `collector_status=succeeded` and `source_status=delayed` because the observed airline marker was still older than the expected daily marker.
+
+## Still unresolved / next packages
+
+Do not report the whole audit as complete yet. Remaining high-value work:
+
+1. **Cross-run checkpoint persistence** — current `--resume` data remains runner-local. Persist route/month checkpoints by `cycle_id + region_id + route + month + schema_version`, and never mix checkpoints from different source versions/policies.
+2. **Coverage-aware alert state** — carry publication/source/coverage/unqueryable context into notification evaluation. `available → unknown → available` must not create a false new-seat alert; `available → confirmed unavailable → available` must still create a reopen alert.
+3. **Message-level outbox / atomic claim** — partial Telegram success must not resend messages that were already delivered. Exactly-once delivery cannot be guaranteed across a crash after Telegram accepts a message but before local state persistence; document the reconciliation policy.
+4. **Alert API operational hardening** — verify `/health` against storage readiness, add explicit external-request timeouts, duplicate webhook protection and storage write concurrency protection. Render Free sleeping is an operational limitation.
+5. **Deployment version endpoint** — add static/API runtime commit/version reporting so repository SHA and each service Live SHA can be checked from the product, not only the Render control plane.
+6. **Full browser QA** — verify 360/390/430, 768/1024 and 1440 widths; keyboard/focus/200% zoom; filter preservation during publication refresh; export publication/row-count match.
+7. **7-day 23:00 observation** — record scheduled time, worker-ready time, first actual request, observed source, regional completion/publication, notification result and failure cause. Do not use the number of green Action checks as the success metric.
+
+## Safety / invariants
+
+- Preserve the current reduced scope and Europe → Americas → Oceania → Bali collection priority.
+- Do not convert `UNQUERYABLE` or failed requests into “no seats”.
+- Do not publish incomplete regional coverage over the previous good region.
+- Do not remove legitimate CLOSED events to satisfy a test.
+- Do not store Telegram tokens, device tokens, user rules or other private notification data in the public repository.
+- Do not bypass Korean Air authentication, CAPTCHA or access controls.
+- Before any future Render/Linux collector move, verify the existing Windows Edge/headed dependency and public-source behavior rather than assuming a command can simply be copied.
