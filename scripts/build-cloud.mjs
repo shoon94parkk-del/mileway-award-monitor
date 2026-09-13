@@ -1,18 +1,20 @@
 import fs from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import {createStore} from '../src/app-store.mjs';
+import {createStore,seatKey} from '../src/app-store.mjs';
 
 const replaceRequired=(text,needle,replacement,label)=>{if(!text.includes(needle))throw Error(`Cloud build replacement failed: ${label}`);return text.replace(needle,replacement);};
 const catalog=JSON.parse(fs.readFileSync('routes.json','utf8')).routes;
 const store=createStore(':memory:',catalog);
 const readJson=(file,fallback)=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return fallback;}};
 try{
- store.importReport(JSON.parse(gunzipSync(fs.readFileSync('public-data/results.json.gz')).toString('utf8')));
+ const publishedReport=JSON.parse(gunzipSync(fs.readFileSync('public-data/results.json.gz')).toString('utf8'));
+ store.importReport(publishedReport);
  if(!store.report.source_updated_at||!store.report.attempt_complete)throw Error('Missing completed published snapshot');
  fs.mkdirSync('dist',{recursive:true});
  const baseBootstrap=store.bootstrap();
  const routeMap=new Map((baseBootstrap.routes||[]).map(r=>[r.code,r]));
- const enrich=row=>{const route=routeMap.get(row.destination)||{};return {...row,city:route.city||row.city||row.destination,country:route.country||row.country||route.region||''};};
+ const sourceRowMap=new Map((publishedReport.rows||[]).filter(r=>r?.flight).map(r=>[seatKey(r),r]));
+ const enrich=row=>{const route=routeMap.get(row.destination)||{},sourceRow=sourceRowMap.get(row.id)||{};return {...row,city:route.city||row.city||row.destination,country:route.country||row.country||route.region||'',aircraft:sourceRow.aircraft||null,aircraft_source:sourceRow.aircraft?'KOREAN_AIR_PUBLIC_DAILY':null};};
  const changeHistory=readJson('public-data/changes.json',{events:[]});
  const allChanges=(changeHistory.events||[]).map(c=>enrich(c));
  const sevenDayCutoff=Date.now()-7*864e5;
@@ -22,8 +24,8 @@ try{
  const rows=store.list({limit:50000}).rows.map(enrich);
  fs.writeFileSync('dist/snapshot.json',JSON.stringify({bootstrap,rows}));
  const buildCommit=process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||process.env.GIT_COMMIT||'unknown';
- fs.writeFileSync('dist/version.json',JSON.stringify({service:'mileway-award-monitor',commit:buildCommit,schema_version:2,built_at:new Date().toISOString(),publication_id:bootstrap.report?.publication_id||null},null,2)+'\n');
- for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','mobile-booking.css','android-booking.js','telegram-setup.css','telegram-setup.js','ux-reference-polish.css','ux-reference-polish.js','alert-center.css','alert-center.js','mobile-nav-v2.css','mobile-nav-v2.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
+ fs.writeFileSync('dist/version.json',JSON.stringify({service:'mileway-award-monitor',commit:buildCommit,schema_version:3,built_at:new Date().toISOString(),publication_id:bootstrap.report?.publication_id||null},null,2)+'\n');
+ for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','mobile-booking.css','android-booking.js','telegram-setup.css','telegram-setup.js','ux-reference-polish.css','ux-reference-polish.js','alert-center.css','alert-center.js','mobile-nav-v2.css','mobile-nav-v2.js','seat-info.css','seat-info.js','seat-metadata.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
  const cloudApi=replaceRequired(fs.readFileSync('web/cloud-api.js','utf8'),"const SNAPSHOT_URL='./snapshot.json';","const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';",'live cloud snapshot source');
  fs.writeFileSync('dist/cloud-api.js',cloudApi);
  let html=fs.readFileSync('web/index.html','utf8').replaceAll('내 PC 전용','브라우저 저장').replaceAll('내 여행 계획은 이곳에만','검색 조건은 이 브라우저에만');
@@ -44,5 +46,5 @@ try{
  fs.writeFileSync('dist/app.js',js);
  fs.appendFileSync('dist/style.css','\n.sidebar-foot{font-size:12px}\n');
  if(!cloudApi.includes('raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json'))throw Error('Cloud build did not wire the live GitHub snapshot');
- console.log(`Cloud build: ${bootstrap.stats.available} available combinations, ${bootstrap.routes.length} monitored routes, ${recentOpened.length} opened in 7 days, ${recentChanges.length} retained changes`);
+ console.log(`Cloud build: ${bootstrap.stats.available} available combinations, ${bootstrap.routes.length} monitored routes, ${recentOpened.length} opened in 7 days, ${recentChanges.length} retained changes, ${rows.filter(r=>r.aircraft).length} rows with aircraft metadata`);
 }finally{store.db.close();}
