@@ -71,9 +71,16 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Could not inspect collector workflow state' }
             $runs = ($runsJson | ConvertFrom-Json).workflow_runs
 
-            $active = @($runs | Where-Object { $_.status -eq 'in_progress' -or $_.status -eq 'queued' })
-            if ($active.Count -gt 0) {
-              Write-Host "Collector already queued/running; watcher will not create a duplicate run."
+            $queued = @($runs | Where-Object { $_.status -eq 'queued' })
+            if ($queued.Count -gt 0) {
+              Write-Host "A collector is already queued; watcher will not create another duplicate run."
+              return
+            }
+
+            $running = @($runs | Where-Object { $_.status -eq 'in_progress' })
+            $sameRevisionRunning = @($running | Where-Object { $_.head_sha -eq $env:GITHUB_SHA })
+            if ($sameRevisionRunning.Count -gt 0) {
+              Write-Host "A collector from the current revision is already running; no duplicate is needed."
               return
             }
 
@@ -89,6 +96,9 @@ jobs:
               }
             }
 
+            if ($running.Count -gt 0) {
+              Write-Host "An older-revision collector is still running; GitHub concurrency will queue the corrected current revision behind it."
+            }
             Write-Host "$Reason; dispatching a clean full collector with no cross-run route/month cache."
             & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main
             if ($LASTEXITCODE -ne 0) { throw 'Collector dispatch failed' }
@@ -134,15 +144,14 @@ jobs:
                 exit 0
               }
 
-              # The Korean Air DOM marker can remain stale on the GitHub US edge.
-              # Once 23:08 KST has passed, the marker is advisory only: force an
-              # actual bonusSeatView API scan. collect.yml now starts clean, so this
-              # can never be short-circuited by yesterday's route/month cache.
+              # If the source marker is still stale after the normal refresh window,
+              # keep an independent full-scan fail-safe. collect.yml starts clean, so
+              # a stale checkpoint can never short-circuit this retry.
               if ($isStale -and [DateTime]::UtcNow -ge $watcherFailSafeAt) {
                 if ($eventName -eq 'push') {
                   Start-CollectorIfIdle -Reason 'Collection/interlock code changed while the daily marker is stale'
                 } else {
-                  Start-CollectorIfIdle -Reason 'Korean Air DOM marker is still stale after the daily refresh window' -RespectStaleCooldown
+                  Start-CollectorIfIdle -Reason 'Korean Air source marker is still stale after the daily refresh window' -RespectStaleCooldown
                 }
               }
             } else {
@@ -158,7 +167,7 @@ jobs:
           }
 
           if ($sawStaleDailyMarker) {
-            Write-Host 'Korean Air US-edge DOM is still stale. Backup watchers remain armed through 06:17 KST.'
+            Write-Host 'Korean Air source marker is still stale. Backup watchers remain armed through 06:17 KST.'
           } else {
             Write-Host 'No new source marker observed in this watcher window.'
           }
