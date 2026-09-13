@@ -89,17 +89,45 @@ export function ruleHash(rules){
  return hash(JSON.stringify(rules.map(r=>({id:r.id,signature:ruleSignature(r)}))));
 }
 
-export function evaluateAlerts(rows,rules,previous={}){
- const active={},rule_meta={},opened=[];
+const coverageKey=row=>`${String(row?.destination||'').toUpperCase()}|${String(row?.date||'').slice(0,7)}`;
+const compactActiveRow=row=>({key:alertSeatKey(row),destination:String(row.destination||'').toUpperCase(),date:String(row.date||''),flight:String(row.flight||'').toUpperCase(),cabin:String(row.cabin||'').toUpperCase()});
+function coverageState(context={}){
+ const coverage=arr(context.coverage),unqueryable=arr(context.unqueryable);
+ const covered=new Set(coverage.map(item=>`${String(item?.destination||'').toUpperCase()}|${String(item?.month||'')}`).filter(value=>!value.endsWith('|')));
+ const unknown=new Set(unqueryable.map(item=>`${String(item?.destination||'').toUpperCase()}|${String(item?.month||'')}`).filter(value=>!value.endsWith('|')));
+ return {known:coverage.length>0||unqueryable.length>0,covered,unknown};
+}
+function priorRows(previous,ruleId,signature){
+ const oldMeta=previous.rule_meta?.[ruleId];
+ if(oldMeta?.signature!==signature)return [];
+ return arr(previous.active_rows?.[ruleId]).filter(row=>row&&row.key&&row.destination&&row.date);
+}
+
+export function evaluateAlerts(rows,rules,previous={},context={}){
+ const active={},active_rows={},rule_meta={},opened=[];
+ const coverage=coverageState(context);
+ let unknownPreserved=0;
  for(const rule of rules){
   const current=rows.filter(row=>matchesAlertRule(row,rule));
-  const hashes=current.map(alertSeatKey),signature=ruleSignature(rule);
-  active[rule.id]=hashes;rule_meta[rule.id]={signature};
+  const currentRows=current.map(compactActiveRow),currentKeys=new Set(currentRows.map(row=>row.key)),signature=ruleSignature(rule);
   const oldMeta=previous.rule_meta?.[rule.id];
   const legacyPrior=previous.active?.[rule.name]||[];
-  const prior=new Set(oldMeta?.signature===signature?(previous.active?.[rule.id]||[]):(!previous.rule_meta?legacyPrior:[]));
-  const fresh=current.filter(row=>!prior.has(alertSeatKey(row)));
+  const priorHashes=new Set(oldMeta?.signature===signature?(previous.active?.[rule.id]||[]):(!previous.rule_meta?legacyPrior:[]));
+  const priorMetadata=priorRows(previous,rule.id,signature);
+  const preserved=[];
+  if(coverage.known){
+   for(const oldRow of priorMetadata){
+    if(currentKeys.has(oldRow.key))continue;
+    const key=coverageKey(oldRow);
+    if(!coverage.covered.has(key)||coverage.unknown.has(key)){preserved.push(oldRow);unknownPreserved++;}
+   }
+  }
+  const mergedRows=[...currentRows,...preserved.filter(row=>!currentKeys.has(row.key))];
+  active_rows[rule.id]=mergedRows;
+  active[rule.id]=mergedRows.map(row=>row.key);
+  rule_meta[rule.id]={signature};
+  const fresh=current.filter(row=>!priorHashes.has(alertSeatKey(row)));
   if(fresh.length)opened.push({rule,rows:fresh});
  }
- return {version:3,rule_hash:ruleHash(rules),rule_meta,active,opened};
+ return {version:4,rule_hash:ruleHash(rules),rule_meta,active,active_rows,opened,unknown_preserved:unknownPreserved};
 }
