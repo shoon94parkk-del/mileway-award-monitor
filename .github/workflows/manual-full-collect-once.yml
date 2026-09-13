@@ -1,0 +1,28 @@
+name: One-time full collection
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/manual-full-collect-once.yml'
+permissions:
+  contents: write
+concurrency:
+  group: public-daily-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install collector dependency
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Test collection-critical parsers
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs test/seat-metadata.test.mjs test/seat-metadata-flow.test.mjs
+      - name: Collect and publish all monitored regions
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: node --no-warnings scripts/collect-regions.mjs
