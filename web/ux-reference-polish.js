@@ -14,6 +14,12 @@ function sourceStamp(value){
  if(!m)return NaN;
  return Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4])-9,Number(m[5]));
 }
+function freshestSource(...values){
+ let best='',bestStamp=-Infinity;
+ for(const value of values){const stamp=sourceStamp(value);if(stamp>bestStamp){best=String(value||'');bestStamp=stamp;}}
+ return best||values.find(Boolean)||'';
+}
+function isoStamp(value){const ms=Date.parse(value||'');return Number.isFinite(ms)?ms:NaN;}
 function expectedDailySourceStamp(now=new Date()){
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(now);
  const get=type=>Number(parts.find(p=>p.type===type)?.value||0);
@@ -58,12 +64,16 @@ async function deviceAlertStatus(){
 async function syncHealth(){
  try{
   const [status,h,s,device]=await Promise.all([fetchJson(STATUS_URL),fetchJson(HEALTH_URL),fetchJson(SNAPSHOT_URL),deviceAlertStatus()]);
-  const source=status?.observed_source_at||s?.bootstrap?.report?.source_updated_at||h?.source_updated_at||'';
-  const sourceStatus=status?.source_status||(sourceIsStale(source)?'delayed':'current');
-  const collector=status?.collector_status||'';
+  const report=s?.bootstrap?.report||{};
+  const source=freshestSource(report.source_updated_at,status?.observed_source_at,h?.source_updated_at);
+  const sourceStatus=sourceIsStale(source)?'delayed':'current';
+  const statusMatchesSnapshot=!report.publication_id||!status?.publication_id||status.publication_id===report.publication_id;
+  const collector=statusMatchesSnapshot?(status?.collector_status||''):(report.attempt_complete?'succeeded':'partial');
+  const successfulSnapshotAfterError=!!report.attempt_complete&&isoStamp(report.finished_at)>isoStamp(h?.last_error_at);
+  const healthCollectionFailure=h?.status==='degraded'&&h?.last_error_step!=='notification'&&!successfulSnapshotAfterError;
   const health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
   if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source);
-  const operationalFailure=collector==='failed'||h?.status==='degraded';
+  const operationalFailure=collector==='failed'||healthCollectionFailure;
   const delayed=sourceStatus==='delayed';
   const partial=collector==='partial';
   const ok=!operationalFailure&&!delayed&&!partial&&sourceStatus==='current';
