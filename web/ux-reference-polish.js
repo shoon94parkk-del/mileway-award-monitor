@@ -1,5 +1,8 @@
 const HEALTH_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/health.json';
+const STATUS_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/status.json';
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
+const ALERT_API_URL='https://mileway-alert-api.onrender.com';
+const ALERT_TOKEN_KEY='mileway.alert.manage-token.v1';
 const $=s=>document.querySelector(s);
 
 function compactSource(text=''){
@@ -20,7 +23,7 @@ function expectedDailySourceStamp(now=new Date()){
 }
 function sourceIsStale(value,now=new Date()){
  const observed=sourceStamp(value);
- return Number.isFinite(observed)&&observed<expectedDailySourceStamp(now);
+ return !Number.isFinite(observed)||observed<expectedDailySourceStamp(now);
 }
 function ensureRail(){
  if($('#ux-status-rail'))return $('#ux-status-rail');
@@ -31,7 +34,7 @@ function ensureRail(){
   <div class="ux-rail-item ux-health"><i></i><span>수집</span><b id="ux-health-value">확인 중</b></div>
   <div class="ux-rail-item"><span>원자료</span><b id="ux-source-value">확인 중</b></div>
   <div class="ux-rail-item"><span>현재 결과</span><b id="ux-result-value">—</b></div>
-  <button class="ux-rail-item ux-rail-button" type="button" data-ux-alert><span>알림</span><b id="ux-alert-value">확인 중</b></button>
+  <button class="ux-rail-item ux-rail-button" type="button" data-ux-alert><span>내 알림</span><b id="ux-alert-value">확인 중</b></button>
   <button class="ux-rail-more" type="button" data-ux-source>수집 범위 ↗</button>`;
  top.after(rail);return rail;
 }
@@ -40,27 +43,34 @@ function syncVisibleValues(){
  const source=$('#source-time')?.textContent||'';$('#ux-source-value')&&( $('#ux-source-value').textContent=compactSource(source) );
  const count=$('#result-count')?.textContent?.trim();if(count&&$('#ux-result-value'))$('#ux-result-value').textContent=count;
 }
+async function fetchJson(url){try{const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():null;}catch{return null;}}
+async function deviceAlertStatus(){
+ const token=localStorage.getItem(ALERT_TOKEN_KEY)||'';
+ if(!token)return {label:'미연결',ok:false};
+ try{
+  const r=await fetch(ALERT_API_URL+'/me',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+  if(!r.ok)return {label:'확인 필요',ok:false};
+  const me=await r.json();
+  if(!me.telegram_linked)return {label:'연결 필요',ok:false};
+  return {label:`Telegram ON${Number(me.rule_count)>0?` · ${me.rule_count}개`:''}`,ok:true};
+ }catch{return {label:'확인 필요',ok:false};}
+}
 async function syncHealth(){
  try{
-  const [healthResponse,snapshotResponse]=await Promise.all([
-   fetch(HEALTH_URL+'?t='+Date.now(),{cache:'no-store'}).catch(()=>null),
-   fetch(SNAPSHOT_URL+'?t='+Date.now(),{cache:'no-store'}).catch(()=>null)
-  ]);
-  const h=healthResponse?.ok?await healthResponse.json():null;
-  const s=snapshotResponse?.ok?await snapshotResponse.json():null;
-  const source=s?.bootstrap?.report?.source_updated_at||h?.source_updated_at||'';
-  const stale=sourceIsStale(source);
-  const a=h?.alerts||{},health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
+  const [status,h,s,device]=await Promise.all([fetchJson(STATUS_URL),fetchJson(HEALTH_URL),fetchJson(SNAPSHOT_URL),deviceAlertStatus()]);
+  const source=status?.observed_source_at||s?.bootstrap?.report?.source_updated_at||h?.source_updated_at||'';
+  const sourceStatus=status?.source_status||(sourceIsStale(source)?'delayed':'current');
+  const collector=status?.collector_status||'';
+  const health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
   if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source);
-  const ok=h?.status==='healthy'&&!stale;
-  if(value)value.textContent=stale?'원자료 지연':ok?'정상':h?.status==='degraded'?'주의':'확인 중';
+  const operationalFailure=collector==='failed'||h?.status==='degraded';
+  const delayed=sourceStatus==='delayed';
+  const partial=collector==='partial';
+  const ok=!operationalFailure&&!delayed&&!partial&&sourceStatus==='current';
+  if(value)value.textContent=operationalFailure?'수집 실패':delayed?'원자료 지연':partial?'부분 반영':ok?'정상':'확인 중';
   health?.classList.toggle('is-ok',ok);
-  health?.classList.toggle('is-warn',stale||h?.status==='degraded');
-  if(alert){
-   if(a.rules_configured&&a.telegram_configured)alert.textContent='Telegram ON';
-   else if(a.telegram_bot_configured||a.telegram_configured)alert.textContent='조건 설정 필요';
-   else alert.textContent='미설정';
-  }
+  health?.classList.toggle('is-warn',operationalFailure||delayed||partial);
+  if(alert)alert.textContent=device.label;
  }catch{}
 }
 function bind(){
@@ -73,6 +83,7 @@ function bind(){
  const source=$('#source-time'),count=$('#result-count');
  if(source)new MutationObserver(syncVisibleValues).observe(source,{childList:true,subtree:true});
  if(count)new MutationObserver(syncVisibleValues).observe(count,{childList:true,subtree:true});
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){syncVisibleValues();syncHealth();}});
 }
 ensureRail();bind();syncVisibleValues();syncHealth();
-setTimeout(syncVisibleValues,500);setTimeout(syncHealth,1200);
+setTimeout(syncVisibleValues,500);setTimeout(syncHealth,1200);setInterval(syncHealth,30000);
