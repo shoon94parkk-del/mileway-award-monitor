@@ -14,7 +14,7 @@ jobs:
   smoke:
     if: github.event.repository.private == false
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,7 +28,7 @@ jobs:
           $start = node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});console.log(f.format(new Date()))"
           $end = node -e "const f=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit'});const [y,m]=f.format(new Date()).split('-').map(Number);console.log(new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10))"
           Write-Host "Hybrid smoke range: $start -> $end"
-          node --no-warnings src/public-extract.mjs --headless --route LAX --start $start --end $end --output data/direct-smoke --max-retries 2 --interval-ms 2500 --direct-after-first --direct-interval-ms 1000
+          node --no-warnings src/public-extract.mjs --headless --route LAX --start $start --end $end --output data/direct-smoke --max-retries 1 --interval-ms 2500 --direct-after-first --direct-interval-ms 1000
       - name: Summarize hybrid engine usage
         if: always()
         shell: pwsh
