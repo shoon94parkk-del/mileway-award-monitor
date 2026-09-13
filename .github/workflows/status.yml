@@ -16,6 +16,8 @@ on:
       - 'scripts/build-public-status.mjs'
       - 'src/health-status.mjs'
       - 'src/collection-cycle.mjs'
+      - 'public-data/snapshot.json'
+      - 'public-data/health.json'
 permissions:
   contents: write
 concurrency:
