@@ -1,4 +1,4 @@
-const CACHE='mileway-shell-v19';
+const CACHE='mileway-shell-v20';
 const SHELL=['/','/style.css','/cloud-enhancements.css','/ui-v2.css','/mobile-booking.css','/telegram-setup.css','/ux-reference-polish.css','/alert-center.css','/mobile-nav-v2.css','/seat-info.css','/app.js','/cloud-api.js','/cloud-enhancements.js','/global-regions.js','/regional-status.js','/ui-v2.js','/android-booking.js','/telegram-setup.js','/ux-reference-polish.js','/alert-center.js','/mobile-nav-v2.js','/seat-info.js','/seat-metadata.js','/favicon.svg','/manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
