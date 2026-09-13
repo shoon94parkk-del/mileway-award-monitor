@@ -53,6 +53,14 @@ async function publishCommit(group){
  throw Error('Git push failed after retries; stop to avoid replacing newer public state');
 }
 
+function notifyPublishedRegion(group){
+ if(!process.env.TELEGRAM_BOT_TOKEN){console.log(`REGION NOTIFY SKIPPED: ${group}; Telegram token unavailable`);return false;}
+ const result=runAt(publisherDir,process.execPath,['--no-warnings','scripts/notify-alerts.mjs','--snapshot','public-data/snapshot.json']);
+ if((result.status??1)!==0){console.error(`REGION NOTIFY FAILED: ${group}; publication remains valid and final workflow retry stays armed`);return false;}
+ console.log(`REGION NOTIFIED: ${group}; published snapshot evaluated immediately`);
+ return true;
+}
+
 let parallelStopped=false;
 async function runCollector(index,{intervalMs,parallelMode=false,forceResume=false,lane=0}={}){
  const group=groups[index],output=`data/region-${index}`;
@@ -143,7 +151,8 @@ async function publishResult(item){
   gitAt(publisherDir,['add','--',...files]);
   await publishCommit(group);
   console.log(`REGION PUBLISHED: ${group}; website snapshot updated immediately after regional completion`);
-  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,`published_${item.index}=true\n`);
+  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,`published=true\npublished_${item.index}=true\n`);
+  notifyPublishedRegion(group);
   return true;
  }catch(error){
   runAt(publisherDir,'git',['reset','--hard','origin/main'],{stdio:'ignore'});
