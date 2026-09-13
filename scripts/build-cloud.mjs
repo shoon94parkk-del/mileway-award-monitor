@@ -21,6 +21,8 @@ try{
  const bootstrap={...baseBootstrap,changes:recentChanges,recent_opened:{days:7,total:recentOpened.length,items:recentOpened.slice(0,8)},cloud:true,scan:{paused:true,running:false,enabled:false,history:[]}};
  const rows=store.list({limit:50000}).rows.map(enrich);
  fs.writeFileSync('dist/snapshot.json',JSON.stringify({bootstrap,rows}));
+ const buildCommit=process.env.RENDER_GIT_COMMIT||process.env.GITHUB_SHA||process.env.GIT_COMMIT||'unknown';
+ fs.writeFileSync('dist/version.json',JSON.stringify({service:'mileway-award-monitor',commit:buildCommit,schema_version:2,built_at:new Date().toISOString(),publication_id:bootstrap.report?.publication_id||null},null,2)+'\n');
  for(const file of ['style.css','favicon.svg','cloud-enhancements.css','cloud-enhancements.js','global-regions.js','regional-status.js','ui-v2.css','ui-v2.js','mobile-booking.css','android-booking.js','telegram-setup.css','telegram-setup.js','ux-reference-polish.css','ux-reference-polish.js','alert-center.css','alert-center.js','mobile-nav-v2.css','mobile-nav-v2.js','manifest.webmanifest','service-worker.js'])fs.copyFileSync('web/'+file,'dist/'+file);
  const cloudApi=replaceRequired(fs.readFileSync('web/cloud-api.js','utf8'),"const SNAPSHOT_URL='./snapshot.json';","const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';",'live cloud snapshot source');
  fs.writeFileSync('dist/cloud-api.js',cloudApi);
