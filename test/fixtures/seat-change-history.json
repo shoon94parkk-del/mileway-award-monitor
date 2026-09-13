@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "baseline_reset_at": "2026-09-10T00:00:00.000Z",
+  "events": [
+    {
+      "id": "opened-example",
+      "kind": "OPENED",
+      "detected_at": "2026-09-10T01:00:00.000Z"
+    },
+    {
+      "id": "closed-example",
+      "kind": "CLOSED",
+      "detected_at": "2026-09-10T02:00:00.000Z"
+    }
+  ]
+}
