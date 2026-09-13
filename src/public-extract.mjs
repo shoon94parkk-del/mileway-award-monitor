@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import {PUBLIC_URL,PUBLIC_API,readPublicCalendar,parsePublicCalendar,parsePublicApi,monthRange} from './public-calendar.mjs';
+import {queryPublicSeatMonth} from './public-direct-client.mjs';
 import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
 import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
@@ -28,14 +29,16 @@ const only=value('--route',null)?.split(',');
 const groupOnly=value('--group',null);
 if(groupOnly&&!['유럽','미주','오세아니아','아시아'].includes(groupOnly))throw Error('Unknown collection group');
 const intervalMs=Math.max(2000,Number(value('--interval-ms','5000')));
+const directIntervalMs=Math.max(500,Number(value('--direct-interval-ms',process.env.COLLECT_DIRECT_INTERVAL_MS||'1000')));
+const directAfterFirst=process.argv.includes('--direct-after-first')||process.env.MILEWAY_DIRECT_API==='1';
 const maxRetries=Math.max(1,Math.min(5,Number(value('--max-retries','3'))));
 const stopFile=value('--stop-file',null);
 const checkStop=()=>{if(stopFile&&fs.existsSync(stopFile))throw Error('Collection stopped by user');};
-if(!Number.isFinite(intervalMs)||!Number.isFinite(maxRetries)) throw new Error('Invalid collector option');
+if(!Number.isFinite(intervalMs)||!Number.isFinite(directIntervalMs)||!Number.isFinite(maxRetries)) throw new Error('Invalid collector option');
 const output=path.resolve(value('--output',path.join(root,'data','public')));fs.mkdirSync(output,{recursive:true});
 const releaseCollection=claimCollection(path.join(output,'collection.lock'));
 const previous=process.argv.includes('--resume')&&fs.existsSync(path.join(output,'results.json'))?JSON.parse(fs.readFileSync(path.join(output,'results.json'),'utf8')):null;
-const report={source:PUBLIC_URL,source_type:'KOREAN_AIR_PUBLIC_DAILY',started_at:new Date().toISOString(),start_date:start,end_date:end,complete:false,attempt_complete:false,coverage:[],unqueryable:[],failed:[],errors:[],rows:[]};
+const report={source:PUBLIC_URL,source_type:'KOREAN_AIR_PUBLIC_DAILY',started_at:new Date().toISOString(),start_date:start,end_date:end,complete:false,attempt_complete:false,coverage:[],unqueryable:[],failed:[],errors:[],rows:[],collection_engine:directAfterFirst?'HYBRID_DIRECT_AFTER_FIRST':'UI'};
 const writeJson=(name,value)=>{const file=path.join(output,name),temporary=file+'.tmp';fs.writeFileSync(temporary,JSON.stringify(value,null,2));fs.renameSync(temporary,file);};
 const save=()=>{writeJson('results.json',report);writeJson('available.json',{...report,rows:report.rows.filter(r=>r.available)});writePublicReport(report,output);};
 const db=new DatabaseSync(path.join(output,'seats.db'));
@@ -112,6 +115,33 @@ async function selectDestination(route) {
   await regionList('destination',route.region);
   await page.getByRole('button',{name:new RegExp(`^${route.code} `)}).click();
 }
+function storeDirectResult(route,monthKey,data){
+  if(data.departureAirport==='ICN'&&data.arrivalAirport===route.code&&Array.isArray(data.flightList)&&data.flightList.length===0){
+    const notice='검색하신 여정은 조회가 불가합니다.';
+    const record={destination:route.code,month:monthKey,status:'UNQUERYABLE',reason:notice,checked_at:new Date().toISOString(),engine:'DIRECT_API'};
+    report.unqueryable.push(record);store.run('ICN',route.code,monthKey,record.checked_at,report.source_updated_at,JSON.stringify({api:data,direct:true,notice}));save();
+    console.log(`${route.code} ${monthKey}: DIRECT UNQUERYABLE`);
+    return;
+  }
+  const options={origin:'ICN',destination:route.code,month:monthKey,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at};
+  const rows=parsePublicApi(data,options);
+  const dayCount=new Set(data.flightList.map(day=>day.departureDate)).size;
+  report.rows.push(...rows.map(r=>({...r,region:route.region})));
+  report.coverage.push({destination:route.code,month:monthKey,days:dayCount,flightClassRows:rows.length,engine:'DIRECT_API'});
+  store.run('ICN',route.code,monthKey,new Date().toISOString(),report.source_updated_at,JSON.stringify({api:data,direct:true}));
+  save();
+  console.log(`${route.code} ${monthKey}: DIRECT ${dayCount} flight days, ${rows.filter(r=>r.available).length} flight/class matches`);
+}
+async function collectMonthDirect(route,monthKey,template){
+  checkStop();pending.clear();apiErrors=[];lastPublicResponse=null;
+  const result=await queryPublicSeatMonth(page,template,{origin:'ICN',destination:route.code,month:monthKey});
+  lastPublicResponse={request:JSON.stringify(result.body),data:result.data,direct:true};
+  const deadline=Date.now()+5000;
+  while(pending.size&&Date.now()<deadline)await sleep(100);
+  if(pending.size||apiErrors.length)throw new Error('Incomplete direct public seat API response: '+JSON.stringify(apiErrors));
+  storeDirectResult(route,monthKey,result.data);
+  await sleep(directIntervalMs);
+}
 async function collectMonth(route,monthKey) {
   checkStop();pending.clear();apiErrors=[];lastPublicResponse=null;
   await page.locator('#seatCalendarBtn').click();
@@ -132,10 +162,10 @@ async function collectMonth(route,monthKey) {
   if(data.departureAirport==='ICN'&&data.arrivalAirport===route.code&&Array.isArray(data.flightList)&&data.flightList.length===0){
     const notice='검색하신 여정은 조회가 불가합니다.';
     await page.getByText(notice,{exact:true}).waitFor({state:'visible'});
-    const record={destination:route.code,month:monthKey,status:'UNQUERYABLE',reason:notice,checked_at:new Date().toISOString()};
+    const record={destination:route.code,month:monthKey,status:'UNQUERYABLE',reason:notice,checked_at:new Date().toISOString(),engine:'UI'};
     report.unqueryable.push(record);store.run('ICN',route.code,monthKey,record.checked_at,report.source_updated_at,JSON.stringify({api:data,notice}));save();
     console.log(`${route.code} ${monthKey}: UNQUERYABLE (not unavailable seats)`);
-    await page.getByRole('button',{name:'확인',exact:true}).click();await sleep(intervalMs);return;
+    await page.getByRole('button',{name:'확인',exact:true}).click();await sleep(intervalMs);return requested;
   }
   await page.locator('#travelCalendarPopup [id^="day_"]').first().waitFor();
   await sleep(intervalMs);
@@ -159,11 +189,12 @@ async function collectMonth(route,monthKey) {
     if(apiAvailable!==displayed.available) throw new Error(`API/calendar mismatch: ${displayed.date} ${displayed.cabin}`);
   }
   report.rows.push(...rows.map(r=>({...r,region:route.region})));
-  report.coverage.push({destination:route.code,month:monthKey,days:calendarRows.length/2,flightClassRows:rows.length});
+  report.coverage.push({destination:route.code,month:monthKey,days:calendarRows.length/2,flightClassRows:rows.length,engine:'UI'});
   store.run('ICN',route.code,monthKey,new Date().toISOString(),report.source_updated_at,JSON.stringify({calendar:snapshot,api:data}));
   save();
-  console.log(`${route.code} ${monthKey}: ${calendarRows.length/2} days, ${rows.filter(r=>r.available).length} flight/class matches`);
+  console.log(`${route.code} ${monthKey}: UI ${calendarRows.length/2} days, ${rows.filter(r=>r.available).length} flight/class matches`);
   await page.locator('#travelCalendarCloseBtn').click();
+  return requested;
 }
 async function writeFailureDiagnostic(route,monthKey,attempt,error) {
   fs.writeFileSync(path.join(output,'last-public-error.json'),JSON.stringify({destination:route.code,month:monthKey,attempt,message:error.message,response:lastPublicResponse,pageText:await page.locator('body').innerText().catch(()=>''),calendar:await page.evaluate(readPublicCalendar).catch(()=>null)},null,2));
@@ -208,7 +239,7 @@ try {
   report.rows=report.rows.filter(r=>selectedCodes.has(r.destination));
   report.coverage=report.coverage.filter(r=>selectedCodes.has(r.destination));
   report.unqueryable=report.unqueryable.filter(r=>selectedCodes.has(r.destination));
-  console.log(`PUBLIC DAILY WORLDWIDE: ${selected.length} routes across ${regions.length} regions, ${months.length} months, updated ${report.source_updated_at}`);
+  console.log(`PUBLIC DAILY WORLDWIDE: ${selected.length} routes across ${regions.length} regions, ${months.length} months, updated ${report.source_updated_at}; engine ${report.collection_engine}`);
   if(!process.argv.includes('--discover-only')) {
   let activeGroup=null;
   for (const route of selected) {
@@ -219,15 +250,29 @@ try {
     const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&!report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
     if(!routeMonths.length) continue;
     await selectDestination(route);
+    let directTemplate=null;
     for(const monthKey of routeMonths) {
       let success=false,lastError=null;
       for(let attempt=1;attempt<=maxRetries;attempt++) {
         try {
-          await collectMonth(route,monthKey);success=true;break;
+          if(directAfterFirst&&directTemplate){
+            try{
+              await collectMonthDirect(route,monthKey,directTemplate);
+            }catch(directError){
+              if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(directError.message))throw directError;
+              console.warn(`${route.code} ${monthKey}: DIRECT fallback to UI: ${directError.message}`);
+              directTemplate=null;
+              directTemplate=await collectMonth(route,monthKey);
+            }
+          }else{
+            directTemplate=await collectMonth(route,monthKey);
+          }
+          success=true;break;
         } catch(e) {
           if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(e.message))throw e;
           lastError=e;await writeFailureDiagnostic(route,monthKey,attempt,e);
           console.error(`${route.code} ${monthKey}: attempt ${attempt}/${maxRetries} failed: ${e.message}`);
+          directTemplate=null;
           if(attempt<maxRetries) {
             const backoff=Math.min(60000,5000*Math.pow(2,attempt-1));
             await sleep(backoff);
@@ -242,6 +287,7 @@ try {
         console.error(`${route.code} ${monthKey}: FAILED after ${maxRetries} attempts; continuing remaining route/months`);
         await initializeSearchPage(report.source_updated_at);
         await selectDestination(route);
+        directTemplate=null;
       }
     }
   }
