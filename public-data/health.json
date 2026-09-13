@@ -2,8 +2,9 @@
   "version": 1,
   "status": "healthy",
   "alerts": {
-    "rules_configured": true,
-    "telegram_rule_count": 2,
+    "rules_scope": "private_api",
+    "rules_configured": null,
+    "telegram_rule_count": null,
     "telegram_bot_configured": true,
     "telegram_target_registered": true,
     "telegram_configured": true,
