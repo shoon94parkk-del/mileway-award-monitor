@@ -56,6 +56,35 @@ jobs:
           MILEWAY_DIRECT_API: '1'
           COLLECT_DIRECT_INTERVAL_MS: '1000'
         run: node --no-warnings scripts/collect-regions.mjs
+      - name: Report acceleration metrics
+        if: always()
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem data -Filter results.json -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match 'region-[0-3]' }
+          $ui=0; $direct=0; $verified=0; $verifyCalls=0; $fallbacks=0; $verifyFail=0; $elapsed=@()
+          foreach ($file in $files) {
+            $r = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            if ($r.acceleration) {
+              $ui += [int]$r.acceleration.ui_months
+              $direct += [int]$r.acceleration.direct_months
+              $verified += [int]$r.acceleration.direct_templates_verified
+              $verifyCalls += [int]$r.acceleration.direct_verification_calls
+              $fallbacks += [int]$r.acceleration.direct_fallbacks
+              $verifyFail += [int]$r.acceleration.direct_verification_failures
+            }
+            if ($r.elapsed_ms) { $elapsed += [int64]$r.elapsed_ms }
+          }
+          $covered = $ui + $direct
+          $share = if ($covered -gt 0) { [math]::Round(100*$direct/$covered,1) } else { 0 }
+          $maxElapsed = if ($elapsed.Count) { ($elapsed | Measure-Object -Maximum).Maximum } else { 0 }
+          Write-Host "ACCELERATION TOTAL UI=$ui DIRECT=$direct DIRECT_SHARE=$share% VERIFIED=$verified/$verifyCalls FALLBACKS=$fallbacks VERIFY_FAIL=$verifyFail MAX_REGION_ELAPSED_MS=$maxElapsed"
+          "### Mileway collection acceleration" >> $env:GITHUB_STEP_SUMMARY
+          "- UI months: $ui" >> $env:GITHUB_STEP_SUMMARY
+          "- Direct API months: $direct ($share%)" >> $env:GITHUB_STEP_SUMMARY
+          "- Direct templates verified: $verified / $verifyCalls" >> $env:GITHUB_STEP_SUMMARY
+          "- Direct fallbacks: $fallbacks" >> $env:GITHUB_STEP_SUMMARY
+          "- Verification failures: $verifyFail" >> $env:GITHUB_STEP_SUMMARY
+          "- Slowest regional collector: $maxElapsed ms" >> $env:GITHUB_STEP_SUMMARY
       - name: Recheck matching seat alerts after all regional publications
         id: notify
         if: always() && steps.collect.outputs.published == 'true'
