@@ -21,13 +21,14 @@ test('wrong route and empty/loading results cannot become unavailable records',(
 test('month ranges cover year boundary and partial final month',()=>{
  assert.deepEqual(monthRange('2026-12-09','2027-02-04'),['2026-12','2027-01','2027-02']);
 });
-test('public API preserves flight-level O/A inventory and excludes Z upgrades',()=>{
+test('public API preserves flight-level O/A inventory, aircraft metadata, and excludes Z upgrades',()=>{
  const data={departureAirport:'ICN',arrivalAirport:'CDG',flightList:[{departureDate:'20270401',flightDetailList:[
- {flightNumber:'KE901',departureTime:'10:00',bookingClass:'Z',availableSeat:true},
- {flightNumber:'KE901',departureTime:'10:00',bookingClass:'O',availableSeat:false},
- {flightNumber:'KE901',departureTime:'10:00',bookingClass:'A',availableSeat:true}]}]};
+ {flightNumber:'KE901',departureTime:'10:00',bookingClass:'Z',availableSeat:true,aircraftType:'789'},
+ {flightNumber:'KE901',departureTime:'10:00',bookingClass:'O',availableSeat:false,aircraftType:'789'},
+ {flightNumber:'KE901',departureTime:'10:00',bookingClass:'A',availableSeat:true,aircraftType:'789'}]}]};
  const rows=parsePublicApi(data,{...options,month:'2027-04'});
  assert.equal(rows.length,2);assert.equal(rows[0].available,false);assert.equal(rows[1].flight,'KE901');
+ assert.equal(rows[0].aircraft,'789');
  assert.throws(()=>parsePublicApi(data,{...options,month:'2027-05'}));
 });
 test('representative public API fixture keeps O/A semantics and rejects route drift',()=>{
