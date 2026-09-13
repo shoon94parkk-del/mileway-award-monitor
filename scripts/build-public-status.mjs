@@ -20,6 +20,7 @@ for(const [name,value] of Object.entries(report.region_status||{})){
 }
 const operationalFailure=health.status==='degraded';
 const collectorStatus=operationalFailure?'failed':report.attempt_complete?'succeeded':'partial';
+const notificationFailure=operationalFailure&&health.last_error_step==='notification';
 const status={
   version:2,
   schema_version:2,
@@ -33,10 +34,10 @@ const status={
   last_successful_collection_at:health.last_successful_collection_at||health.last_successful_scan_at||report.finished_at||null,
   last_fresh_publication_at:freshness.source_status==='current'?(health.last_fresh_publication_at||report.finished_at||null):(health.last_fresh_publication_at||null),
   publication_id:report.publication_id||null,
-  notification_status:health.last_error_step==='notification'?'failed':health.last_notification_check_at?'sent':'unknown',
+  notification_status:notificationFailure?'failed':health.last_notification_check_at?'sent':'unknown',
   last_notification_check_at:health.last_notification_check_at||null,
   heartbeat_at:now.toISOString(),
-  error_code:health.last_error_step||null,
+  error_code:operationalFailure?(health.last_error_step||'unknown'):null,
   regions
 };
 fs.mkdirSync('public-data',{recursive:true});
