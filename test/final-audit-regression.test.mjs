@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read=file=>fs.readFileSync(file,'utf8');
+
+test('public UI describes the real 23 KST watcher instead of a fake hourly cadence',()=>{
+ const cloud=read('web/cloud-enhancements.js'),build=read('scripts/build-cloud.mjs');
+ assert.match(cloud,/30초 집중 확인/);
+ assert.match(cloud,/23시 집중 감시/);
+ assert.doesNotMatch(cloud,/약 1시간/);
+ assert.match(build,/22:47 KST/);
+ assert.match(build,/22:57~23:20/);
+ assert.match(build,/23:33~02:03/);
+ assert.doesNotMatch(build,/평소 약 1시간/);
+});
+
+test('legacy secret-based alert manager is no longer shipped in cloud enhancements',()=>{
+ const cloud=read('web/cloud-enhancements.js');
+ assert.doesNotMatch(cloud,/ALERT_RULES_JSON/);
+ assert.doesNotMatch(cloud,/openAlertManager/);
+ assert.doesNotMatch(cloud,/cloud-alert-status/);
+});
+
+test('recent-opened panel only shows seats that are still current and bookable',()=>{
+ const cloud=read('web/cloud-enhancements.js');
+ assert.match(cloud,/current=new Set/);
+ assert.match(cloud,/current\.has\(seatIdentity\(e\)\)/);
+ assert.match(cloud,/지금 예약 가능한 좌석/);
+});
+
+test('public notification status means checked, not falsely sent',()=>{
+ const status=read('scripts/build-public-status.mjs'),health=read('scripts/write-health.mjs');
+ assert.match(status,/notification_status:notificationFailure\?'failed':health\.last_notification_check_at\?'checked':'unknown'/);
+ assert.doesNotMatch(status,/last_notification_check_at\?'sent'/);
+ assert.match(health,/rules_scope:'private_api'/);
+ assert.match(health,/if\(notify==='success'\)next\.last_notification_check_at=now/);
+ assert.doesNotMatch(health,/priorRuleCount/);
+});
+
+test('notification sender refuses silent success when direct Telegram config is gone',()=>{
+ const notify=read('scripts/notify-alerts.mjs');
+ assert.match(notify,/telegram_direct_configured/);
+ assert.match(notify,/Alert API direct Telegram config is missing/);
+});
+
+test('saved count ignores orphaned favorites while keeping their local ids for a future reopen',()=>{
+ const api=read('web/cloud-api.js');
+ assert.match(api,/visibleFavorites=snapshot\.rows\.reduce/);
+ assert.match(api,/favorites:visibleFavorites/);
+});
+
+test('shared dialog state is reset after the seat guide closes',()=>{
+ const seat=read('web/seat-info.js');
+ assert.match(seat,/content\.className=''/);
+ assert.match(seat,/addEventListener\('close'/);
+ assert.match(seat,/classList\.remove\('seat-info-dialog'\)/);
+});
+
+test('service worker cache is advanced for the final audit bundle',()=>{
+ const sw=read('web/service-worker.js');
+ const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=23);
+});
