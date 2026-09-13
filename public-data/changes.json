@@ -4,6 +4,83 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "99788e4b0bb94894e37a5f0c",
+      "kind": "CLOSED",
+      "destination": "HNL",
+      "date": "2027-09-08",
+      "flight": "KE053",
+      "time": "21:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "f2f630bc6ed85366e85dfb6d",
+      "kind": "CLOSED",
+      "destination": "YYZ",
+      "date": "2027-09-08",
+      "flight": "KE077",
+      "time": "09:35",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "a7e1e8c9c7106a9cedf04dfe",
+      "kind": "OPENED",
+      "destination": "HNL",
+      "date": "2027-05-08",
+      "flight": "KE051",
+      "time": "22:45",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "2dc576bd984cab817d750281",
+      "kind": "OPENED",
+      "destination": "HNL",
+      "date": "2026-09-27",
+      "flight": "KE8053",
+      "time": "22:35",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "39869f639a7441ba4e7d59c5",
+      "kind": "OPENED",
+      "destination": "YYZ",
+      "date": "2027-08-16",
+      "flight": "KE077",
+      "time": "09:35",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "2a839681cdf836e47cb8084c",
+      "kind": "OPENED",
+      "destination": "CDG",
+      "date": "2027-09-08",
+      "flight": "KE901",
+      "time": "11:20",
+      "cabin": "FIRST",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
+      "id": "2ede48decdce903ea10b3904",
+      "kind": "OPENED",
+      "destination": "CDG",
+      "date": "2027-09-08",
+      "flight": "KE901",
+      "time": "11:20",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:31.805Z"
+    },
+    {
       "id": "847a8afb9d855f32c48450a0",
       "kind": "CLOSED",
       "destination": "PRG",
