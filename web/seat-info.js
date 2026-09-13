@@ -2,7 +2,8 @@ import {prestigeSeatInfo} from './seat-metadata.js';
 
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const AWARD_URL='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mobileQuery=window.matchMedia('(max-width:850px)');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 let seatRowsPromise=null;
 
 async function rowsById(){
@@ -26,9 +27,11 @@ function enhanceRows(){
   const detail=el.querySelector('[data-detail]');if(!detail)return;
   const id=detail.dataset.detail;
   const actions=document.createElement('div');actions.className='seat-actions';
-  detail.before(actions);actions.append(detail);addSeatButton(actions,id);
+  detail.before(actions);
+  if(mobileQuery.matches)detail.remove();else actions.append(detail);
+  addSeatButton(actions,id);
   const book=document.createElement('a');book.className='book-button reserve-button';book.dataset.book=id;book.href=AWARD_URL;book.target='_blank';book.rel='noreferrer';book.textContent='예약';actions.append(book);
-  el.dataset.seatInfoEnhanced='1';
+  el.dataset.seatInfoEnhanced='1';el.dataset.seatRowId=id;
  });
  const head=document.querySelector('.list-head');if(head&&head.children[5])head.children[5].textContent='확인';
  hydrateRows();
@@ -56,7 +59,7 @@ function enhanceReserveOnlyRows(map){
   const row=matchReserveRow(map,el,reserve);if(!row)return;
   const actions=document.createElement('div');actions.className='seat-actions mobile-seat-actions';
   reserve.before(actions);addSeatButton(actions,row.id);actions.append(reserve);
-  el.dataset.seatInfoEnhanced='1';
+  el.dataset.seatInfoEnhanced='1';el.dataset.seatRowId=row.id;
  });
 }
 
@@ -65,7 +68,7 @@ async function hydrateRows(){
  enhanceReserveOnlyRows(map);
  document.querySelectorAll('.flight-row[data-seat-info-enhanced="1"]').forEach(el=>{
   const detail=el.querySelector('[data-detail]'),book=el.querySelector('[data-book]');
-  let row=detail?map.get(String(detail.dataset.detail)):null;
+  let row=map.get(String(el.dataset.seatRowId||detail?.dataset.detail||''));
   if(!row){const reserve=el.querySelector('a.reserve-button');row=reserve?matchReserveRow(map,el,reserve):null;}
   if(!row)return;
   if(book){book.href=bookingUrl(row);book.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예약`);}
