@@ -8,6 +8,7 @@ const rows=[
  {id:'3',destination:'JFK',region:'미주',date:'2027-04-05',flight:'KE081',time:'10:00',cabin:'PRESTIGE',fare_class:'O',available:1},
  {id:'4',destination:'NRT',region:'일본',date:'2027-04-06',flight:'KE703',time:'10:10',cabin:'PRESTIGE',fare_class:'O',available:1}
 ];
+const state=result=>({rule_hash:result.rule_hash,rule_meta:result.rule_meta,active:result.active,active_rows:result.active_rows});
 
 test('알림 규칙은 지역·목적지·객실·날짜·주말 조건을 모두 적용한다',()=>{
  const [rule]=normalizeAlertRules([{id:'rule_paris_01',name:'파리 주말 비즈니스',region:'유럽',destinations:['cdg'],cabins:['prestige'],start:'2027-04-01',end:'2027-04-30',weekend:true}]);
@@ -26,12 +27,34 @@ test('같은 좌석은 반복 알림하지 않고 사라졌다 다시 생기면 
  const rules=normalizeAlertRules([{id:'rule_europe_01',name:'유럽',region:'유럽'}]);
  const first=evaluateAlerts(rows,rules,{});
  assert.equal(first.opened[0].rows.length,2);
- const previous={rule_hash:first.rule_hash,rule_meta:first.rule_meta,active:first.active};
+ const previous=state(first);
  assert.equal(evaluateAlerts(rows,rules,previous).opened.length,0);
  const disappeared=evaluateAlerts([rows[1],rows[2],rows[3]],rules,previous);
- const reappeared=evaluateAlerts(rows,rules,{rule_hash:disappeared.rule_hash,rule_meta:disappeared.rule_meta,active:disappeared.active});
+ const reappeared=evaluateAlerts(rows,rules,state(disappeared));
  assert.equal(reappeared.opened.length,1);
  assert.equal(reappeared.opened[0].rows[0].destination,'CDG');
+});
+
+test('available → unknown → available은 새 좌석으로 다시 알리지 않는다',()=>{
+ const rules=normalizeAlertRules([{id:'rule_europe_01',name:'유럽',region:'유럽',destinations:['CDG']}]);
+ const coverage={coverage:[{destination:'CDG',month:'2027-04'}],unqueryable:[]};
+ const first=evaluateAlerts([rows[0]],rules,{},coverage);
+ const unknown=evaluateAlerts([],rules,state(first),{coverage:[],unqueryable:[{destination:'CDG',month:'2027-04'}]});
+ assert.equal(unknown.active.rule_europe_01.length,1);
+ assert.equal(unknown.unknown_preserved,1);
+ const recovered=evaluateAlerts([rows[0]],rules,state(unknown),coverage);
+ assert.equal(recovered.opened.length,0);
+});
+
+test('available → confirmed unavailable → available은 재오픈 알림을 만든다',()=>{
+ const rules=normalizeAlertRules([{id:'rule_europe_01',name:'유럽',region:'유럽',destinations:['CDG']}]);
+ const coverage={coverage:[{destination:'CDG',month:'2027-04'}],unqueryable:[]};
+ const first=evaluateAlerts([rows[0]],rules,{},coverage);
+ const unavailable=evaluateAlerts([],rules,state(first),coverage);
+ assert.equal(unavailable.active.rule_europe_01.length,0);
+ const reopened=evaluateAlerts([rows[0]],rules,state(unavailable),coverage);
+ assert.equal(reopened.opened.length,1);
+ assert.equal(reopened.opened[0].rows[0].destination,'CDG');
 });
 
 test('다른 규칙을 추가해도 기존 규칙 좌석을 신규로 다시 알리지 않는다',()=>{
@@ -41,7 +64,7 @@ test('다른 규칙을 추가해도 기존 규칙 좌석을 신규로 다시 알
   {id:'rule_europe_01',name:'유럽',region:'유럽'},
   {id:'rule_america_01',name:'미주',region:'미주'}
  ]);
- const next=evaluateAlerts(rows,nextRules,{rule_hash:first.rule_hash,rule_meta:first.rule_meta,active:first.active});
+ const next=evaluateAlerts(rows,nextRules,state(first));
  assert.equal(next.opened.length,1);
  assert.equal(next.opened[0].rule.id,'rule_america_01');
  assert.equal(next.opened[0].rows[0].destination,'JFK');
