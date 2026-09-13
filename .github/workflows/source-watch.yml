@@ -1,26 +1,28 @@
 name: Watch Korean Air daily source
 on:
   schedule:
-    # Allocate a runner before the 23:00 KST refresh window, then poll inside it.
+    # Two prewarm shots before the 23:00 KST refresh window. Either allocated runner
+    # can survive a delay in the other scheduled event.
+    - cron: '32 13 * * *'
     - cron: '47 13 * * *'
-    # Independent late backups in case the primary schedule is delayed/dropped or a US edge is stale.
-    - cron: '33 14 * * *'
-    - cron: '3 15 * * *'
-    - cron: '33 15 * * *'
-    - cron: '3 16 * * *'
-    - cron: '33 16 * * *'
-    - cron: '3 17 * * *'
+    # Late independent GitHub checks stay armed well into the morning. Avoid the
+    # top-of-hour congestion window by using :17/:47.
+    - cron: '17,47 14-20 * * *'
+    - cron: '17 21 * * *'
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - '.github/workflows/source-watch.yml'
+      - '.github/workflows/collect.yml'
       - 'src/public-source-check.mjs'
       - 'src/source-observer.mjs'
       - 'src/source-timestamp.mjs'
       - 'src/collection-cycle.mjs'
       - 'scripts/cycle-info.mjs'
       - 'src/public-navigation.mjs'
+      - 'src/public-extract.mjs'
+      - 'scripts/collect-regions.mjs'
       - 'test/public-source-check.test.mjs'
       - 'test/collection-cycle.test.mjs'
 permissions:
@@ -50,9 +52,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $schedule = '${{ github.event.schedule }}'
-          $primary = '47 13 * * *'
+          $eventName = '${{ github.event_name }}'
+          $prewarmSchedules = @('32 13 * * *','47 13 * * *')
 
-          $cycle = (node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 15 | ConvertFrom-Json)
+          $cycle = (node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 30 | ConvertFrom-Json)
           $cycleStart = [DateTime]::Parse($cycle.cycle_start_utc).ToUniversalTime()
           $watcherFailSafeAt = $cycleStart.AddMinutes(8)
           $staleRetryCooldown = [TimeSpan]::FromMinutes(55)
@@ -86,12 +89,12 @@ jobs:
               }
             }
 
-            Write-Host "$Reason; dispatching full collector."
+            Write-Host "$Reason; dispatching a clean full collector with no cross-run route/month cache."
             & gh workflow run collect.yml --repo $env:GITHUB_REPOSITORY --ref main
             if ($LASTEXITCODE -ne 0) { throw 'Collector dispatch failed' }
           }
 
-          if ($schedule -eq $primary) {
+          if ($prewarmSchedules -contains $schedule) {
             $pollStart = $cycleStart.AddMinutes(-3)  # 22:57 KST
             $deadline = $cycleStart.AddMinutes(20)   # 23:20 KST
             if ([DateTime]::UtcNow -lt $pollStart) {
@@ -100,7 +103,7 @@ jobs:
               Start-Sleep -Seconds $wait
             }
             if ([DateTime]::UtcNow -gt $deadline) {
-              # If GitHub started this schedule very late, still perform a short immediate check.
+              # A delayed prewarm is still useful: perform an immediate short check.
               $deadline = [DateTime]::UtcNow.AddMinutes(2)
             }
             $intervalSeconds = 30
@@ -131,11 +134,16 @@ jobs:
                 exit 0
               }
 
-              # A US edge can keep serving yesterday's DOM marker even after Korea has refreshed.
-              # After 23:08 KST, stale DOM is advisory only: make sure an actual bonusSeatView
-              # full scan is retried, with a cooldown so we never stack expensive collectors.
+              # The Korean Air DOM marker can remain stale on the GitHub US edge.
+              # Once 23:08 KST has passed, the marker is advisory only: force an
+              # actual bonusSeatView API scan. collect.yml now starts clean, so this
+              # can never be short-circuited by yesterday's route/month cache.
               if ($isStale -and [DateTime]::UtcNow -ge $watcherFailSafeAt) {
-                Start-CollectorIfIdle -Reason 'Korean Air DOM marker is still stale after the daily refresh window' -RespectStaleCooldown
+                if ($eventName -eq 'push') {
+                  Start-CollectorIfIdle -Reason 'Collection/interlock code changed while the daily marker is stale'
+                } else {
+                  Start-CollectorIfIdle -Reason 'Korean Air DOM marker is still stale after the daily refresh window' -RespectStaleCooldown
+                }
               }
             } else {
               Write-Warning "Source check failed; retrying within the watcher window."
@@ -150,7 +158,7 @@ jobs:
           }
 
           if ($sawStaleDailyMarker) {
-            Write-Host 'Korean Air US-edge DOM is still stale. Late backup watchers remain armed through 02:03 KST.'
+            Write-Host 'Korean Air US-edge DOM is still stale. Backup watchers remain armed through 06:17 KST.'
           } else {
             Write-Host 'No new source marker observed in this watcher window.'
           }
