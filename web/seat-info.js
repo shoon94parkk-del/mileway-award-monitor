@@ -12,7 +12,7 @@ async function rowsById(){
 
 function bookingUrl(row){
  if(!row?.destination)return AWARD_URL;
- const q=new URLSearchParams({bookingType:'A',tripType:'OW',departure:'ICN',arrival:String(row.destination),adults:'1',cabinClass:row.cabin==='FIRST'?'F':'C'});
+ const q=new URLSearchParams({bookingType:'A',tripType:'OW',departure:'ICN',arrival:String(row.destination),departureDate:String(row.date||''),adults:'1',cabinClass:row.cabin==='FIRST'?'F':'C'});
  return `https://www.koreanair.com/booking/search?${q}`;
 }
 
@@ -35,7 +35,7 @@ async function hydrateRows(){
  let map;try{map=await rowsById();}catch{return;}
  document.querySelectorAll('.flight-row[data-seat-info-enhanced="1"]').forEach(el=>{
   const detail=el.querySelector('[data-detail]'),id=detail?.dataset.detail,row=map.get(String(id));if(!row)return;
-  const book=el.querySelector('[data-book]');if(book)book.href=bookingUrl(row);
+  const book=el.querySelector('[data-book]');if(book){book.href=bookingUrl(row);book.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예약`);}
   if(row.aircraft&&!el.querySelector('.aircraft-badge')){
    const badge=document.createElement('span');badge.className='aircraft-badge';badge.textContent=String(row.aircraft);badge.title='대한항공 공개 자료에서 수집한 예정 기종';
    el.querySelector('.cabin-cell')?.append(badge);
@@ -56,12 +56,12 @@ function renderSeatDialog(row){
  const d=document.querySelector('#dialog'),content=document.querySelector('#dialog-content');if(!d||!content)return;
  const prestige=row.cabin!=='FIRST';
  const meta=prestige?prestigeSeatInfo(row.aircraft):{aircraft:row.aircraft||'기종 미확인',seat_name:'일등석 좌석',bed:'기재별 상이',direct_aisle:'기재별 상이',layout:'기재별 상이',privacy:'기재별 상이',summary:'현재 Mileway의 좌석 품질 메타데이터는 프레스티지석을 우선 제공합니다. 일등석은 대한항공 공식 기종 페이지에서 확인해 주세요.',image_url:'',image_note:'',official_url:'https://www.koreanair.com/contents/plan-your-travel/in-flight-experience/fleet',confidence:'unknown'};
- const exact=meta.confidence==='exact';
- content.innerHTML=`<span class="eyebrow">SEAT GUIDE · ${esc(row.flight||'KOREAN AIR')}</span><div class="seat-dialog-title"><div><h2>${esc(row.city||row.destination)}행 ${prestige?'프레스티지':'일등석'} 좌석</h2><p>${esc(row.date)} · ${esc(row.flight)} ${esc(row.time||'')} · ${esc(meta.aircraft||row.aircraft||'기종 미확인')}</p></div><span class="seat-confidence ${exact?'exact':'check'}">${exact?'기종 기준 확인':'구성 확인 필요'}</span></div>
+ const exact=meta.confidence==='exact',unknown=meta.confidence==='unknown';
+ content.innerHTML=`<span class="eyebrow">SEAT GUIDE · ${esc(row.flight||'KOREAN AIR')}</span><div class="seat-dialog-title"><div><h2>${esc(row.city||row.destination)}행 ${prestige?'프레스티지':'일등석'} 좌석</h2><p>${esc(row.date)} · ${esc(row.flight)} ${esc(row.time||'')} · ${esc(meta.aircraft||row.aircraft||'기종 미확인')}</p></div><span class="seat-confidence ${exact?'exact':'check'}">${exact?'기종 기준 확인':unknown?'기종 미확인':'구성 확인 필요'}</span></div>
  ${meta.image_url?`<figure class="seat-photo"><img src="${esc(meta.image_url)}" alt="${esc(meta.image_note||meta.seat_name)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(meta.image_note||'대한항공 공식 좌석 이미지')}</figcaption><div class="seat-image-fallback" hidden>이미지를 불러오지 못했습니다. 아래 공식 좌석 정보에서 사진을 확인해 주세요.</div></figure>`:''}
  <div class="seat-product"><strong>${esc(meta.seat_name)}</strong><p>${esc(meta.summary)}</p></div>${seatFacts(meta)}${variantsHtml(meta)}
  <div class="seat-caution">예정 기종과 실제 투입 기재는 운항 사정으로 바뀔 수 있습니다. 특히 B777-300ER·A330-300은 같은 기종 안에서도 좌석 구성이 다르므로 예약 화면에서 최종 기재를 확인해 주세요.</div>
- <div class="dialog-actions seat-dialog-actions"><a class="secondary" href="${esc(meta.official_url)}" target="_blank" rel="noreferrer">대한항공 공식 좌석 사진 ↗</a><a class="primary" href="${esc(bookingUrl(row))}" target="_blank" rel="noreferrer">예약하기 ↗</a></div>`;
+ <div class="dialog-actions seat-dialog-actions"><a class="secondary" href="${esc(meta.official_url)}" target="_blank" rel="noreferrer">대한항공 공식 좌석 사진 ↗</a><a class="primary book-button" href="${esc(bookingUrl(row))}" target="_blank" rel="noreferrer">예약하기 ↗</a></div>`;
  d.classList.add('seat-info-dialog');if(!d.open)d.showModal();
  const img=content.querySelector('.seat-photo img');if(img)img.addEventListener('error',()=>{img.hidden=true;const f=content.querySelector('.seat-image-fallback');if(f)f.hidden=false;},{once:true});
 }
