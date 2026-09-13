@@ -4,6 +4,28 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "847a8afb9d855f32c48450a0",
+      "kind": "CLOSED",
+      "destination": "PRG",
+      "date": "2027-09-08",
+      "flight": "KE969",
+      "time": "11:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:13.361Z"
+    },
+    {
+      "id": "8f635257b403b48f3146dab1",
+      "kind": "CLOSED",
+      "destination": "FRA",
+      "date": "2027-09-08",
+      "flight": "KE945",
+      "time": "10:50",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 13일 23:00",
+      "detected_at": "2026-09-13T21:57:13.361Z"
+    },
+    {
       "id": "f9072ca398691962f127d8c6",
       "kind": "OPENED",
       "destination": "SYD",
