@@ -1,12 +1,6 @@
 name: Collect public daily award seats
 on:
   workflow_dispatch:
-    inputs:
-      force_full_scan:
-        description: Run a fresh full collection immediately
-        required: false
-        default: true
-        type: boolean
 permissions:
   contents: write
 concurrency:
@@ -22,6 +16,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Resolve KST collection cycle
+        id: cycle
+        shell: pwsh
+        run: |
+          $cycle = node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 15 | ConvertFrom-Json
+          $safe = $cycle.cycle_id -replace '[:+]','-'
+          "id=$safe" >> $env:GITHUB_OUTPUT
+          Write-Host "Collection cycle: $($cycle.cycle_id)"
+      - name: Restore route-month checkpoints
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/region-0
+            data/region-1
+            data/region-2
+            data/region-3
+          key: mileway-checkpoint-${{ runner.os }}-${{ steps.cycle.outputs.id }}-${{ github.run_id }}
+          restore-keys: |
+            mileway-checkpoint-${{ runner.os }}-${{ steps.cycle.outputs.id }}-
       - name: Auto-register Telegram target
         id: telegram
         continue-on-error: true
@@ -34,11 +47,13 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Test collection-critical parsers
         id: tests
-        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs
       - name: Collect and publish Europe, Americas, Oceania, then Asia
         id: collect
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: node --no-warnings scripts/collect-regions.mjs
-      - name: Notify matching seat alerts
+      - name: Recheck matching seat alerts after all regional publications
         id: notify
         if: always() && steps.collect.outputs.published == 'true'
         continue-on-error: true
