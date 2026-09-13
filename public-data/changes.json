@@ -4,6 +4,39 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "e1b8f535a79df42c72924c02",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-09-07",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:52.326Z"
+    },
+    {
+      "id": "2498fa95d162a03b0b89a5cd",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-08-28",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:52.326Z"
+    },
+    {
+      "id": "ec58282240475fa772155216",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-05-10",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 12일 23:00",
+      "detected_at": "2026-09-13T02:34:52.326Z"
+    },
+    {
       "id": "52cba79836a0712d9ea9a4b6",
       "kind": "CLOSED",
       "destination": "HNL",
