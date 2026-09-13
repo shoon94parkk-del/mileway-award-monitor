@@ -7,11 +7,18 @@ on:
 permissions:
   actions: write
   contents: read
+concurrency:
+  group: public-cycle-interlock
+  cancel-in-progress: false
 jobs:
   force-start:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Ensure full collection has started by 23:05 KST
         env:
           GH_TOKEN: ${{ github.token }}
@@ -20,12 +27,16 @@ jobs:
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
           workflow="collect.yml"
+          cycle_json=$(node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 15)
+          cycle_start=$(printf '%s' "$cycle_json" | jq -r '.cycle_start_utc')
+          cycle_id=$(printf '%s' "$cycle_json" | jq -r '.cycle_id')
+          echo "Collection cycle: $cycle_id ($cycle_start)"
 
           # The scheduled runner is intentionally allocated around 22:50 KST.
           # Waiting inside an already-running job is much more reliable than asking
           # GitHub to start a new scheduled run exactly around 23:00 KST.
           if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-            target=$(date -u -d "$(date -u +%F) 14:05:00" +%s)
+            target=$(( $(date -u -d "$cycle_start" +%s) + 300 ))
             now=$(date -u +%s)
             if [ "$now" -lt "$target" ]; then
               echo "Interlock prewarmed; waiting until 23:05 KST."
@@ -33,13 +44,18 @@ jobs:
             fi
           fi
 
-          active=$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=30" \
-            --jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length')
-
+          runs=$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=30")
+          active=$(printf '%s' "$runs" | jq '[.workflow_runs[] | select(.status=="in_progress" or .status=="queued")] | length')
           if [ "$active" -gt 0 ]; then
             echo "A full collection is already queued/running; no duplicate force scan needed."
             exit 0
           fi
 
-          echo "23:05 KST interlock: dispatching forced full scan regardless of the DOM timestamp."
+          completed=$(printf '%s' "$runs" | jq --arg cycle "$cycle_start" '[.workflow_runs[] | select(.status=="completed" and .conclusion=="success" and .created_at >= $cycle)] | length')
+          if [ "$completed" -gt 0 ]; then
+            echo "This cycle already has a successful full collection run; 23:05 interlock will not duplicate it."
+            exit 0
+          fi
+
+          echo "23:05 KST interlock: dispatching one forced full scan regardless of the DOM timestamp."
           gh workflow run "$workflow" --repo "$repo" --ref main -f force_full_scan=true
