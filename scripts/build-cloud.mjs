@@ -40,7 +40,7 @@ try{
  js=replaceRequired(js,"location.href='/api/export?'+params","location.href='/snapshot.json';return;void params",'cloud export');
  const cloudPanel=`renderDataBase(); if(boot.cloud){
    $('#scan').hidden=true;
-   $('#data-view').insertAdjacentHTML('afterbegin','<section class="data-card"><h2>GitHub 자동 수집 · 선택 노선</h2><p>유럽·미주·오세아니아와 발리(DPS)만 모니터링합니다. 괌, 동북아, 발리를 제외한 동남아/서남아, 러시아/몽골/중앙아시아, 중동/아프리카는 현재 수집하지 않습니다.</p><p>평소 약 1시간 간격, 22:30~00:30 KST에는 약 5분 간격으로 대한항공 원자료 갱신을 확인합니다. 원자료가 갱신되면 지역별로 수집 완료 즉시 반영합니다.</p><p>상단 일일 업데이트 현황에서 최근 수집 상태와 알림 설정 여부를 확인할 수 있습니다.</p><a href="https://github.com/shoon94parkk-del/mileway-award-monitor/actions" target="_blank" rel="noreferrer">수집 실행 이력 확인 ↗</a></section>');return;
+   $('#data-view').insertAdjacentHTML('afterbegin','<section class="data-card"><h2>GitHub 자동 수집 · 선택 노선</h2><p>유럽·미주·오세아니아와 발리(DPS)만 모니터링합니다. 괌, 동북아, 발리를 제외한 동남아/서남아, 러시아/몽골/중앙아시아, 중동/아프리카는 현재 수집하지 않습니다.</p><p>매일 22:47 KST에 감시 runner를 미리 띄우고 22:57~23:20에는 30초 간격으로 원자료 갱신을 확인합니다. 이후 23:33~02:03에는 독립 백업 감시를 수행하며, 23:05 강제 수집 안전장치도 유지합니다.</p><p>원자료 갱신 또는 안전장치가 수집을 시작하면 지역별 완료 즉시 결과에 반영합니다.</p><p>상단 일일 업데이트 현황에서 최근 수집 상태와 내 Telegram 알림 연결 상태를 확인할 수 있습니다.</p><a href="https://github.com/shoon94parkk-del/mileway-award-monitor/actions" target="_blank" rel="noreferrer">수집 실행 이력 확인 ↗</a></section>');return;
  }`;
  js=replaceRequired(js,'renderDataBase();',cloudPanel,'cloud data panel');
  fs.writeFileSync('dist/app.js',js);
