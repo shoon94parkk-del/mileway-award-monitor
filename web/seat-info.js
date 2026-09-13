@@ -16,26 +16,59 @@ function bookingUrl(row){
  return `https://www.koreanair.com/booking/search?${q}`;
 }
 
+function addSeatButton(actions,id){
+ const seat=document.createElement('button');seat.type='button';seat.className='seat-info-button';seat.dataset.seatInfo=id;seat.textContent='좌석 정보';actions.append(seat);return seat;
+}
+
 function enhanceRows(){
  document.querySelectorAll('.flight-row').forEach(el=>{
   if(el.dataset.seatInfoEnhanced==='1')return;
   const detail=el.querySelector('[data-detail]');if(!detail)return;
   const id=detail.dataset.detail;
   const actions=document.createElement('div');actions.className='seat-actions';
-  detail.before(actions);actions.append(detail);
-  const seat=document.createElement('button');seat.type='button';seat.className='seat-info-button';seat.dataset.seatInfo=id;seat.textContent='좌석 정보';actions.append(seat);
-  const book=document.createElement('a');book.className='book-button';book.dataset.book=id;book.href=AWARD_URL;book.target='_blank';book.rel='noreferrer';book.textContent='예약';actions.append(book);
+  detail.before(actions);actions.append(detail);addSeatButton(actions,id);
+  const book=document.createElement('a');book.className='book-button reserve-button';book.dataset.book=id;book.href=AWARD_URL;book.target='_blank';book.rel='noreferrer';book.textContent='예약';actions.append(book);
   el.dataset.seatInfoEnhanced='1';
  });
  const head=document.querySelector('.list-head');if(head&&head.children[5])head.children[5].textContent='확인';
  hydrateRows();
 }
 
+function reserveIdentity(el,reserve){
+ const href=String(reserve?.dataset?.webFallback||reserve?.href||'');
+ const destination=(href.match(/[?&]arrival=([^&#;]+)/)||[])[1];
+ const date=(href.match(/[?&]departureDate=([^&#;]+)/)||[])[1];
+ const flight=el.querySelector('.flight-time .subline')?.textContent?.trim()||'';
+ const cabin=el.querySelector('.cabin')?.textContent?.includes('일등')?'FIRST':'PRESTIGE';
+ try{return {destination:destination?decodeURIComponent(destination):'',date:date?decodeURIComponent(date):'',flight,cabin};}catch{return {destination,date,flight,cabin};}
+}
+
+function matchReserveRow(map,el,reserve){
+ const id=reserveIdentity(el,reserve);
+ if(!id.destination||!id.date||!id.flight)return null;
+ for(const row of map.values())if(row.destination===id.destination&&row.date===id.date&&String(row.flight)===id.flight&&row.cabin===id.cabin)return row;
+ return null;
+}
+
+function enhanceReserveOnlyRows(map){
+ document.querySelectorAll('.flight-row:not([data-seat-info-enhanced="1"])').forEach(el=>{
+  const reserve=el.querySelector('a.reserve-button');if(!reserve)return;
+  const row=matchReserveRow(map,el,reserve);if(!row)return;
+  const actions=document.createElement('div');actions.className='seat-actions mobile-seat-actions';
+  reserve.before(actions);addSeatButton(actions,row.id);actions.append(reserve);
+  el.dataset.seatInfoEnhanced='1';
+ });
+}
+
 async function hydrateRows(){
  let map;try{map=await rowsById();}catch{return;}
+ enhanceReserveOnlyRows(map);
  document.querySelectorAll('.flight-row[data-seat-info-enhanced="1"]').forEach(el=>{
-  const detail=el.querySelector('[data-detail]'),id=detail?.dataset.detail,row=map.get(String(id));if(!row)return;
-  const book=el.querySelector('[data-book]');if(book){book.href=bookingUrl(row);book.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예약`);}
+  const detail=el.querySelector('[data-detail]'),book=el.querySelector('[data-book]');
+  let row=detail?map.get(String(detail.dataset.detail)):null;
+  if(!row){const reserve=el.querySelector('a.reserve-button');row=reserve?matchReserveRow(map,el,reserve):null;}
+  if(!row)return;
+  if(book){book.href=bookingUrl(row);book.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예약`);}
   if(row.aircraft&&!el.querySelector('.aircraft-badge')){
    const badge=document.createElement('span');badge.className='aircraft-badge';badge.textContent=String(row.aircraft);badge.title='대한항공 공개 자료에서 수집한 예정 기종';
    el.querySelector('.cabin-cell')?.append(badge);
