@@ -5,6 +5,7 @@ const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-a
 const AWARD_URL='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
 const SCHEDULE_URL='https://www.koreanair.com/flight-status?isSchedule=T';
 const mobileQuery=window.matchMedia('(max-width:850px)');
+const compactQuery=window.matchMedia('(max-width:520px)');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let seatRowsPromise=null;
 
@@ -19,7 +20,7 @@ function bookingUrl(row){
  return `https://www.koreanair.com/booking/search?${q}`;
 }
 
-function addSeatButton(actions,id){const seat=document.createElement('button');seat.type='button';seat.className='seat-info-button';seat.dataset.seatInfo=id;seat.textContent='좌석 정보';actions.append(seat);return seat;}
+function addSeatButton(actions,id){const seat=document.createElement('button');seat.type='button';seat.className='seat-info-button';seat.dataset.seatInfo=id;seat.textContent=compactQuery.matches?'좌석':'좌석 정보';seat.setAttribute('aria-label','좌석 정보 보기');actions.append(seat);return seat;}
 
 function enhanceRows(){
  document.querySelectorAll('.flight-row').forEach(el=>{
@@ -44,11 +45,20 @@ function enhanceReserveOnlyRows(map){
  document.querySelectorAll('.flight-row:not([data-seat-info-enhanced="1"])').forEach(el=>{const reserve=el.querySelector('a.reserve-button');if(!reserve)return;const row=matchReserveRow(map,el,reserve);if(!row)return;const actions=document.createElement('div');actions.className='seat-actions mobile-seat-actions';reserve.before(actions);addSeatButton(actions,row.id);actions.append(reserve);el.dataset.seatInfoEnhanced='1';el.dataset.seatRowId=row.id;});
 }
 
-function aircraftBadgeText(row){
+function aircraftBadgeData(row){
  const estimate=estimateAircraft(row);
- if(estimate.confidence==='confirmed')return `${estimate.aircraft} · 확정`;
- if(estimate.aircraft&&estimate.confidence==='high')return `${estimate.aircraft} · 예상 높음`;
- return '';
+ if(estimate.confidence==='confirmed')return {aircraft:estimate.aircraft,confidence:'확정',className:'confirmed',title:'대한항공 공개 좌석 원자료에서 확인된 기종'};
+ if(estimate.aircraft&&estimate.confidence==='high')return {aircraft:estimate.aircraft,confidence:'높음',className:'high',title:'편명과 해당 운항일 공개 스케줄 기반 예상 기종'};
+ if(estimate.aircraft&&estimate.confidence==='medium')return {aircraft:estimate.aircraft,confidence:'중간',className:'medium',title:'편명에서 반복 확인되는 대표 기종이며 해당 날짜는 확정 범위 밖'};
+ return null;
+}
+function renderAircraftBadge(el,row){
+ el.querySelectorAll('.aircraft-badge,.aircraft-meta').forEach(node=>node.remove());
+ const data=aircraftBadgeData(row);if(!data)return;
+ if(compactQuery.matches){
+  const meta=document.createElement('div');meta.className=`aircraft-meta ${data.className}`;meta.title=data.title;meta.innerHTML=`<span class="aircraft-type">${esc(data.aircraft)}</span><span class="aircraft-confidence">${esc(data.confidence)}</span>`;el.append(meta);return;
+ }
+ const badge=document.createElement('span');badge.className=`aircraft-badge ${data.className}`;badge.textContent=`${data.aircraft} · ${data.confidence}`;badge.title=data.title;el.querySelector('.cabin-cell')?.append(badge);
 }
 async function hydrateRows(){
  let map;try{map=await rowsById();}catch{return;}
@@ -56,7 +66,7 @@ async function hydrateRows(){
  document.querySelectorAll('.flight-row[data-seat-info-enhanced="1"]').forEach(el=>{
   const detail=el.querySelector('[data-detail]'),book=el.querySelector('[data-book]');let row=map.get(String(el.dataset.seatRowId||detail?.dataset.detail||''));if(!row){const reserve=el.querySelector('a.reserve-button');row=reserve?matchReserveRow(map,el,reserve):null;}if(!row)return;
   if(book){book.href=bookingUrl(row);book.setAttribute('aria-label',`${row.city||row.destination} ${row.date} 대한항공 마일리지 예약`);}
-  const badgeText=aircraftBadgeText(row);if(badgeText&&!el.querySelector('.aircraft-badge')){const badge=document.createElement('span');badge.className='aircraft-badge';badge.textContent=badgeText;badge.title=row.aircraft?'대한항공 공개 자료에서 확인된 기종':'편명과 운항일 공개 스케줄 기반 예상 기종';el.querySelector('.cabin-cell')?.append(badge);}
+  renderAircraftBadge(el,row);
  });
 }
 
@@ -98,5 +108,7 @@ async function openSeatInfo(id){try{const row=(await rowsById()).get(String(id))
 
 const sharedDialog=document.querySelector('#dialog');sharedDialog?.addEventListener('close',()=>{sharedDialog.classList.remove('seat-info-dialog');const content=document.querySelector('#dialog-content');if(content)content.className='';});
 document.addEventListener('click',event=>{const b=event.target.closest('[data-seat-info]');if(b){event.preventDefault();openSeatInfo(b.dataset.seatInfo);}});
+function refreshSeatEnhancements(){document.querySelectorAll('.flight-row').forEach(el=>{el.querySelectorAll('.aircraft-badge,.aircraft-meta').forEach(node=>node.remove());el.querySelectorAll('.seat-info-button').forEach(button=>{button.textContent=compactQuery.matches?'좌석':'좌석 정보';});});hydrateRows();}
+compactQuery.addEventListener?.('change',refreshSeatEnhancements);
 new MutationObserver(enhanceRows).observe(document.documentElement,{subtree:true,childList:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhanceRows,{once:true});else enhanceRows();
