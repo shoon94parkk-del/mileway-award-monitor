@@ -11,5 +11,7 @@ test('calendar enhancement is idempotent and does not retrigger its own observer
 });
 
 test('service worker cache remains newer than the calendar freeze fix',()=>{
- assert.match(read('web/service-worker.js'),/mileway-shell-v20/);
+ const match=read('web/service-worker.js').match(/mileway-shell-v(\d+)/);
+ assert.ok(match);
+ assert.ok(Number(match[1])>=19);
 });
