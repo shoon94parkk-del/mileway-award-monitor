@@ -4,7 +4,7 @@ const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-a
 const AWARD_URL='https://www.koreanair.com/booking/book-and-manage/award-seat-availability';
 const SCHEDULE_URL='https://www.koreanair.com/flight-status?isSchedule=T';
 const mobileQuery=window.matchMedia('(max-width:850px)');
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 let seatRowsPromise=null;
 
 async function rowsById(){
@@ -101,6 +101,7 @@ function attachImageFallbacks(content){
 
 function renderSeatDialog(row){
  const d=document.querySelector('#dialog'),content=document.querySelector('#dialog-content');if(!d||!content)return;
+ content.className='';
  const prestige=row.cabin!=='FIRST';
  const meta=prestige?prestigeSeatInfo(row.aircraft):{aircraft:row.aircraft||'기종 미확인',seat_name:'일등석 좌석',bed:'기재별 상이',direct_aisle:'기재별 상이',layout:'기재별 상이',privacy:'기재별 상이',summary:'현재 Mileway의 좌석 품질 메타데이터는 프레스티지석을 우선 제공합니다. 일등석은 대한항공 공식 기종 페이지에서 확인해 주세요.',image_url:'',image_note:'',official_url:'https://www.koreanair.com/contents/plan-your-travel/in-flight-experience/fleet',confidence:'unknown'};
  const exact=meta.confidence==='exact',unknown=meta.confidence==='unknown';
@@ -111,9 +112,11 @@ function renderSeatDialog(row){
 }
 
 async function openSeatInfo(id){
- try{const row=(await rowsById()).get(String(id));if(!row)throw Error('항공편 정보를 찾지 못했습니다.');renderSeatDialog(row);}catch(error){const content=document.querySelector('#dialog-content'),d=document.querySelector('#dialog');if(content)content.innerHTML=`<h2 class="detail-heading">좌석 정보를 불러오지 못했어요</h2><p class="muted">${esc(error.message)}</p><div class="dialog-actions"><a class="primary" href="${AWARD_URL}" target="_blank" rel="noreferrer">대한항공에서 확인 ↗</a></div>`;if(d&&!d.open)d.showModal();}
+ try{const row=(await rowsById()).get(String(id));if(!row)throw Error('항공편 정보를 찾지 못했습니다.');renderSeatDialog(row);}catch(error){const content=document.querySelector('#dialog-content'),d=document.querySelector('#dialog');if(content){content.className='';content.innerHTML=`<h2 class="detail-heading">좌석 정보를 불러오지 못했어요</h2><p class="muted">${esc(error.message)}</p><div class="dialog-actions"><a class="primary" href="${AWARD_URL}" target="_blank" rel="noreferrer">대한항공에서 확인 ↗</a></div>`;}if(d&&!d.open)d.showModal();}
 }
 
+const sharedDialog=document.querySelector('#dialog');
+sharedDialog?.addEventListener('close',()=>{sharedDialog.classList.remove('seat-info-dialog');const content=document.querySelector('#dialog-content');if(content)content.className='';});
 document.addEventListener('click',event=>{const b=event.target.closest('[data-seat-info]');if(b){event.preventDefault();openSeatInfo(b.dataset.seatInfo);}});
 new MutationObserver(enhanceRows).observe(document.documentElement,{subtree:true,childList:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhanceRows,{once:true});else enhanceRows();
