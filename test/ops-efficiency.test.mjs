@@ -12,6 +12,13 @@ test('public status avoids heartbeat-only commits and hourly runner churn',()=>{
  assert.match(workflow,/Semantic status unchanged; skip heartbeat-only commit and downstream redeploy/);
 });
 
+test('generated public data does not launch redundant full CI',()=>{
+ const workflow=read('.github/workflows/ci.yml');
+ assert.match(workflow,/paths-ignore:/);
+ assert.match(workflow,/public-data\/\*\*/);
+ assert.match(workflow,/cancel-in-progress:\s*true/);
+});
+
 test('free alert API is woken on demand instead of kept alive every five minutes',()=>{
  const workflow=read('.github/workflows/telegram-sync.yml');
  const notify=read('scripts/notify-alerts.mjs');
