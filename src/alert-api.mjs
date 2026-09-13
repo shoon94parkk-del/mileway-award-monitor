@@ -3,6 +3,7 @@ import net from 'node:net';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import {normalizeAlertRules,evaluateAlerts,alertSeatKey} from './alert-rules.mjs';
+import {formatAlertRow} from './alert-display.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const ADMIN_TOKEN=String(process.env.ALERT_ADMIN_TOKEN||'');
@@ -111,8 +112,7 @@ async function handleTelegramWebhook(req,input){
  return true;
 }
 
-const cabin=row=>row.cabin==='FIRST'?'일등석':'프레스티지';
-const rowText=row=>`${row.date} · ${row.destination} · ${row.flight}${row.time?' '+row.time:''} · ${cabin(row)}`;
+const rowText=row=>formatAlertRow(row);
 function buildMessages(opened,sourceUpdatedAt,publicationId){return opened.map(({rule,rows})=>{const visible=rows.slice(0,12),more=rows.length-visible.length,lines=visible.map(row=>`• ${rowText(row)}`);if(more)lines.push(`• 외 ${more}건`);const ids=rows.map(alertSeatKey).sort().join(','),version=publicationId||sourceUpdatedAt;return {text:`🔔 ${rule.name}\n${lines.join('\n')}\n\n대한항공 공개 일일 자료 기준: ${sourceUpdatedAt}\n예약 전 대한항공에서 최종 확인해 주세요.`,idempotency:`${version}|${rule.id}|${ids}`};});}
 async function deliverOutbox(owner,target,message){
  const key=OUTBOX_PREFIX+owner+':'+digest(message.idempotency),existing=await redis(['GET',key]);
