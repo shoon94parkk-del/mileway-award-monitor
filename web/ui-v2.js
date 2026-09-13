@@ -1,13 +1,44 @@
 import {cloudApi} from './cloud-api.js';
 
 const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const mobileQuery=window.matchMedia('(max-width:850px)');
+
+function ensureCabinFilter(){
+ const select=$('#cabin');
+ const grid=$('.filter-grid');
+ if(!select||!grid)return;
+ if(select.dataset.uxCabinUpgraded!=='true'){
+  select.dataset.uxCabinUpgraded='true';
+  select.hidden=false;
+  select.removeAttribute('aria-hidden');
+  select.removeAttribute('tabindex');
+  select.innerHTML='<option value="">프레스티지 + 일등석</option><option value="PRESTIGE">프레스티지</option><option value="FIRST">일등석</option>';
+  const label=document.createElement('label');
+  label.className='ux-cabin-filter';
+  label.append(document.createTextNode('좌석 등급'));
+  select.parentNode?.insertBefore(label,select);
+  label.appendChild(select);
+  grid.appendChild(label);
+ }
+ if(select.dataset.uxDefaultApplied!=='true'){
+  select.dataset.uxDefaultApplied='true';
+  if(!select.value){
+   select.value='PRESTIGE';
+   queueMicrotask(()=>select.dispatchEvent(new Event('change',{bubbles:true})));
+  }
+ }
+}
 
 function moveRecentOpenedBelowResults(){
  const panel=$('#recent-opened');
  const pagination=$('#pagination');
  if(panel&&pagination&&pagination.parentNode&&panel.previousElementSibling!==pagination){pagination.after(panel);}
+}
+
+function cabinFilterLabel(){
+ const value=$('#cabin')?.value||'';
+ return value==='PRESTIGE'?'프레스티지':value==='FIRST'?'일등석':'프레스티지 + 일등석';
 }
 
 function renderActiveFilters(){
@@ -22,7 +53,7 @@ function renderActiveFilters(){
  const end=$('#end')?.value||'';
  const weekend=$('#weekend')?.checked;
  const range=start||end?`${start||'시작'} ~ ${end||'종료'}`:month;
- const chips=[`지역 ${region}`,destination,range,'프레스티지 + 일등석',...(weekend?['주말 출발']:[])];
+ const chips=[`지역 ${region}`,destination,range,cabinFilterLabel(),...(weekend?['주말 출발']:[])];
  const signature=chips.join('|');
  if(bar.dataset.signature!==signature){bar.dataset.signature=signature;bar.innerHTML=`<strong>현재 검색조건</strong><div>${chips.map(v=>`<span>${esc(v)}</span>`).join('')}</div>`;}
 }
@@ -55,7 +86,7 @@ function currentFilterSummary(){
  const start=$('#start')?.value||'',end=$('#end')?.value||'';
  const range=start||end?`${start||'시작'}~${end||'종료'}`:month;
  const weekend=$('#weekend')?.checked?' · 주말':'';
- return {region,destination,range,weekend};
+ return {region,destination,range,weekend,cabin:cabinFilterLabel()};
 }
 
 function setMobileFilterOpen(open){
@@ -83,8 +114,8 @@ function ensureMobileFilterSheet(){
  let backdrop=$('#mobile-filter-backdrop');
  if(!backdrop){backdrop=document.createElement('button');backdrop.id='mobile-filter-backdrop';backdrop.className='mobile-filter-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','검색 조건 닫기');backdrop.hidden=true;document.body.appendChild(backdrop);}
  const f=currentFilterSummary();
- const signature=[f.region,f.destination,f.range,f.weekend].join('|');
- if(summary.dataset.signature!==signature){summary.dataset.signature=signature;summary.innerHTML=`<span class="mobile-filter-summary-text"><strong>${esc(f.region)}</strong> · ${esc(f.destination)} · ${esc(f.range)}${esc(f.weekend)}</span><span class="mobile-filter-summary-action">필터</span>`;}
+ const signature=[f.region,f.destination,f.range,f.cabin,f.weekend].join('|');
+ if(summary.dataset.signature!==signature){summary.dataset.signature=signature;summary.innerHTML=`<span class="mobile-filter-summary-text"><strong>${esc(f.region)}</strong> · ${esc(f.destination)} · ${esc(f.range)} · ${esc(f.cabin)}${esc(f.weekend)}</span><span class="mobile-filter-summary-action">필터</span>`;}
  const count=$('#result-count')?.textContent?.trim();
  const apply=card.querySelector('.mobile-filter-sheet-apply');
  const applyLabel=count?`${count} 결과 보기`:'결과 보기';
@@ -175,7 +206,7 @@ function bindMobileUi(){
  mobileQuery.addEventListener?.('change',()=>{if(!mobileQuery.matches)setMobileFilterOpen(false);sync();});
 }
 
-function sync(){moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();simplifyMobileRows();syncMobileFilterState();}
+function sync(){ensureCabinFilter();moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();simplifyMobileRows();syncMobileFilterState();}
 function scheduleSync(){if(scheduleSync.pending)return;scheduleSync.pending=requestAnimationFrame(()=>{scheduleSync.pending=0;sync();});}
 
 bindMobileUi();
