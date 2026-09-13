@@ -8,8 +8,9 @@ on:
       - 'scripts/register-telegram.mjs'
       - '.github/workflows/telegram-sync.yml'
   schedule:
-    # Keeps the free alert API warm and refreshes an encrypted recovery backup.
-    - cron: '*/5 * * * *'
+    # Back up recovery state twice a day without keeping the free Render API awake 24/7.
+    # Notification delivery performs its own warm-up immediately before sending.
+    - cron: '50 5,17 * * *'
 permissions:
   contents: write
 concurrency:
@@ -24,6 +25,7 @@ jobs:
         with:
           node-version: '24'
       - name: Provision direct Telegram webhook
+        if: github.event_name != 'schedule'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -37,7 +39,11 @@ jobs:
           import fs from 'node:fs';
           const token=process.env.TELEGRAM_BOT_TOKEN||'';
           if(!token) throw new Error('TELEGRAM_BOT_TOKEN missing');
-          const res=await fetch('https://mileway-alert-api.onrender.com/internal/backup',{headers:{Authorization:`Bearer ${token}`}});
+          const controller=new AbortController();
+          const timer=setTimeout(()=>controller.abort(),90000);
+          let res;
+          try{res=await fetch('https://mileway-alert-api.onrender.com/internal/backup',{headers:{Authorization:`Bearer ${token}`},signal:controller.signal});}
+          finally{clearTimeout(timer);}
           if(!res.ok) throw new Error(`Encrypted backup failed: HTTP ${res.status}`);
           const record=await res.json();
           if(!record?.ciphertext) throw new Error('Encrypted backup payload missing');
