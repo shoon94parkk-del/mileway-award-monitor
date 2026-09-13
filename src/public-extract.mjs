@@ -38,7 +38,7 @@ if(!Number.isFinite(intervalMs)||!Number.isFinite(directIntervalMs)||!Number.isF
 const output=path.resolve(value('--output',path.join(root,'data','public')));fs.mkdirSync(output,{recursive:true});
 const releaseCollection=claimCollection(path.join(output,'collection.lock'));
 const previous=process.argv.includes('--resume')&&fs.existsSync(path.join(output,'results.json'))?JSON.parse(fs.readFileSync(path.join(output,'results.json'),'utf8')):null;
-const report={source:PUBLIC_URL,source_type:'KOREAN_AIR_PUBLIC_DAILY',started_at:new Date().toISOString(),start_date:start,end_date:end,complete:false,attempt_complete:false,coverage:[],unqueryable:[],failed:[],errors:[],rows:[],collection_engine:directAfterFirst?'HYBRID_DIRECT_AFTER_FIRST':'UI'};
+const report={source:PUBLIC_URL,source_type:'KOREAN_AIR_PUBLIC_DAILY',started_at:new Date().toISOString(),start_date:start,end_date:end,complete:false,attempt_complete:false,coverage:[],unqueryable:[],failed:[],errors:[],rows:[],collection_engine:directAfterFirst?'HYBRID_DIRECT_VERIFIED':'UI',acceleration:{ui_months:0,direct_months:0,direct_fallbacks:0,direct_verification_calls:0,direct_templates_verified:0,direct_verification_failures:0}};
 const writeJson=(name,value)=>{const file=path.join(output,name),temporary=file+'.tmp';fs.writeFileSync(temporary,JSON.stringify(value,null,2));fs.renameSync(temporary,file);};
 const save=()=>{writeJson('results.json',report);writeJson('available.json',{...report,rows:report.rows.filter(r=>r.available)});writePublicReport(report,output);};
 const db=new DatabaseSync(path.join(output,'seats.db'));
@@ -115,7 +115,31 @@ async function selectDestination(route) {
   await regionList('destination',route.region);
   await page.getByRole('button',{name:new RegExp(`^${route.code} `)}).click();
 }
+function seatSignature(data,route,monthKey){
+  const options={origin:'ICN',destination:route.code,month:monthKey,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at};
+  return parsePublicApi(data,options).map(row=>[row.date,row.flight,row.departureTime||'',row.cabin,row.fareClass,row.available?'1':'0'].join('|')).sort().join('\n');
+}
+async function verifyDirectTemplate(route,monthKey,template,uiData){
+  report.acceleration.direct_verification_calls++;
+  try{
+    pending.clear();apiErrors=[];
+    const result=await queryPublicSeatMonth(page,template,{origin:'ICN',destination:route.code,month:monthKey});
+    if(seatSignature(result.data,route,monthKey)!==seatSignature(uiData,route,monthKey))throw new Error('Direct/API UI seat signature mismatch');
+    report.acceleration.direct_templates_verified++;
+    console.log(`${route.code} ${monthKey}: DIRECT TEMPLATE VERIFIED`);
+    await sleep(directIntervalMs);
+    save();
+    return true;
+  }catch(error){
+    report.acceleration.direct_verification_failures++;
+    console.warn(`${route.code} ${monthKey}: DIRECT TEMPLATE VERIFY FAILED; UI-only for this route: ${error.message}`);
+    if(/ACCESS_LIMIT/.test(error.message))await sleep(Math.max(10000,intervalMs));
+    save();
+    return false;
+  }
+}
 function storeDirectResult(route,monthKey,data){
+  report.acceleration.direct_months++;
   if(data.departureAirport==='ICN'&&data.arrivalAirport===route.code&&Array.isArray(data.flightList)&&data.flightList.length===0){
     const notice='검색하신 여정은 조회가 불가합니다.';
     const record={destination:route.code,month:monthKey,status:'UNQUERYABLE',reason:notice,checked_at:new Date().toISOString(),engine:'DIRECT_API'};
@@ -159,6 +183,7 @@ async function collectMonth(route,monthKey) {
   let requested;
   try { requested=JSON.parse(lastPublicResponse.request); } catch { throw new Error('Public API request body was not valid JSON'); }
   if(requested.departureAirport!=='ICN'||requested.arrivalAirport!==route.code||requested.departureDate!==monthKey.replace('-','')+'01') throw new Error('Unexpected public request parameters');
+  report.acceleration.ui_months++;
   if(data.departureAirport==='ICN'&&data.arrivalAirport===route.code&&Array.isArray(data.flightList)&&data.flightList.length===0){
     const notice='검색하신 여정은 조회가 불가합니다.';
     await page.getByText(notice,{exact:true}).waitFor({state:'visible'});
@@ -210,6 +235,7 @@ try {
   }
   if(previous && previous.source_updated_at===report.source_updated_at && previous.start_date===start && previous.end_date===end) {
     report.rows=previous.rows||[];report.coverage=previous.coverage||[];report.unqueryable=previous.unqueryable||[];
+    if(previous.acceleration)report.acceleration={...report.acceleration,...previous.acceleration};
     console.log(`Resuming ${report.coverage.length+report.unqueryable.length} saved route/months from the same daily data`);
   }
   const regions=await discoverDestinationRegions();
@@ -251,28 +277,35 @@ try {
     if(!routeMonths.length) continue;
     await selectDestination(route);
     let directTemplate=null;
+    let directVerified=false;
+    let directDisabled=false;
     for(const monthKey of routeMonths) {
       let success=false,lastError=null;
       for(let attempt=1;attempt<=maxRetries;attempt++) {
         try {
-          if(directAfterFirst&&directTemplate){
+          if(directAfterFirst&&directVerified&&directTemplate&&!directDisabled){
             try{
               await collectMonthDirect(route,monthKey,directTemplate);
             }catch(directError){
-              if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(directError.message))throw directError;
-              console.warn(`${route.code} ${monthKey}: DIRECT fallback to UI: ${directError.message}`);
-              directTemplate=null;
-              directTemplate=await collectMonth(route,monthKey);
+              if(/Collection stopped by user|Public source timestamp changed/.test(directError.message))throw directError;
+              report.acceleration.direct_fallbacks++;
+              console.warn(`${route.code} ${monthKey}: DIRECT fallback to UI and disable acceleration for this route: ${directError.message}`);
+              directTemplate=null;directVerified=false;directDisabled=true;
+              await collectMonth(route,monthKey);
             }
           }else{
             directTemplate=await collectMonth(route,monthKey);
+            if(directAfterFirst&&!directDisabled&&directTemplate&&lastPublicResponse?.data){
+              directVerified=await verifyDirectTemplate(route,monthKey,directTemplate,lastPublicResponse.data);
+              if(!directVerified){directDisabled=true;directTemplate=null;}
+            }
           }
           success=true;break;
         } catch(e) {
           if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(e.message))throw e;
           lastError=e;await writeFailureDiagnostic(route,monthKey,attempt,e);
           console.error(`${route.code} ${monthKey}: attempt ${attempt}/${maxRetries} failed: ${e.message}`);
-          directTemplate=null;
+          directTemplate=null;directVerified=false;
           if(attempt<maxRetries) {
             const backoff=Math.min(60000,5000*Math.pow(2,attempt-1));
             await sleep(backoff);
@@ -287,13 +320,16 @@ try {
         console.error(`${route.code} ${monthKey}: FAILED after ${maxRetries} attempts; continuing remaining route/months`);
         await initializeSearchPage(report.source_updated_at);
         await selectDestination(route);
-        directTemplate=null;
+        directTemplate=null;directVerified=false;
       }
     }
   }
   report.complete=report.failed.length===0&&report.target_routes.every(code=>months.every(month=>report.coverage.some(c=>c.destination===code&&c.month===month)));
   report.attempt_complete=report.failed.length===0&&report.target_routes.every(code=>months.every(month=>[...report.coverage,...report.unqueryable].some(c=>c.destination===code&&c.month===month)));
-  report.finished_at=new Date().toISOString();save();
+  report.finished_at=new Date().toISOString();
+  report.elapsed_ms=new Date(report.finished_at).getTime()-new Date(report.started_at).getTime();
+  save();
+  console.log(`ACCELERATION UI=${report.acceleration.ui_months} DIRECT=${report.acceleration.direct_months} VERIFIED=${report.acceleration.direct_templates_verified}/${report.acceleration.direct_verification_calls} FALLBACKS=${report.acceleration.direct_fallbacks} VERIFY_FAIL=${report.acceleration.direct_verification_failures} ELAPSED_MS=${report.elapsed_ms}`);
   console.log(`Saved ${report.rows.filter(r=>r.available).length} matches to ${output}`);
   if(report.failed.length) {
     report.failure=`${report.failed.length} route/month collections failed after retries`;
@@ -301,7 +337,7 @@ try {
   }
   }
 } catch(e) {
-  report.failure=e.message;report.finished_at=new Date().toISOString();
+  report.failure=e.message;report.finished_at=new Date().toISOString();report.elapsed_ms=new Date(report.finished_at).getTime()-new Date(report.started_at).getTime();
   if(report.coverage.length||report.unqueryable.length||report.failed.length)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
   console.error(e.message);process.exitCode=/ACCESS_LIMIT/.test(e.message)?75:1;
 }
