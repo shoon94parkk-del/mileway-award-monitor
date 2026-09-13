@@ -1,43 +1,43 @@
 {
   "version": 2,
   "schema_version": 2,
-  "generated_at": "2026-09-13T17:06:16.915Z",
+  "generated_at": "2026-09-13T17:28:24.176Z",
   "cycle_id": "2026-09-13T23:00:00+09:00",
   "collector_status": "succeeded",
   "source_status": "delayed",
   "expected_source_at": "2026년 9월 13일 23:00",
   "observed_source_at": "2026년 9월 12일 23:00",
-  "source_observed_at": "2026-09-13T04:24:07.797Z",
-  "last_successful_collection_at": "2026-09-13T04:24:07.797Z",
+  "source_observed_at": "2026-09-13T17:28:23.718Z",
+  "last_successful_collection_at": "2026-09-13T17:28:23.718Z",
   "last_fresh_publication_at": null,
-  "publication_id": "2026-09-13T04:24:07.797Z|오세아니아",
+  "publication_id": "2026-09-13T17:28:19.524Z|오세아니아",
   "notification_status": "checked",
-  "last_notification_check_at": "2026-09-13T02:34:59.728Z",
-  "heartbeat_at": "2026-09-13T17:06:16.915Z",
+  "last_notification_check_at": "2026-09-13T17:28:23.718Z",
+  "heartbeat_at": "2026-09-13T17:28:24.176Z",
   "error_code": null,
   "regions": {
     "미주": {
       "status": "success",
       "source_updated_at": "2026년 9월 12일 23:00",
-      "finished_at": "2026-09-13T04:18:40.226Z",
+      "finished_at": "2026-09-13T17:22:48.645Z",
       "routes": 13
     },
     "유럽": {
       "status": "success",
       "source_updated_at": "2026년 9월 12일 23:00",
-      "finished_at": "2026-09-13T04:18:34.903Z",
+      "finished_at": "2026-09-13T17:22:44.559Z",
       "routes": 13
     },
     "오세아니아": {
       "status": "success",
       "source_updated_at": "2026년 9월 12일 23:00",
-      "finished_at": "2026-09-13T04:24:07.797Z",
+      "finished_at": "2026-09-13T17:28:19.524Z",
       "routes": 4
     },
     "아시아": {
       "status": "success",
       "source_updated_at": "2026년 9월 12일 23:00",
-      "finished_at": "2026-09-13T04:20:41.314Z",
+      "finished_at": "2026-09-13T17:24:39.589Z",
       "routes": 1
     }
   }
