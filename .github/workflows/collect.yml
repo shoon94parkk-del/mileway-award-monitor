@@ -24,17 +24,14 @@ jobs:
           $safe = $cycle.cycle_id -replace '[:+]','-'
           "id=$safe" >> $env:GITHUB_OUTPUT
           Write-Host "Collection cycle: $($cycle.cycle_id)"
-      - name: Restore route-month checkpoints
-        uses: actions/cache@v4
-        with:
-          path: |
-            data/region-0
-            data/region-1
-            data/region-2
-            data/region-3
-          key: mileway-checkpoint-${{ runner.os }}-${{ steps.cycle.outputs.id }}-${{ github.run_id }}
-          restore-keys: |
-            mileway-checkpoint-${{ runner.os }}-${{ steps.cycle.outputs.id }}-
+      # A forced/interlock scan must really query Korean Air again. Do not restore
+      # route/month checkpoints from an older run just because the US-edge DOM
+      # timestamp is still stale. In-process retries still resume local files.
+      - name: Start with clean route-month checkpoints
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force data/region-0,data/region-1,data/region-2,data/region-3 -ErrorAction SilentlyContinue
+          Write-Host "Fresh full scan armed: no cross-run route/month cache will be reused."
       - name: Auto-register Telegram target
         id: telegram
         continue-on-error: true
