@@ -25,8 +25,8 @@ jobs:
           "id=$safe" >> $env:GITHUB_OUTPUT
           Write-Host "Collection cycle: $($cycle.cycle_id)"
       # A forced/interlock scan must really query Korean Air again. Do not restore
-      # route/month checkpoints from an older run just because the US-edge DOM
-      # timestamp is still stale. In-process retries still resume local files.
+      # route/month checkpoints from an older run just because a previous run saw
+      # the same source marker. In-process retries still resume local files.
       - name: Start with clean route-month checkpoints
         shell: pwsh
         run: |
@@ -44,11 +44,17 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Test collection-critical parsers
         id: tests
-        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-direct-client.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs
       - name: Collect and publish Europe, Americas, Oceania, then Asia
         id: collect
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # Guarded hybrid mode: the first month of each route is still collected
+          # through the verified Korean Air UI. The captured request then drives
+          # the remaining months through the same public API. Any unexpected
+          # response automatically falls back to the existing UI collector.
+          MILEWAY_DIRECT_API: '1'
+          COLLECT_DIRECT_INTERVAL_MS: '1000'
         run: node --no-warnings scripts/collect-regions.mjs
       - name: Recheck matching seat alerts after all regional publications
         id: notify
