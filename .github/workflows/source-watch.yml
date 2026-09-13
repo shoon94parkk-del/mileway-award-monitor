@@ -18,8 +18,11 @@ on:
       - 'src/public-source-check.mjs'
       - 'src/source-observer.mjs'
       - 'src/source-timestamp.mjs'
+      - 'src/collection-cycle.mjs'
+      - 'scripts/cycle-info.mjs'
       - 'src/public-navigation.mjs'
       - 'test/public-source-check.test.mjs'
+      - 'test/collection-cycle.test.mjs'
 permissions:
   actions: write
   contents: read
@@ -39,7 +42,7 @@ jobs:
       - name: Install lightweight watcher dependency
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Test source freshness logic
-        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs
+        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/collection-cycle.test.mjs
       - name: Poll Korean Air source and dispatch collector
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,13 +52,11 @@ jobs:
           $schedule = '${{ github.event.schedule }}'
           $primary = '47 13 * * *'
 
-          $now = [DateTime]::UtcNow
-          $cycleStart = $now.Date.AddHours(14) # 23:00 KST
-          if ($now -lt $cycleStart) { $cycleStart = $cycleStart.AddDays(-1) }
-          # The dedicated 23:05 interlock owns the first forced scan. If that fails,
-          # the watcher becomes a second independent fail-safe three minutes later.
+          $cycle = (node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 15 | ConvertFrom-Json)
+          $cycleStart = [DateTime]::Parse($cycle.cycle_start_utc).ToUniversalTime()
           $watcherFailSafeAt = $cycleStart.AddMinutes(8)
           $staleRetryCooldown = [TimeSpan]::FromMinutes(55)
+          Write-Host "Collection cycle: $($cycle.cycle_id) / expected source $($cycle.expected_source_at)"
 
           function Start-CollectorIfIdle {
             param(
@@ -91,8 +92,8 @@ jobs:
           }
 
           if ($schedule -eq $primary) {
-            $pollStart = [DateTime]::UtcNow.Date.AddHours(13).AddMinutes(57)  # 22:57 KST
-            $deadline = [DateTime]::UtcNow.Date.AddHours(14).AddMinutes(20)   # 23:20 KST
+            $pollStart = $cycleStart.AddMinutes(-3)  # 22:57 KST
+            $deadline = $cycleStart.AddMinutes(20)   # 23:20 KST
             if ([DateTime]::UtcNow -lt $pollStart) {
               $wait = [int][Math]::Ceiling(($pollStart - [DateTime]::UtcNow).TotalSeconds)
               Write-Host "Watcher prewarmed before 23:00 KST; waiting $wait seconds before polling."
