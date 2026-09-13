@@ -100,7 +100,10 @@ export async function cloudApi(url,method='GET',data){
   const id=Number(u.pathname.split('/').pop());writeJson(SEARCHES_KEY,readSearches().filter(s=>Number(s.id)!==id));return {ok:true};
  }
  if(method!=='GET')throw Error('공개 사이트는 조회 전용입니다.');
- if(u.pathname==='/api/bootstrap')return {...snapshot.bootstrap,favorites:favorites.size,searches:readSearches()};
+ if(u.pathname==='/api/bootstrap'){
+  const visibleFavorites=snapshot.rows.reduce((count,row)=>count+(favorites.has(row.id)?1:0),0);
+  return {...snapshot.bootstrap,favorites:visibleFavorites,searches:readSearches()};
+ }
  if(u.pathname.startsWith('/api/seats/')){const row=snapshot.rows.find(r=>r.id===u.pathname.split('/').pop());if(!row)throw Error('항공편을 찾지 못했습니다.');return withSaved(row,favorites);}
  const rows=filterRows(snapshot.rows,f,favorites);
  if(u.pathname==='/api/calendar')return [...groupRowsByDate(rows)].map(([date,rs])=>({date,count:rs.length,first:rs.filter(r=>r.cabin==='FIRST').length,destinations:new Set(rs.map(r=>r.destination)).size})).sort((a,b)=>a.date.localeCompare(b.date));
