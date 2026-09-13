@@ -57,5 +57,5 @@ jobs:
             exit 0
           fi
 
-          echo "23:05 KST interlock: dispatching one forced full scan regardless of the DOM timestamp."
-          gh workflow run "$workflow" --repo "$repo" --ref main -f force_full_scan=true
+          echo "23:05 KST interlock: dispatching one full scan regardless of the DOM timestamp."
+          gh workflow run "$workflow" --repo "$repo" --ref main
