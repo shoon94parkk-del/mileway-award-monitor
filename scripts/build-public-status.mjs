@@ -40,7 +40,7 @@ const status={
   last_successful_collection_at:latestIso(successfulReportAt,health.last_successful_collection_at,health.last_successful_scan_at),
   last_fresh_publication_at:freshness.source_status==='current'?latestIso(report.finished_at,health.last_fresh_publication_at):(health.last_fresh_publication_at||null),
   publication_id:report.publication_id||null,
-  notification_status:notificationFailure?'failed':health.last_notification_check_at?'sent':'unknown',
+  notification_status:notificationFailure?'failed':health.last_notification_check_at?'checked':'unknown',
   last_notification_check_at:health.last_notification_check_at||null,
   heartbeat_at:now.toISOString(),
   error_code:healthFailureCurrent?(health.last_error_step||'unknown'):null,
