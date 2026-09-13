@@ -6,7 +6,8 @@ on:
       - Watch Korean Air daily source
     types: [completed]
   schedule:
-    - cron: '7 * * * *'
+    # Time-based freshness can change at the 23:00 KST boundary even without a data commit.
+    # Other status refreshes are event-driven by watcher/collector completion and data pushes.
     - cron: '0,5,15,30,45 14 * * *'
   workflow_dispatch:
   push:
@@ -36,9 +37,24 @@ jobs:
           node-version: '24'
       - name: Build public status contract
         run: node --no-warnings scripts/build-public-status.mjs
-      - name: Persist status
+      - name: Persist status only when semantic state changed
         shell: bash
         run: |
+          SEMANTIC_CHANGED="$(node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const current=JSON.parse(fs.readFileSync('public-data/status.json','utf8'));
+          let previous=null;
+          try{previous=JSON.parse(execFileSync('git',['show','HEAD:public-data/status.json'],{encoding:'utf8',stdio:['ignore','pipe','ignore']}));}catch{}
+          const semantic=value=>{if(!value)return null;const copy={...value};delete copy.generated_at;delete copy.heartbeat_at;return copy;};
+          process.stdout.write(JSON.stringify(semantic(current))===JSON.stringify(semantic(previous))?'0':'1');
+          NODE
+          )"
+          if [ "$SEMANTIC_CHANGED" = "0" ]; then
+            git checkout -- public-data/status.json
+            echo "Semantic status unchanged; skip heartbeat-only commit and downstream redeploy."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public-data/status.json
