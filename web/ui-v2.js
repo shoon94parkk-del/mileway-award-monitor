@@ -1,7 +1,7 @@
 import {cloudApi} from './cloud-api.js';
 
 const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobileQuery=window.matchMedia('(max-width:850px)');
 
 function ensureCabinFilter(){
@@ -39,6 +39,46 @@ function moveRecentOpenedBelowResults(){
 function cabinFilterLabel(){
  const value=$('#cabin')?.value||'';
  return value==='PRESTIGE'?'프레스티지':value==='FIRST'?'일등석':'프레스티지 + 일등석';
+}
+
+function currentFilterParams(){
+ return {
+  region:$('#regions button.selected')?.dataset.region||'',
+  destination:$('#destination')?.value||'',
+  month:$('#month')?.value||'',
+  cabin:$('#cabin')?.value||'',
+  start:$('#start')?.value||'',
+  end:$('#end')?.value||'',
+  weekend:$('#weekend')?.checked?'true':'',
+  sort:$('#sort')?.value||'date'
+ };
+}
+
+async function exportCurrentPublication(){
+ const button=$('#export');
+ if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+ try{
+  const filters=currentFilterParams();
+  const query=new URLSearchParams(Object.entries({...filters,limit:'50000'}).filter(([,value])=>value!==''));
+  const [boot,data]=await Promise.all([cloudApi('/api/bootstrap'),cloudApi('/api/seats?'+query.toString())]);
+  const payload={
+   schema_version:2,
+   publication_id:boot?.report?.publication_id||boot?.report?.source_updated_at||null,
+   source_updated_at:boot?.report?.source_updated_at||null,
+   exported_at:new Date().toISOString(),
+   filters,
+   total:data.total,
+   rows:data.rows
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const source=String(payload.source_updated_at||'unknown').replace(/[^0-9]+/g,'-').replace(/^-|-$/g,'');
+  a.href=url;a.download=`mileway-${source||'snapshot'}-${filters.cabin||'all'}.json`;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }finally{
+  if(button){button.disabled=false;button.removeAttribute('aria-busy');}
+ }
 }
 
 function renderActiveFilters(){
@@ -196,17 +236,24 @@ function simplifyMobileRows(){
  }
 }
 
+function cleanDeveloperCopy(){
+ const empty=$('#results .empty');
+ if(empty&&empty.innerHTML.includes('로컬 서버 실행 상태를 확인해 주세요.'))empty.innerHTML=empty.innerHTML.replace(' · 로컬 서버 실행 상태를 확인해 주세요.',' · 잠시 후 다시 시도해 주세요.');
+}
+
 function bindMobileUi(){
  if(document.documentElement.dataset.mobileUiBound)return;
  document.documentElement.dataset.mobileUiBound='true';
  document.addEventListener('click',e=>{
+  if(e.target.closest('#export')){e.preventDefault();e.stopImmediatePropagation();exportCurrentPublication().catch(()=>{});return;}
+  if(e.target.closest('#reset')){setTimeout(()=>{const cabin=$('#cabin');if(cabin){cabin.value='PRESTIGE';cabin.dispatchEvent(new Event('change',{bubbles:true}));}},0);}
   if(e.target.closest('#mobile-filter-summary-bar')){setMobileFilterOpen(true);return;}
   if(e.target.closest('.mobile-filter-sheet-close,.mobile-filter-sheet-apply,#mobile-filter-backdrop')){setMobileFilterOpen(false);return;}
  },true);
  mobileQuery.addEventListener?.('change',()=>{if(!mobileQuery.matches)setMobileFilterOpen(false);sync();});
 }
 
-function sync(){ensureCabinFilter();moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();simplifyMobileRows();syncMobileFilterState();}
+function sync(){ensureCabinFilter();moveRecentOpenedBelowResults();renderActiveFilters();emphasizeResults();renderMobileStatsSummary();ensureMobileFilterSheet();simplifyMobileRows();cleanDeveloperCopy();syncMobileFilterState();}
 function scheduleSync(){if(scheduleSync.pending)return;scheduleSync.pending=requestAnimationFrame(()=>{scheduleSync.pending=0;sync();});}
 
 bindMobileUi();
