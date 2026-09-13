@@ -23,7 +23,10 @@ async function warmAlertApi(){
  const timer=setTimeout(()=>controller.abort(),90000);
  try{
   const res=await fetch(ALERT_API_URL+'/health',{cache:'no-store',signal:controller.signal});
+  const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(`Alert API warm-up ${res.status}`);
+  if(!data?.storage_ready)throw new Error('Alert API storage is not ready');
+  if(!data?.telegram_direct_configured)throw new Error('Alert API direct Telegram config is missing');
   console.log('Alert API ready.');
  }finally{clearTimeout(timer);}
 }
