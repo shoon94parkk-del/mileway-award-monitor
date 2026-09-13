@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
+import {sourceFreshness} from '../src/health-status.mjs';
 
 const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api.onrender.com';
 const arg=name=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:null;};
 const has=name=>process.argv.includes(name);
 const snapshotPath=path.resolve(arg('--snapshot')||'public-data/snapshot.json');
 const readJson=file=>fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{};
+const departureTimeMs=row=>{const date=String(row?.date||''),time=/^\d{2}:\d{2}$/.test(String(row?.time||row?.departureTime||''))?String(row.time||row.departureTime):'23:59';const value=Date.parse(`${date}T${time}:00+09:00`);return Number.isFinite(value)?value:Infinity;};
 
 async function sendLegacyTest(token){
  const target=await resolveTelegramTarget(token,{explicitChatId:process.env.TELEGRAM_CHAT_ID||'',allowDiscover:true});
@@ -17,11 +19,32 @@ async function sendLegacyTest(token){
 }
 
 async function notifyViaApi(token,snapshot){
- const rows=Array.isArray(snapshot.rows)?snapshot.rows:[],sourceUpdatedAt=snapshot.bootstrap?.report?.source_updated_at||snapshot.report?.source_updated_at||'미확인';
- const res=await fetch(ALERT_API_URL+'/internal/notify',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({source_updated_at:sourceUpdatedAt,rows})});
+ const report=snapshot.bootstrap?.report||snapshot.report||{};
+ const sourceUpdatedAt=report.source_updated_at||'미확인';
+ const freshness=sourceFreshness(sourceUpdatedAt,new Date());
+ if(freshness.source_status!=='current'){
+  console.log(`원자료 ${freshness.source_status}: 신규 좌석 알림을 보류합니다. observed=${sourceUpdatedAt}, expected=${freshness.expected_source_at}`);
+  return;
+ }
+ const now=Date.now();
+ const rows=(Array.isArray(snapshot.rows)?snapshot.rows:[]).filter(row=>departureTimeMs(row)>=now);
+ const payload={
+  schema_version:2,
+  publication_id:report.publication_id||null,
+  source_updated_at:sourceUpdatedAt,
+  coverage:Array.isArray(report.coverage)?report.coverage:[],
+  unqueryable:Array.isArray(report.unqueryable)?report.unqueryable:[],
+  region_status:report.region_status||{},
+  rows
+ };
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),15000);
+ let res;
+ try{res=await fetch(ALERT_API_URL+'/internal/notify',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}
+ finally{clearTimeout(timer);}
  const data=await res.json().catch(()=>({}));
  if(!res.ok&&res.status!==207)throw new Error(data?.error||`Alert API ${res.status}`);
- console.log(`Telegram 알림 처리: devices=${data.users||0}, sent_seats=${data.sent_seats||0}, unlinked=${data.skipped_unlinked||0}`);
+ console.log(`Telegram 알림 처리: devices=${data.users||0}, sent_seats=${data.sent_seats||0}, unknown_preserved=${data.unknown_preserved||0}, unlinked=${data.skipped_unlinked||0}`);
  if(Array.isArray(data.failures)&&data.failures.length)throw new Error(`일부 Telegram 전송 실패: ${data.failures.join(' | ')}`);
 }
 
@@ -33,4 +56,4 @@ async function main(){
  await notifyViaApi(telegramToken,snapshot);
  if(process.env.RESEND_API_KEY)console.log('Email 알림은 공개 사용자 규칙과 분리하기 위해 현재 Telegram 전용 경로에서 비활성화되어 있습니다.');
 }
-main().catch(error=>{console.error(error.message);process.exitCode=1;});
+main().catch(error=>{console.error(error.name==='AbortError'?'알림 API 요청 시간 초과':error.message);process.exitCode=1;});
