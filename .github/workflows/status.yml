@@ -1,0 +1,49 @@
+name: Refresh Mileway public status
+on:
+  workflow_run:
+    workflows:
+      - Collect public daily award seats
+      - Watch Korean Air daily source
+    types: [completed]
+  schedule:
+    - cron: '7 * * * *'
+    - cron: '0,5,15,30,45 14 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/status.yml'
+      - 'scripts/build-public-status.mjs'
+      - 'src/health-status.mjs'
+      - 'src/collection-cycle.mjs'
+permissions:
+  contents: write
+concurrency:
+  group: mileway-public-status
+  cancel-in-progress: true
+jobs:
+  refresh:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build public status contract
+        run: node --no-warnings scripts/build-public-status.mjs
+      - name: Persist status
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public-data/status.json
+          if git diff --cached --quiet; then
+            echo "Status unchanged."
+            exit 0
+          fi
+          git commit -m "Update Mileway public status"
+          git pull --rebase origin main
+          git push
