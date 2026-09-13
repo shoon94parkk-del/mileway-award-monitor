@@ -32,6 +32,8 @@ jobs:
           node --check web/cloud-enhancements.js
           node --check web/global-regions.js
           node --check web/service-worker.js
+          node --check web/seat-info.js
+          node --check web/seat-metadata.js
           node -e "JSON.parse(require('fs').readFileSync('web/manifest.webmanifest','utf8'))"
       - name: Build cloud site
         run: |
@@ -41,5 +43,8 @@ jobs:
           node --check dist/cloud-enhancements.js
           node --check dist/global-regions.js
           node --check dist/service-worker.js
+          node --check dist/seat-info.js
+          node --check dist/seat-metadata.js
           test -s dist/cloud-enhancements.css
+          test -s dist/seat-info.css
           test -s dist/manifest.webmanifest
