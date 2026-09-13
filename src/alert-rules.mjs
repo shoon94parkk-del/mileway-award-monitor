@@ -3,9 +3,28 @@ import {createHash} from 'node:crypto';
 const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/;
 const CABINS=new Set(['PRESTIGE','FIRST']);
 const RULE_ID=/^[A-Za-z0-9_-]{8,80}$/;
+const REGION_IDS=new Set(['europe','americas','oceania','bali']);
+const REGION_LABELS={europe:'유럽',americas:'미주',oceania:'오세아니아',bali:'발리'};
+const OCEANIA_DESTINATIONS=new Set(['MEL','BNE','SYD','AKL']);
 const arr=value=>Array.isArray(value)?value:[];
 const uniq=value=>[...new Set(arr(value).map(v=>String(v).trim().toUpperCase()).filter(Boolean))].sort();
 const hash=value=>createHash('sha256').update(String(value)).digest('hex').slice(0,24);
+
+export function regionIdFor(region,destination=''){
+ const code=String(destination||'').trim().toUpperCase();
+ const value=String(region||'').trim();
+ if(code==='DPS')return 'bali';
+ if(OCEANIA_DESTINATIONS.has(code))return 'oceania';
+ if(value==='유럽')return 'europe';
+ if(value==='미주')return 'americas';
+ if(value==='오세아니아'||value==='대양주/괌')return 'oceania';
+ if(value==='발리')return 'bali';
+ return '';
+}
+
+export function regionLabelFor(regionId,fallback=''){
+ return REGION_LABELS[String(regionId||'').trim().toLowerCase()]||String(fallback||'');
+}
 
 function normalizedShape(rule,index){
  if(!rule||typeof rule!=='object')throw new Error(`알림 규칙 ${index+1} 형식이 올바르지 않습니다.`);
@@ -17,9 +36,13 @@ function normalizedShape(rule,index){
  if(start&&!validDate(start))throw new Error(`${name}: start는 유효한 YYYY-MM-DD 날짜여야 합니다.`);
  if(end&&!validDate(end))throw new Error(`${name}: end는 유효한 YYYY-MM-DD 날짜여야 합니다.`);
  if(start&&end&&start>end)throw new Error(`${name}: 시작일이 종료일보다 늦습니다.`);
- const region=String(rule.region||'').trim();if(region.length>60||/[\u0000-\u001f]/.test(region))throw new Error(`${name}: region 형식이 올바르지 않습니다.`);
+ const legacyRegion=String(rule.region||'').trim();if(legacyRegion.length>60||/[\u0000-\u001f]/.test(legacyRegion))throw new Error(`${name}: region 형식이 올바르지 않습니다.`);
+ const suppliedRegionId=String(rule.region_id||'').trim().toLowerCase();
+ if(suppliedRegionId&&!REGION_IDS.has(suppliedRegionId))throw new Error(`${name}: region_id 형식이 올바르지 않습니다.`);
+ const region_id=suppliedRegionId||regionIdFor(legacyRegion,destinations.length===1?destinations[0]:'');
+ const region=region_id?regionLabelFor(region_id,legacyRegion):legacyRegion;
  const flights=uniq(rule.flights);if(flights.some(v=>!/^KE\d{1,4}$/.test(v)))throw new Error(`${name}: 항공편은 KE901 같은 형식이어야 합니다.`);
- return {name,region,destinations,cabins,start,end,weekend:rule.weekend===true,flights};
+ return {name,region,region_id,destinations,cabins,start,end,weekend:rule.weekend===true,flights};
 }
 
 export function ruleSignature(rule){
@@ -45,7 +68,9 @@ export function normalizeAlertRules(input){
 export function matchesAlertRule(row,rule){
  if(!row||!rule)return false;
  if(row.available===false||row.available===0)return false;
- if(rule.region&&row.region!==rule.region)return false;
+ if(rule.region_id){
+  if(regionIdFor(row.region,row.destination)!==rule.region_id)return false;
+ }else if(rule.region&&row.region!==rule.region)return false;
  if(rule.destinations.length&&!rule.destinations.includes(String(row.destination).toUpperCase()))return false;
  if(rule.cabins.length&&!rule.cabins.includes(String(row.cabin).toUpperCase()))return false;
  if(rule.flights.length&&!rule.flights.includes(String(row.flight).toUpperCase()))return false;
@@ -76,5 +101,5 @@ export function evaluateAlerts(rows,rules,previous={}){
   const fresh=current.filter(row=>!prior.has(alertSeatKey(row)));
   if(fresh.length)opened.push({rule,rows:fresh});
  }
- return {version:2,rule_hash:ruleHash(rules),rule_meta,active,opened};
+ return {version:3,rule_hash:ruleHash(rules),rule_meta,active,opened};
 }
