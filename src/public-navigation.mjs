@@ -1,9 +1,26 @@
 import {PUBLIC_URL} from './public-calendar.mjs';
 
+// Korean Air's public award-seat page chooses the daily 23:00 snapshot from the
+// browser's local timezone. GitHub-hosted Windows runners use UTC by default,
+// which makes a 23:00 KST refresh look like the previous day until 08:00 KST.
+// Apply a Chromium timezone override before the first navigation so both the
+// watcher and the full collector see the same Korea-time snapshot as users.
+const timezoneSessions=new WeakMap();
+async function enforceSeoulTimezone(page){
+  if(timezoneSessions.has(page))return;
+  const context=typeof page.context==='function'?page.context():null;
+  if(!context||typeof context.newCDPSession!=='function')return;
+  const session=await context.newCDPSession(page);
+  await session.send('Emulation.setTimezoneOverride',{timezoneId:'Asia/Seoul'});
+  timezoneSessions.set(page,session);
+  console.log('PUBLIC TIMEZONE: Asia/Seoul');
+}
+
 export async function openPublicPage(page,{attempts=2,delay=ms=>new Promise(r=>setTimeout(r,ms)),cacheBust=true}={}){
   let last;
   for(let attempt=1;attempt<=attempts;attempt++){
     try{
+      await enforceSeoulTimezone(page);
       if(typeof page.setExtraHTTPHeaders==='function'){
         await page.setExtraHTTPHeaders({'Cache-Control':'no-cache, no-store, max-age=0','Pragma':'no-cache'});
       }
