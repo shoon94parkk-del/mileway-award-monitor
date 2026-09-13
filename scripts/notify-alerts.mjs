@@ -18,6 +18,16 @@ async function sendLegacyTest(token){
  console.log('알림 테스트 성공: Telegram');
 }
 
+async function warmAlertApi(){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),90000);
+ try{
+  const res=await fetch(ALERT_API_URL+'/health',{cache:'no-store',signal:controller.signal});
+  if(!res.ok)throw new Error(`Alert API warm-up ${res.status}`);
+  console.log('Alert API ready.');
+ }finally{clearTimeout(timer);}
+}
+
 async function notifyViaApi(token,snapshot){
  const report=snapshot.bootstrap?.report||snapshot.report||{};
  const sourceUpdatedAt=report.source_updated_at||'미확인';
@@ -26,6 +36,7 @@ async function notifyViaApi(token,snapshot){
   console.log(`원자료 ${freshness.source_status}: 신규 좌석 알림을 보류합니다. observed=${sourceUpdatedAt}, expected=${freshness.expected_source_at}`);
   return;
  }
+ await warmAlertApi();
  const now=Date.now();
  const rows=(Array.isArray(snapshot.rows)?snapshot.rows:[]).filter(row=>departureTimeMs(row)>=now);
  const payload={
@@ -38,7 +49,7 @@ async function notifyViaApi(token,snapshot){
   rows
  };
  const controller=new AbortController();
- const timer=setTimeout(()=>controller.abort(),15000);
+ const timer=setTimeout(()=>controller.abort(),30000);
  let res;
  try{res=await fetch(ALERT_API_URL+'/internal/notify',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}
  finally{clearTimeout(timer);}
