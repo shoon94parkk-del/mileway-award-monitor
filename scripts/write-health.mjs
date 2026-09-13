@@ -13,12 +13,11 @@ const explicitChat=process.env.TELEGRAM_CHAT_ID||'';
 const savedTelegram=telegramToken&&!explicitChat?readTelegramTarget(telegramToken):null;
 const telegramTargetReady=!!(explicitChat||savedTelegram?.chatId);
 const telegramRecord=savedTelegram?.record||null;
-// User alert rules are private in the alert API now. Never reconstruct or publish them from GitHub files.
-const priorRuleCount=Number(prev?.alerts?.telegram_rule_count)||0;
-const privateRulesKnown=!!process.env.ALERT_RULES_JSON||!!prev?.alerts?.rules_configured;
+// Per-device alert rules live only in the private alert API. Public health must not invent or preserve a stale rule count.
 const alerts={
- rules_configured:privateRulesKnown,
- telegram_rule_count:priorRuleCount,
+ rules_scope:'private_api',
+ rules_configured:null,
+ telegram_rule_count:null,
  telegram_bot_configured:!!telegramToken,
  telegram_target_registered:telegramTargetReady,
  telegram_configured:!!(telegramToken&&telegramTargetReady),
@@ -32,9 +31,9 @@ if(hasOperationalOutcome)for(const [outcome,step] of outcomes){if(outcome==='fai
 const next={...prev,version:1,status,alerts};
 const currentSource=process.env.CURRENT_SOURCE||readSnapshotSource();if(currentSource)next.source_updated_at=currentSource;
 if(fullScan&&collect==='success'&&build==='success')next.last_successful_scan_at=now;
-if(notify==='success'&&alerts.rules_configured&&(alerts.telegram_configured||alerts.email_configured))next.last_notification_check_at=now;
+if(notify==='success')next.last_notification_check_at=now;
 if(error_step){next.last_error_at=now;next.last_error_step=error_step;}
 if(hasOperationalOutcome&&status==='healthy'&&prev.status==='degraded')next.recovered_at=now;
 fs.mkdirSync(path.dirname(file),{recursive:true});
 const before=JSON.stringify(prev),after=JSON.stringify(next);if(before!==after)fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');
-console.log(`health=${status}${error_step?` step=${error_step}`:''} private_alert_rules=${alerts.rules_configured?'configured':'unknown'}`);
+console.log(`health=${status}${error_step?` step=${error_step}`:''} private_alert_rules=managed-by-api`);
