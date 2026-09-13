@@ -83,13 +83,17 @@ jobs:
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
           ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
         run: node --no-warnings scripts/write-health.mjs public-data/health.json
+      - name: Refresh public status from final snapshot
+        id: status
+        if: always()
+        run: node --no-warnings scripts/build-public-status.mjs
       - name: Persist public state
         if: always()
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public-data/health.json
+          git add public-data/health.json public-data/status.json
           if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
           if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
           if ! git diff --cached --quiet; then
