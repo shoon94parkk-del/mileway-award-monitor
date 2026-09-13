@@ -12,7 +12,7 @@ function toAndroidIntent(webUrl){
 
 function patchBookingLinks(root=document){
   if(!ANDROID)return;
-  for(const link of root.querySelectorAll?.('a.reserve-button')||[]){
+  for(const link of root.querySelectorAll?.('a.reserve-button,a.book-button')||[]){
     if(link.dataset.androidIntent==='true')continue;
     const webUrl=link.href;
     if(!webUrl.includes('koreanair.com/booking/search'))continue;
