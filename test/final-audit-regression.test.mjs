@@ -75,7 +75,20 @@ test('cloud startup uses bundled snapshot immediately and refreshes live data wi
  assert.match(build,/live cloud snapshot source/);
 });
 
-test('service worker cache is advanced for the mobile stability bundle',()=>{
+test('mobile seat cards keep date-time, seat-aircraft, and actions in two compact rows',()=>{
+ const mobile=read('web/mobile-booking.css'),seat=read('web/seat-info.css'),seatJs=read('web/seat-info.js');
+ assert.match(mobile,/grid-template-columns:minmax\(0,1fr\) 74px 92px 46px/);
+ assert.match(mobile,/grid-template-rows:25px 25px/);
+ assert.match(mobile,/날짜\/시간/);
+ assert.match(mobile,/좌석\/기종/);
+ assert.match(seat,/\.flight-row>\.seat-actions\{grid-column:4!important;grid-row:1\/3!important/);
+ assert.match(seat,/\.aircraft-meta\{grid-column:3!important;grid-row:2!important/);
+ assert.match(seatJs,/compactQuery\.matches\?'좌석':'좌석 정보'/);
+ assert.match(seatJs,/className=`aircraft-meta/);
+});
+
+test('service worker cache includes aircraft inference module and is advanced for compact mobile UI',()=>{
  const sw=read('web/service-worker.js');
- const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=24);
+ const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=25);
+ assert.match(sw,/flight-aircraft\.js/);
 });
