@@ -28,7 +28,7 @@ for(const id of ['destination','month','cabin','start','end','weekend','sort'])$
 $('#query').oninput=()=>{clearTimeout(readFilters.timer);readFilters.timer=setTimeout(readFilters,220);};
 $('#reset').onclick=()=>{filters={};selectedDay='';calendarMonth=months()[0];for(const id of ['query','destination','month','cabin','start','end'])$('#'+id).value='';$('#weekend').checked=false;$('#sort').value='date';$('#regions button').click();};
 $('#export').onclick=()=>{location.href='/api/export?'+params({saved:view==='saved'?'true':'',...(mode==='calendar'?{month:calendarMonth,date:selectedDay}:{})});};
-document.onclick=async e=>{try{const p=e.target.closest('[data-page]');if(p){offset+=Number(p.dataset.page)*30;await refresh();}if(e.target.closest('[data-retry]'))await refresh();}catch(err){toast(err.message);}};
+document.onclick=async e=>{try{const p=e.target.closest('[data-page]');if(p){offset+=Number(p.dataset.page)*30;await refresh();}if(e.target.closest('[data-retry]'))await refresh();if(e.target.closest('[data-reload-app]'))await init();}catch(err){toast(err.message);}};
 function isCurrent(r){return r.source_updated_at===boot.report.source_updated_at&&r.date>=boot.report.start_date&&r.date<=boot.report.end_date&&boot.report.coverage.some(c=>c.destination===r.destination&&c.month===r.date.slice(0,7));}
 function syncControls(){options();for(const id of ['destination','month','cabin','start','end'])$('#'+id).value=filters[id]||'';$('#query').value=filters.q||'';$('#weekend').checked=filters.weekend==='true';$('#sort').value=filters.sort||'date';$('#regions').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.region===(filters.region||'')));}
 function changeView(next){view=next;offset=0;selectedDay='';$('#explorer').hidden=view==='data';$('#data-view').hidden=view!=='data';$('#page-title').textContent=({explore:'다음 여행, 어디로 갈까요?',saved:'마음에 담아둔 다음 여행',data:'자료가 얼마나 모였을까요?'})[view];$('#results-title').textContent=view==='saved'?'저장한 항공편':'가능한 항공편';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='data')renderData();else refresh();}
@@ -63,7 +63,18 @@ document.addEventListener('click',async e=>{try{
  }catch(err){toast(err.message);}});
 document.addEventListener('change',e=>{const id=e.target.dataset.compare;if(!id)return;if(e.target.checked){if(comparison.size>=3){e.target.checked=false;toast('최대 3개 항공편을 비교할 수 있어요.');return;}comparison.set(id,rows.find(r=>r.id===id));}else comparison.delete(id);compareBar();});
 async function updateBootstrap(){boot=await api('/api/bootstrap');metadata();renderSearches();if(view==='data'&&!document.activeElement?.closest('#automation-form'))renderData();}
-async function init(){try{await updateBootstrap();options();await refresh();}catch(e){$('#results').innerHTML=`<div class="empty">${esc(e.message)} · 로컬 서버 실행 상태를 확인해 주세요.</div>`;}}
+let initializing=false;
+async function init(){
+ if(initializing)return;
+ initializing=true;
+ $('#source-time').textContent='최신 자료 연결 중…';
+ $('#results').innerHTML='<div class="empty">항공편 자료를 불러오고 있어요…</div>';
+ try{await updateBootstrap();options();await refresh();}
+ catch(e){
+  $('#source-time').textContent='자료 연결 지연 · 다시 시도 가능';
+  $('#results').innerHTML=`<div class="empty"><strong>자료를 불러오지 못했어요</strong>${esc(e.message)}<br><button class="text-button" data-reload-app>다시 시도</button></div>`;
+ }finally{initializing=false;}
+}
 let polling=false;setInterval(async()=>{if(polling||document.hidden||$('#dialog').open)return;polling=true;try{const old=JSON.stringify([boot?.report.coverage.length,boot?.report.source_updated_at,boot?.report.complete,boot?.report.unqueryable?.length,boot?.report.attempt_complete]);await updateBootstrap();if(old!==JSON.stringify([boot.report.coverage.length,boot.report.source_updated_at,boot.report.complete,boot.report.unqueryable?.length,boot.report.attempt_complete])&&view!=='data'&&!$('#results').contains(document.activeElement))await refresh();}catch{toast('서버 연결이 끊겼어요. 저장된 결과는 유지됩니다.');}finally{polling=false;}},8000);
 if(document.modelContext?.registerTool){const lifecycle=new AbortController();addEventListener('pagehide',()=>lifecycle.abort(),{once:true});try{Promise.resolve(document.modelContext.registerTool({name:'search_award_flights',description:'Filter the visible Korean Air daily award results. This is not realtime inventory.',inputSchema:{type:'object',properties:{destination:{type:'string'},month:{type:'string'},cabin:{type:'string',enum:['PRESTIGE','FIRST']}},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},async execute(input){if(!input||typeof input!=='object'||Object.keys(input).some(k=>!['destination','month','cabin'].includes(k)))throw Error('Invalid filters');if(input.destination&&!boot.routes.some(r=>r.code===input.destination))throw Error('Unknown destination');if(input.month&&!months().includes(input.month))throw Error('Month outside coverage');if(input.cabin&&!['PRESTIGE','FIRST'].includes(input.cabin))throw Error('Invalid cabin');filters={...input};mode='list';$('#display-mode').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===mode));syncControls();view='explore';changeView(view);await refresh();return {source_type:'daily',source_updated_at:boot.report.source_updated_at,results:rows};}},{signal:lifecycle.signal})).catch(()=>{});}catch{}}
 const renderDataBase=renderData;

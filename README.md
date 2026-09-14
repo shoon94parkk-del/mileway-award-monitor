@@ -17,6 +17,7 @@ Collection start priority is **Europe → Americas → Oceania → Bali**. Exclu
 
 - `source-watch.yml` is a lightweight source watcher, separate from the expensive collector.
 - `force-2305.yml` is the 23:05 KST recovery interlock.
+- Render Cron `mileway-daily-dispatch` prewarms at 22:55 KST and dispatches the Windows collector at 23:00 KST. It requires a repository-scoped `GITHUB_ACTIONS_TOKEN` with Actions read/write permission.
 - Both use the shared KST cycle calculation in `src/collection-cycle.mjs`; the prewarmed 22:47/22:50 jobs target the upcoming same-day 23:00 cycle rather than the previous day.
 - A stale Korean Air DOM timestamp is not treated as proof that the API is stale. After the refresh window, a guarded safety collection can run even if a US edge still serves the previous marker.
 - Duplicate active collectors are blocked, and the 23:05 interlock does not start another collector when that cycle already has a successful run.

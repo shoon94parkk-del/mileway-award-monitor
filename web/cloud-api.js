@@ -89,6 +89,9 @@ async function fetchSnapshot(url,timeoutMs){
   const r=await fetch(url+separator+'ts='+Date.now(),{cache:'no-store',signal:controller.signal});
   if(!r.ok)throw Error('수집 자료를 불러오지 못했습니다.');
   return await r.json();
+ }catch(error){
+  if(error?.name==='AbortError')throw Error('자료 서버 응답이 지연되고 있습니다.');
+  throw error;
  }finally{clearTimeout(timer);}
 }
 function applySnapshot(data){snapshot=sanitizeSnapshot(data);loadedAt=Date.now();return snapshot;}

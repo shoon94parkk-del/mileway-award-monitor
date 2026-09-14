@@ -9,17 +9,23 @@ const EXCLUDED_REGION_PATTERN=/(러시아|몽골|중앙아시아|중동|아프�
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let snapshot=null,health=null,serverRules=[],me={telegram_linked:false},opening=false;
+async function fetchWithTimeout(url,options={},timeoutMs=25000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{return await fetch(url,{...options,signal:controller.signal});}
+ catch(error){if(error?.name==='AbortError')throw Error('알림 서버 시작이 지연되고 있어요. 잠시 후 다시 시도해 주세요.');throw error;}
+ finally{clearTimeout(timer);}
+}
 
 function manageToken(){return localStorage.getItem(TOKEN_KEY)||'';}
 function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,4200);}
 async function fetchJson(url,fallback){try{const r=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():fallback;}catch{return fallback;}}
 async function ensureDevice(){
  if(manageToken())return manageToken();
- const r=await fetch(API_URL+'/device',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'알림 기기를 준비하지 못했습니다.');localStorage.setItem(TOKEN_KEY,data.token);return data.token;
+ const r=await fetchWithTimeout(API_URL+'/device',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'알림 기기를 준비하지 못했습니다.');localStorage.setItem(TOKEN_KEY,data.token);return data.token;
 }
 async function api(path,options={}){
  const token=await ensureDevice(),headers={'Content-Type':'application/json',...(options.headers||{}),Authorization:`Bearer ${token}`};
- const r=await fetch(API_URL+path,{...options,headers,cache:'no-store'});let data={};try{data=await r.json();}catch{}
+ const r=await fetchWithTimeout(API_URL+path,{...options,headers,cache:'no-store'});let data={};try{data=await r.json();}catch{}
  if(!r.ok)throw new Error(data.error||'알림 서버 요청에 실패했습니다.');return data;
 }
 function readLocalRules(key){try{const v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v.filter(Boolean):[];}catch{return [];}}
@@ -34,7 +40,7 @@ async function capturePairingToken(){
  const raw=location.hash.startsWith('#')?location.hash.slice(1):'';if(!raw)return false;const params=new URLSearchParams(raw),legacyToken=params.get('alert-key'),pairCode=params.get('pair');
  if(legacyToken){localStorage.setItem(TOKEN_KEY,legacyToken);params.delete('alert-key');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));return true;}
  if(!pairCode)return false;
- try{const r=await fetch(API_URL+'/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:pairCode}),cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'기기 연결에 실패했습니다.');localStorage.setItem(TOKEN_KEY,data.token);params.delete('pair');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));toast('✅ 기존 알림 관리 기기 연결을 가져왔어요.');return true;}catch(error){toast(error.message);return false;}
+ try{const r=await fetchWithTimeout(API_URL+'/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:pairCode}),cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'기기 연결에 실패했습니다.');localStorage.setItem(TOKEN_KEY,data.token);params.delete('pair');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));toast('✅ 기존 알림 관리 기기 연결을 가져왔어요.');return true;}catch(error){toast(error.message);return false;}
 }
 async function loadState(){
  await ensureDevice();const [s,h,m,r]=await Promise.all([snapshot?Promise.resolve(snapshot):fetchJson(SNAPSHOT_URL,null),fetchJson(HEALTH_URL,null),api('/me'),api('/rules')]);snapshot=s;health=h;me=m||{telegram_linked:false};serverRules=Array.isArray(r?.rules)?r.rules:[];saveLocalBackup(serverRules);
