@@ -14,26 +14,3 @@ services:
       - path: /*
         name: Cache-Control
         value: no-cache
-
-  # Render evaluates cron expressions in UTC. This starts at 22:55 KST,
-  # waits until 23:00 KST, and dispatches the Windows GitHub collector.
-  - type: cron
-    name: mileway-daily-dispatch
-    runtime: node
-    region: singapore
-    plan: starter
-    schedule: "55 13 * * *"
-    buildCommand: "true"
-    startCommand: node --no-warnings scripts/dispatch-collection.mjs
-    autoDeployTrigger: commit
-    envVars:
-      - key: NODE_VERSION
-        value: 24.19.0
-      - key: GITHUB_REPOSITORY
-        value: shoon94parkk-del/mileway-award-monitor
-      - key: GITHUB_WORKFLOW
-        value: collect.yml
-      - key: GITHUB_REF_NAME
-        value: main
-      - key: GITHUB_ACTIONS_TOKEN
-        sync: false

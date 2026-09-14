@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mileway-daily-dispatch",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-09-14",
+  "triggers": {
+    "crons": [
+      "0 14 * * *",
+      "10 14 * * *"
+    ]
+  },
+  "vars": {
+    "GITHUB_REPOSITORY": "shoon94parkk-del/mileway-award-monitor",
+    "GITHUB_WORKFLOW": "collect.yml",
+    "GITHUB_REF_NAME": "main"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
