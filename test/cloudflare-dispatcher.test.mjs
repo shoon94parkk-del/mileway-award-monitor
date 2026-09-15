@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {dispatchFromCloudflare,skipReason} from '../worker/src/index.mjs';
+import worker,{dispatchFromCloudflare,skipReason} from '../worker/src/index.mjs';
 
 const cycle={cycle_id:'2026-09-14T23:00:00+09:00',cycle_start_utc:'2026-09-14T14:00:00.000Z'};
 
@@ -38,4 +38,10 @@ test('Cloudflare trigger dispatches the current cycle once when idle',async()=>{
 
 test('Cloudflare trigger requires its secret',async()=>{
  await assert.rejects(()=>dispatchFromCloudflare({env:{},log:()=>{}}),/GITHUB_ACTIONS_TOKEN/);
+});
+
+test('Cloudflare worker exposes a lightweight health endpoint',async()=>{
+ const response=await worker.fetch();
+ assert.equal(response.status,200);
+ assert.equal(await response.text(),'Mileway daily dispatcher is active.');
 });

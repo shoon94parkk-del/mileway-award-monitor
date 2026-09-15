@@ -74,5 +74,10 @@ export async function dispatchFromCloudflare({env,now=new Date(),fetchImpl=fetch
 export default {
  async scheduled(_controller,env,ctx){
   ctx.waitUntil(dispatchFromCloudflare({env}));
+ },
+ async fetch(){
+  return new Response('Mileway daily dispatcher is active.',{
+   headers:{'Content-Type':'text/plain; charset=utf-8'}
+  });
  }
 };
