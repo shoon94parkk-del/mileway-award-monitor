@@ -4,6 +4,72 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "f9072ca398691962f127d8c6",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-09-09",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
+      "id": "bd60885ffae7c798c2630223",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-09-01",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
+      "id": "f0aac3c79ff5783597bc6673",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-08-18",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
+      "id": "c3df2af6c6caf6a72e69037d",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-09-11",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
+      "id": "45d637316c1d1daa276323ce",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-05-13",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
+      "id": "d98430d26d0325c000001366",
+      "kind": "OPENED",
+      "destination": "BNE",
+      "date": "2027-09-11",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 15일 23:00",
+      "detected_at": "2026-09-15T17:54:00.146Z"
+    },
+    {
       "id": "32cbbdd626ec2f063f86d66f",
       "kind": "CLOSED",
       "destination": "DPS",
