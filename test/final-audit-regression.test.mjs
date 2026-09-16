@@ -92,3 +92,10 @@ test('service worker cache includes aircraft inference module and is advanced fo
  const match=sw.match(/mileway-shell-v(\d+)/);assert.ok(match);assert.ok(Number(match[1])>=25);
  assert.match(sw,/flight-aircraft\.js/);
 });
+
+test('regional status does not poll or reload the page',()=>{
+ const regional=read('web/regional-status.js');
+ assert.doesNotMatch(regional,/location\.reload\(/);
+ assert.doesNotMatch(regional,/setInterval\(render,\s*15000\)/);
+ assert.match(regional,/mileway:snapshot-updated/);
+});
