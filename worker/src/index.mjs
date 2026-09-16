@@ -73,7 +73,9 @@ export async function dispatchFromCloudflare({env,now=new Date(),fetchImpl=fetch
 
 export default {
  async scheduled(_controller,env,ctx){
-  ctx.waitUntil(dispatchFromCloudflare({env}));
+  ctx.waitUntil(dispatchFromCloudflare({env}).catch(error=>{
+   console.error(`Mileway dispatcher failed: ${error?.message||String(error)}`);
+  }));
  },
  async fetch(){
   return new Response('Mileway daily dispatcher is active.',{

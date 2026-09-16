@@ -5,9 +5,19 @@ import worker,{dispatchFromCloudflare,skipReason} from '../worker/src/index.mjs'
 
 const cycle={cycle_id:'2026-09-14T23:00:00+09:00',cycle_start_utc:'2026-09-14T14:00:00.000Z'};
 
-test('Cloudflare schedules primary and recovery checks at 23:00 and 23:10 KST',()=>{
+test('Cloudflare retries every 10 minutes from 23:00 through 03:50 KST',()=>{
  const config=JSON.parse(fs.readFileSync(new URL('../worker/wrangler.jsonc',import.meta.url),'utf8'));
- assert.deepEqual(config.triggers.crons,['0 14 * * *','10 14 * * *']);
+ assert.deepEqual(config.triggers.crons,['*/10 14 * * *','*/10 15 * * *','*/10 16 * * *','*/10 17 * * *']);
+});
+
+test('Cloudflare scheduled failures are caught and logged',async()=>{
+ const messages=[];
+ const context={waitUntil(promise){return promise;}};
+ const workerModule=await import(`../worker/src/index.mjs?failure-test=${Date.now()}`);
+ const original=console.error;
+ console.error=(...args)=>messages.push(args.join(' '));
+ try{await workerModule.default.scheduled({}, {}, context);}finally{console.error=original;}
+ assert.match(messages[0],/GITHUB_ACTIONS_TOKEN/);
 });
 
 test('Cloudflare recovery trigger skips an active or successful cycle',()=>{
