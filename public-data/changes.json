@@ -4,6 +4,72 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "c5fcf5aa2bb645db0a0aa9c0",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-10",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
+      "id": "d327880bfcb0cf037d4cb1f9",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-09-10",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
+      "id": "a1b9b9f97cbae28b9d98265b",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-03-28",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
+      "id": "5e70bdd843f9f1f7539f2a96",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2026-09-27",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
+      "id": "fe8c3a2e685b7fa1800ce846",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-05-04",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
+      "id": "70033cf4ef94ee4c06387350",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2026-09-16",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 16일 23:00",
+      "detected_at": "2026-09-16T14:09:59.144Z"
+    },
+    {
       "id": "64d64a74964ce5c7f4d67f1e",
       "kind": "CLOSED",
       "destination": "ATL",
