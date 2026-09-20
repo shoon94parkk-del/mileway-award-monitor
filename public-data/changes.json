@@ -4,6 +4,28 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "ccf53b1922e6e06065879a0b",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-09-15",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 20일 23:00",
+      "detected_at": "2026-09-20T14:08:42.909Z"
+    },
+    {
+      "id": "8365decec50a2d61f4ce9fe0",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-09-15",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 20일 23:00",
+      "detected_at": "2026-09-20T14:08:42.909Z"
+    },
+    {
       "id": "7a1537e9b8576332d3d9eb53",
       "kind": "OPENED",
       "destination": "HNL",
