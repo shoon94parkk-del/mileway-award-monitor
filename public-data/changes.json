@@ -4,6 +4,17 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "a3e8d58cb6a405c413ef9ace",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-09-16",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 9월 21일 23:00",
+      "detected_at": "2026-09-21T14:09:55.502Z"
+    },
+    {
       "id": "ee5dbec842f746bdac8d84d4",
       "kind": "OPENED",
       "destination": "DPS",
