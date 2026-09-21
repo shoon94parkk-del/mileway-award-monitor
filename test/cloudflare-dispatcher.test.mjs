@@ -7,7 +7,7 @@ const cycle={cycle_id:'2026-09-14T23:00:00+09:00',cycle_start_utc:'2026-09-14T14
 
 test('Cloudflare retries every 10 minutes from 23:00 through 03:50 KST',()=>{
  const config=JSON.parse(fs.readFileSync(new URL('../worker/wrangler.jsonc',import.meta.url),'utf8'));
- assert.deepEqual(config.triggers.crons,['*/10 14 * * *','*/10 15 * * *','*/10 16 * * *','*/10 17 * * *']);
+ assert.deepEqual(config.triggers.crons,['*/10 14-17 * * *']);
 });
 
 test('Cloudflare scheduled failures are caught and logged',async()=>{
