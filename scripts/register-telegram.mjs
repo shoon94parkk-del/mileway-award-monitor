@@ -1,6 +1,6 @@
 import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
 
-const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api.onrender.com';
+const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api-hoon.onrender.com';
 async function bootstrapDirectDelivery(token,target){
  if(!token)return false;
  try{
