@@ -8,7 +8,7 @@ const EXCLUDED_DESTINATIONS=new Set(['GUM','SVO','VVO','LED','UBN','IKT','DXB','
 const EXCLUDED_REGION_PATTERN=/(러시아|몽골|중앙아시아|중동|아프리카)/;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let snapshot=null,health=null,serverRules=[],me={telegram_linked:false},opening=false;
+let snapshot=null,health=null,serverRules=[],me={telegram_linked:false},opening=false,deviceValidated=false;
 async function fetchWithTimeout(url,options={},timeoutMs=25000){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
  try{return await fetch(url,{...options,signal:controller.signal});}
@@ -20,8 +20,15 @@ function manageToken(){return localStorage.getItem(TOKEN_KEY)||'';}
 function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,4200);}
 async function fetchJson(url,fallback){try{const r=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():fallback;}catch{return fallback;}}
 async function ensureDevice(){
- if(manageToken())return manageToken();
- const r=await fetchWithTimeout(API_URL+'/device',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'알림 기기를 준비하지 못했습니다.');localStorage.setItem(TOKEN_KEY,data.token);return data.token;
+ const existing=manageToken();
+ if(existing&&deviceValidated)return existing;
+ if(existing){
+  const check=await fetchWithTimeout(API_URL+'/me',{headers:{Authorization:`Bearer ${existing}`},cache:'no-store'});
+  if(check.ok){deviceValidated=true;return existing;}
+  if(check.status!==401){const data=await check.json().catch(()=>({}));throw new Error(data.error||'알림 서버 요청에 실패했습니다.');}
+  localStorage.removeItem(TOKEN_KEY);
+ }
+ const r=await fetchWithTimeout(API_URL+'/device',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'알림 기기를 준비하지 못했습니다.');localStorage.setItem(TOKEN_KEY,data.token);deviceValidated=true;return data.token;
 }
 async function api(path,options={}){
  const token=await ensureDevice(),headers={'Content-Type':'application/json',...(options.headers||{}),Authorization:`Bearer ${token}`};
@@ -38,9 +45,9 @@ async function migrateLegacyRules(){
 }
 async function capturePairingToken(){
  const raw=location.hash.startsWith('#')?location.hash.slice(1):'';if(!raw)return false;const params=new URLSearchParams(raw),legacyToken=params.get('alert-key'),pairCode=params.get('pair');
- if(legacyToken){localStorage.setItem(TOKEN_KEY,legacyToken);params.delete('alert-key');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));return true;}
+ if(legacyToken){localStorage.setItem(TOKEN_KEY,legacyToken);deviceValidated=false;params.delete('alert-key');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));return true;}
  if(!pairCode)return false;
- try{const r=await fetchWithTimeout(API_URL+'/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:pairCode}),cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'기기 연결에 실패했습니다.');localStorage.setItem(TOKEN_KEY,data.token);params.delete('pair');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));toast('✅ 기존 알림 관리 기기 연결을 가져왔어요.');return true;}catch(error){toast(error.message);return false;}
+ try{const r=await fetchWithTimeout(API_URL+'/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:pairCode}),cache:'no-store'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token)throw new Error(data.error||'기기 연결에 실패했습니다.');localStorage.setItem(TOKEN_KEY,data.token);deviceValidated=false;params.delete('pair');history.replaceState(null,'',location.pathname+location.search+(params.toString()?'#'+params.toString():''));toast('✅ 기존 알림 관리 기기 연결을 가져왔어요.');return true;}catch(error){toast(error.message);return false;}
 }
 async function loadState(){
  await ensureDevice();const [s,h,m,r]=await Promise.all([snapshot?Promise.resolve(snapshot):fetchJson(SNAPSHOT_URL,null),fetchJson(HEALTH_URL,null),api('/me'),api('/rules')]);snapshot=s;health=h;me=m||{telegram_linked:false};serverRules=Array.isArray(r?.rules)?r.rules:[];saveLocalBackup(serverRules);
