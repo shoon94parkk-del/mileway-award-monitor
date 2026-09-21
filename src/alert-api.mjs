@@ -22,7 +22,7 @@ const TELEGRAM_CONFIG_KEY='mileway:telegram-direct-config:v2';
 const OUTBOX_PREFIX='mileway:alert-outbox:v1:';
 const NOTIFY_LOCK_PREFIX='mileway:notify-lock:v1:';
 const WEBHOOK_UPDATE_PREFIX='mileway:telegram-update:v1:';
-const ALLOWED_ORIGIN=process.env.ALLOWED_ORIGIN||'https://mileway-award-monitor.onrender.com';
+const ALLOWED_ORIGINS=String(process.env.ALLOWED_ORIGIN||'https://mileway-award-monitor.onrender.com').split(',').map(x=>x.trim()).filter(Boolean);
 const PUBLIC_API_URL=process.env.PUBLIC_API_URL||'https://mileway-alert-api.onrender.com';
 const BACKUP_URL=process.env.ALERT_BACKUP_URL||'https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/ops-state/ops/alerts.enc.json';
 const APP_COMMIT=process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT||'unknown';
@@ -167,7 +167,7 @@ async function restoreBackupIfEmpty(){
 }
 
 function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.writeHead(status);res.end(JSON.stringify(value));}
-function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
+function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||ALLOWED_ORIGINS.includes(origin)?origin:'';}
 async function body(req){return new Promise((resolve,reject)=>{let data='';req.on('data',chunk=>{data+=chunk;if(data.length>2_000_000){reject(new Error('Payload too large'));req.destroy();}});req.on('end',()=>{try{resolve(data?JSON.parse(data):{});}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 
 const restorePromise=ensureConfigKey().then(()=>restoreBackupIfEmpty());
