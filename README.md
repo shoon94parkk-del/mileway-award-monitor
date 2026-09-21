@@ -2,6 +2,10 @@
 
 Korean Air public **daily** award-seat explorer. It does not claim realtime inventory. A displayed result is a flight/date/cabin combination, not a remaining-seat count, and final availability must be confirmed on Korean Air.
 
+## Development memory
+
+Before changing behavior, read `AGENTS.md`, `docs/project-memory.md`, `docs/regression-guardrails.md`, and `docs/decision-log.md`. Past scheduler/source/alert/mobile fixes are treated as regression contracts, not temporary patches.
+
 ## Current monitored scope
 
 Mileway intentionally monitors the reduced verified scope below:
@@ -92,8 +96,8 @@ CI runs all unit tests, source syntax checks and a complete cloud-site build. A 
 
 Render services:
 
-- Static site: `mileway-award-monitor`
-- Alert API: `mileway-alert-api`
+- Static site: `mileway-hoon` — https://mileway-hoon.onrender.com
+- Alert API: `mileway-alert-api-hoon` — https://mileway-alert-api-hoon.onrender.com
 
 After an operational change, verify the actual Render Live commit because auto-deploy has previously lagged behind `main` even while configured as enabled.
 
