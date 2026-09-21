@@ -1,4 +1,4 @@
-const API_URL='https://mileway-alert-api.onrender.com';
+const API_URL='https://mileway-alert-api-hoon.onrender.com';
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
 const HEALTH_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/health.json';
 const TOKEN_KEY='mileway.alert.manage-token.v1';
