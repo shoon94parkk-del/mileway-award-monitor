@@ -3,7 +3,7 @@ import path from 'node:path';
 import {resolveTelegramTarget,sendTelegramText} from './telegram-target.mjs';
 import {sourceFreshness} from '../src/health-status.mjs';
 
-const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api.onrender.com';
+const ALERT_API_URL=process.env.MILEWAY_ALERT_API_URL||'https://mileway-alert-api-hoon.onrender.com';
 const arg=name=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:null;};
 const has=name=>process.argv.includes(name);
 const snapshotPath=path.resolve(arg('--snapshot')||'public-data/snapshot.json');
