@@ -28,6 +28,8 @@ const BACKUP_URL=process.env.ALERT_BACKUP_URL||'https://raw.githubusercontent.co
 const APP_COMMIT=process.env.RENDER_GIT_COMMIT||process.env.GIT_COMMIT||'unknown';
 const CONFIG_SECRET=ADMIN_TOKEN||PAIR_CODE;
 const CONFIG_CONTEXT='mileway.telegram.direct-config.v2';
+const CONFIG_KEY_STORE='mileway:config-key:v1';
+let CONFIG_KEY=null;
 
 function encodeCommand(parts){return `*${parts.length}\r\n`+parts.map(part=>{const s=String(part);return `$${Buffer.byteLength(s)}\r\n${s}\r\n`;}).join('');}
 function redis(parts){return new Promise((resolve,reject)=>{
@@ -48,9 +50,22 @@ const safeEqual=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));
 const parseJson=(raw,fallback=null)=>{try{return raw?JSON.parse(raw):fallback;}catch{return fallback;}};
 async function fetchWithTimeout(url,options={},timeoutMs=10000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{return await fetch(url,{...options,signal:controller.signal});}finally{clearTimeout(timer);}}
 
-function configKey(){if(!CONFIG_SECRET)return null;return crypto.createHash('sha256').update(CONFIG_CONTEXT).update('\0').update(CONFIG_SECRET).digest();}
-function sealConfig(value){const key=configKey();if(!key)throw new Error('Alert encryption secret unavailable');const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),plain=Buffer.from(JSON.stringify(value),'utf8'),ciphertext=Buffer.concat([cipher.update(plain),cipher.final()]);return {version:2,iv:iv.toString('base64url'),tag:cipher.getAuthTag().toString('base64url'),ciphertext:ciphertext.toString('base64url')};}
-function openConfig(record){const key=configKey();if(!key||!record||record.version!==2)return null;try{const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(record.iv,'base64url'));decipher.setAuthTag(Buffer.from(record.tag,'base64url'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(record.ciphertext,'base64url')),decipher.final()]).toString('utf8'));}catch{return null;}}
+async function ensureConfigKey(){
+ if(CONFIG_KEY)return CONFIG_KEY;
+ let seed=CONFIG_SECRET;
+ if(!seed){
+  seed=await redis(['GET',CONFIG_KEY_STORE]);
+  if(!seed){
+   const generated=crypto.randomBytes(32).toString('base64url'),claimed=await redis(['SET',CONFIG_KEY_STORE,generated,'NX']);
+   seed=claimed==='OK'?generated:await redis(['GET',CONFIG_KEY_STORE]);
+  }
+ }
+ if(!seed)throw new Error('Alert encryption secret unavailable');
+ CONFIG_KEY=crypto.createHash('sha256').update(CONFIG_CONTEXT).update('\0').update(seed).digest();
+ return CONFIG_KEY;
+}
+function sealConfig(value){const key=CONFIG_KEY;if(!key)throw new Error('Alert encryption secret unavailable');const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),plain=Buffer.from(JSON.stringify(value),'utf8'),ciphertext=Buffer.concat([cipher.update(plain),cipher.final()]);return {version:2,iv:iv.toString('base64url'),tag:cipher.getAuthTag().toString('base64url'),ciphertext:ciphertext.toString('base64url')};}
+function openConfig(record){const key=CONFIG_KEY;if(!key||!record||record.version!==2)return null;try{const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(record.iv,'base64url'));decipher.setAuthTag(Buffer.from(record.tag,'base64url'));return JSON.parse(Buffer.concat([decipher.update(Buffer.from(record.ciphertext,'base64url')),decipher.final()]).toString('utf8'));}catch{return null;}}
 
 async function readOwners(){const value=parseJson(await redis(['GET',OWNERS_KEY]),[]);return Array.isArray(value)?value.filter(x=>/^[a-f0-9]{64}$/.test(String(x))):[];}
 async function addOwner(owner){const owners=await readOwners();if(!owners.includes(owner)){owners.push(owner);await redis(['SET',OWNERS_KEY,JSON.stringify(owners.slice(-5000))]);}return owners;}
@@ -155,7 +170,7 @@ function json(res,status,value,origin){if(origin)res.setHeader('Access-Control-A
 function allowedOrigin(req){const origin=req.headers.origin||'';return !origin||origin===ALLOWED_ORIGIN?origin:'';}
 async function body(req){return new Promise((resolve,reject)=>{let data='';req.on('data',chunk=>{data+=chunk;if(data.length>2_000_000){reject(new Error('Payload too large'));req.destroy();}});req.on('end',()=>{try{resolve(data?JSON.parse(data):{});}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 
-const restorePromise=restoreBackupIfEmpty();
+const restorePromise=ensureConfigKey().then(()=>restoreBackupIfEmpty());
 const server=http.createServer(async(req,res)=>{
  const origin=allowedOrigin(req);if(req.headers.origin&&!origin)return json(res,403,{error:'Origin not allowed'},'');
  if(req.method==='OPTIONS'){if(origin)res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Access-Control-Allow-Headers','Content-Type, Authorization');res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');res.writeHead(204);return res.end();}
