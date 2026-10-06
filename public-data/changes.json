@@ -4,6 +4,39 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "d7852adcdd0910e9c36d40ad",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-09-30",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 6일 23:00",
+      "detected_at": "2026-10-06T14:10:03.744Z"
+    },
+    {
+      "id": "4a87356387a4832d17f37440",
+      "kind": "CLOSED",
+      "destination": "AKL",
+      "date": "2027-08-29",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 6일 23:00",
+      "detected_at": "2026-10-06T14:10:03.744Z"
+    },
+    {
+      "id": "7fb030d8635b699d2e50a800",
+      "kind": "OPENED",
+      "destination": "AKL",
+      "date": "2027-08-18",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 6일 23:00",
+      "detected_at": "2026-10-06T14:10:03.744Z"
+    },
+    {
       "id": "a4a3dfb4cc358c18f6f5f465",
       "kind": "CLOSED",
       "destination": "DPS",
@@ -21964,39 +21997,6 @@
       "kind": "CLOSED",
       "destination": "SEA",
       "date": "2027-03-21",
-      "flight": "KE047",
-      "time": "21:20",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 18일 23:00",
-      "detected_at": "2026-09-18T14:09:27.643Z"
-    },
-    {
-      "id": "9f55b3665cac8042a85a42a6",
-      "kind": "CLOSED",
-      "destination": "SEA",
-      "date": "2027-03-19",
-      "flight": "KE047",
-      "time": "21:20",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 18일 23:00",
-      "detected_at": "2026-09-18T14:09:27.643Z"
-    },
-    {
-      "id": "e0c559eb046d997e8e2d2220",
-      "kind": "CLOSED",
-      "destination": "SEA",
-      "date": "2027-03-18",
-      "flight": "KE047",
-      "time": "21:20",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 18일 23:00",
-      "detected_at": "2026-09-18T14:09:27.643Z"
-    },
-    {
-      "id": "120210a4ba1125016bab3fea",
-      "kind": "CLOSED",
-      "destination": "SEA",
-      "date": "2027-03-17",
       "flight": "KE047",
       "time": "21:20",
       "cabin": "PRESTIGE",
