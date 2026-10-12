@@ -4,6 +4,72 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "9923f94419e46cc43009f03c",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-10-06",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
+      "id": "fc7db40defef8d5a83fe9dd4",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-10-06",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
+      "id": "93a3c02d64db60bb14d8b675",
+      "kind": "CLOSED",
+      "destination": "AKL",
+      "date": "2027-10-06",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
+      "id": "48089b0a5db0d7008f546791",
+      "kind": "CLOSED",
+      "destination": "AKL",
+      "date": "2027-09-19",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
+      "id": "d66fb964e54f82ccae4be335",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-05-19",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
+      "id": "a32185668c48a8296a7a9228",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-10-07",
+      "flight": "KE401",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 12일 23:00",
+      "detected_at": "2026-10-12T14:10:32.668Z"
+    },
+    {
       "id": "f03cfdc11565b370490354a2",
       "kind": "CLOSED",
       "destination": "DPS",
@@ -21936,72 +22002,6 @@
       "cabin": "PRESTIGE",
       "source_updated_at": "2026년 9월 24일 23:00",
       "detected_at": "2026-09-24T14:10:21.748Z"
-    },
-    {
-      "id": "7fb030d8635b699d2e50a800",
-      "kind": "OPENED",
-      "destination": "AKL",
-      "date": "2027-08-18",
-      "flight": "KE411",
-      "time": "18:00",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:10:21.748Z"
-    },
-    {
-      "id": "5d384add8ed0115a8271aeb4",
-      "kind": "OPENED",
-      "destination": "AKL",
-      "date": "2027-06-07",
-      "flight": "KE411",
-      "time": "18:00",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:10:21.748Z"
-    },
-    {
-      "id": "911474b9946a7e03ef2f8585",
-      "kind": "OPENED",
-      "destination": "SYD",
-      "date": "2027-09-19",
-      "flight": "KE401",
-      "time": "19:10",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:10:21.748Z"
-    },
-    {
-      "id": "9ec814a3d7515bae91c30f6c",
-      "kind": "CLOSED",
-      "destination": "DPS",
-      "date": "2027-09-18",
-      "flight": "KE433",
-      "time": "18:00",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:09:05.267Z"
-    },
-    {
-      "id": "4d7f3e0bb96a774c146ee162",
-      "kind": "CLOSED",
-      "destination": "DPS",
-      "date": "2027-09-18",
-      "flight": "KE431",
-      "time": "16:10",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:09:05.267Z"
-    },
-    {
-      "id": "21f56a3b6884f487e77e40d8",
-      "kind": "CLOSED",
-      "destination": "DPS",
-      "date": "2027-09-17",
-      "flight": "KE431",
-      "time": "16:10",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 9월 24일 23:00",
-      "detected_at": "2026-09-24T14:09:05.267Z"
     }
   ]
 }
