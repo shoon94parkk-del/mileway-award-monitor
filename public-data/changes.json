@@ -4,6 +4,72 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "46b4ed186f04774cb9a2008a",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-10-16",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
+      "id": "26753083568734e2acee4b45",
+      "kind": "CLOSED",
+      "destination": "DPS",
+      "date": "2027-10-16",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
+      "id": "1ae02d07d84db872d5abc967",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-10-17",
+      "flight": "KE433",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
+      "id": "f73ced7987ca8c06aa906e6f",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-10-17",
+      "flight": "KE431",
+      "time": "16:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
+      "id": "554d5585c86ef4792bf3fc8f",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2027-03-02",
+      "flight": "KE433",
+      "time": "17:50",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
+      "id": "fe51acae3db05cf062b23b8e",
+      "kind": "OPENED",
+      "destination": "DPS",
+      "date": "2026-10-28",
+      "flight": "KE433",
+      "time": "17:50",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:08:48.129Z"
+    },
+    {
       "id": "a2f4c6d6ae5922b1c108d5c4",
       "kind": "CLOSED",
       "destination": "HNL",
@@ -21933,72 +21999,6 @@
       "date": "2027-10-01",
       "flight": "KE901",
       "time": "11:20",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "66a1862cf2e31e3559bc3fe3",
-      "kind": "CLOSED",
-      "destination": "CDG",
-      "date": "2027-10-01",
-      "flight": "KE901",
-      "time": "11:20",
-      "cabin": "FIRST",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "8389ea957f99e5d02a6b7887",
-      "kind": "CLOSED",
-      "destination": "PRG",
-      "date": "2027-10-01",
-      "flight": "KE969",
-      "time": "11:05",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "55e974e70235d4a6b68f5716",
-      "kind": "CLOSED",
-      "destination": "LHR",
-      "date": "2027-10-01",
-      "flight": "KE907",
-      "time": "10:55",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "10764177d3fdb88b236f6aae",
-      "kind": "CLOSED",
-      "destination": "LHR",
-      "date": "2027-10-01",
-      "flight": "KE907",
-      "time": "10:55",
-      "cabin": "FIRST",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "405ed826eb5076f7ae431abb",
-      "kind": "CLOSED",
-      "destination": "FRA",
-      "date": "2027-10-01",
-      "flight": "KE945",
-      "time": "10:50",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "574a0edd12a25b98fe895725",
-      "kind": "CLOSED",
-      "destination": "VIE",
-      "date": "2027-10-01",
-      "flight": "KE937",
-      "time": "10:40",
       "cabin": "PRESTIGE",
       "source_updated_at": "2026년 10월 7일 23:00",
       "detected_at": "2026-10-07T14:08:22.955Z"
