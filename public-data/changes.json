@@ -4,6 +4,61 @@
   "baseline_reset_at": "2026-09-11T02:15:40.376Z",
   "events": [
     {
+      "id": "3b31e9946622e3a093bf8086",
+      "kind": "CLOSED",
+      "destination": "BNE",
+      "date": "2027-10-16",
+      "flight": "KE407",
+      "time": "20:05",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:10:00.549Z"
+    },
+    {
+      "id": "6cb64cb7f98322960696ad90",
+      "kind": "CLOSED",
+      "destination": "SYD",
+      "date": "2027-10-16",
+      "flight": "KE403",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:10:00.549Z"
+    },
+    {
+      "id": "000ea502613f458028a71300",
+      "kind": "CLOSED",
+      "destination": "AKL",
+      "date": "2027-06-04",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:10:00.549Z"
+    },
+    {
+      "id": "7919c33c9ebc82153c28fcf1",
+      "kind": "OPENED",
+      "destination": "AKL",
+      "date": "2027-10-17",
+      "flight": "KE411",
+      "time": "18:00",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:10:00.549Z"
+    },
+    {
+      "id": "1f6b15088ce55f6397d6c140",
+      "kind": "OPENED",
+      "destination": "SYD",
+      "date": "2027-10-17",
+      "flight": "KE403",
+      "time": "19:10",
+      "cabin": "PRESTIGE",
+      "source_updated_at": "2026년 10월 22일 23:00",
+      "detected_at": "2026-10-22T14:10:00.549Z"
+    },
+    {
       "id": "46b4ed186f04774cb9a2008a",
       "kind": "CLOSED",
       "destination": "DPS",
@@ -21947,61 +22002,6 @@
       "cabin": "PRESTIGE",
       "source_updated_at": "2026년 10월 7일 23:00",
       "detected_at": "2026-10-07T14:08:30.245Z"
-    },
-    {
-      "id": "81626f8a023144dcdbdb7afa",
-      "kind": "CLOSED",
-      "destination": "IST",
-      "date": "2027-10-01",
-      "flight": "KE955",
-      "time": "13:40",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "3eab25065bfeea13daa9654c",
-      "kind": "CLOSED",
-      "destination": "MXP",
-      "date": "2027-10-01",
-      "flight": "KE927",
-      "time": "13:35",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "4558c52c6ee3d625484811a3",
-      "kind": "CLOSED",
-      "destination": "LIS",
-      "date": "2027-10-01",
-      "flight": "KE921",
-      "time": "12:45",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "b3213ad0bdbee124800665e9",
-      "kind": "CLOSED",
-      "destination": "AMS",
-      "date": "2027-10-01",
-      "flight": "KE925",
-      "time": "11:55",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
-    },
-    {
-      "id": "de7b61c54f900d63e4810ae2",
-      "kind": "CLOSED",
-      "destination": "CDG",
-      "date": "2027-10-01",
-      "flight": "KE901",
-      "time": "11:20",
-      "cabin": "PRESTIGE",
-      "source_updated_at": "2026년 10월 7일 23:00",
-      "detected_at": "2026-10-07T14:08:22.955Z"
     }
   ]
 }
