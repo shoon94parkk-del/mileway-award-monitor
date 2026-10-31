@@ -11,10 +11,10 @@
     "telegram_bot_username": "koreaairseat99_bot",
     "email_configured": false
   },
-  "source_updated_at": "2026년 10월 30일 23:00",
-  "last_successful_scan_at": "2026-10-30T23:25:09.183Z",
+  "source_updated_at": "2026년 10월 31일 23:00",
+  "last_successful_scan_at": "2026-10-31T14:10:16.636Z",
   "last_error_at": "2026-10-30T19:32:44.189Z",
   "last_error_step": "collection",
   "recovered_at": "2026-10-30T23:25:09.183Z",
-  "last_notification_check_at": "2026-10-30T23:25:09.183Z"
+  "last_notification_check_at": "2026-10-31T14:10:16.636Z"
 }

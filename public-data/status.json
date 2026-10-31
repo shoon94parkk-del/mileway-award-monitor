@@ -1,43 +1,43 @@
 {
   "version": 2,
   "schema_version": 2,
-  "generated_at": "2026-10-30T23:25:09.652Z",
-  "cycle_id": "2026-10-30T23:00:00+09:00",
+  "generated_at": "2026-10-31T14:10:17.198Z",
+  "cycle_id": "2026-10-31T23:00:00+09:00",
   "collector_status": "succeeded",
   "source_status": "current",
-  "expected_source_at": "2026년 10월 30일 23:00",
-  "observed_source_at": "2026년 10월 30일 23:00",
-  "source_observed_at": "2026-10-30T23:25:09.183Z",
-  "last_successful_collection_at": "2026-10-30T23:25:09.183Z",
-  "last_fresh_publication_at": "2026-10-30T23:24:59.079Z",
-  "publication_id": "2026-10-30T23:24:59.079Z|오세아니아",
+  "expected_source_at": "2026년 10월 31일 23:00",
+  "observed_source_at": "2026년 10월 31일 23:00",
+  "source_observed_at": "2026-10-31T14:10:16.636Z",
+  "last_successful_collection_at": "2026-10-31T14:10:16.636Z",
+  "last_fresh_publication_at": "2026-10-31T14:10:02.028Z",
+  "publication_id": "2026-10-31T14:10:02.028Z|오세아니아",
   "notification_status": "checked",
-  "last_notification_check_at": "2026-10-30T23:25:09.183Z",
-  "heartbeat_at": "2026-10-30T23:25:09.652Z",
+  "last_notification_check_at": "2026-10-31T14:10:16.636Z",
+  "heartbeat_at": "2026-10-31T14:10:17.198Z",
   "error_code": null,
   "regions": {
     "미주": {
       "status": "success",
-      "source_updated_at": "2026년 10월 30일 23:00",
-      "finished_at": "2026-10-30T23:22:45.651Z",
+      "source_updated_at": "2026년 10월 31일 23:00",
+      "finished_at": "2026-10-31T14:07:41.867Z",
       "routes": 13
     },
     "유럽": {
       "status": "success",
-      "source_updated_at": "2026년 10월 30일 23:00",
-      "finished_at": "2026-10-30T23:22:44.213Z",
+      "source_updated_at": "2026년 10월 31일 23:00",
+      "finished_at": "2026-10-31T14:07:42.073Z",
       "routes": 13
     },
     "오세아니아": {
       "status": "success",
-      "source_updated_at": "2026년 10월 30일 23:00",
-      "finished_at": "2026-10-30T23:24:59.079Z",
+      "source_updated_at": "2026년 10월 31일 23:00",
+      "finished_at": "2026-10-31T14:10:02.028Z",
       "routes": 4
     },
     "아시아": {
       "status": "success",
-      "source_updated_at": "2026년 10월 30일 23:00",
-      "finished_at": "2026-10-30T23:23:52.599Z",
+      "source_updated_at": "2026년 10월 31일 23:00",
+      "finished_at": "2026-10-31T14:08:43.896Z",
       "routes": 1
     }
   }
