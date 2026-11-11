@@ -41,7 +41,7 @@ export function parseDestinationButton(text,region){
   const label=String(text||'').replace(/\s+/g,' ').trim();
   const code=label.match(IATA)?.[1]||label.match(/\b([A-Z]{3})$/)?.[1];
   if(!code||DOMESTIC.has(code))return null;
-  const city=label.replace(IATA,'').replace(new RegExp('\\b'+code+'
+  const city=label.replace(IATA,'').replace(new RegExp('\\b'+code+'$'),'').trim().replace(/^[-·|]\s*/,'')||code;
   const route={code,region,label,city};
   // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
   return monitoredRoute(route)?route:null;
