@@ -6,6 +6,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {PUBLIC_URL,PUBLIC_API,readPublicCalendar,parsePublicCalendar,parsePublicApi,monthRange} from './public-calendar.mjs';
 import {queryPublicSeatMonth} from './public-direct-client.mjs';
 import {selectPublicMonth} from './public-month-ui.mjs';
+import {readOutboundScreen} from './outbound-ui-collector.mjs';
 import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
 import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
@@ -273,6 +274,65 @@ try {
   report.unqueryable=report.unqueryable.filter(r=>selectedCodes.has(r.destination));
   console.log(`PUBLIC DAILY WORLDWIDE: ${selected.length} routes across ${regions.length} regions, ${months.length} months, updated ${report.source_updated_at}; engine ${report.collection_engine}`);
   if(!process.argv.includes('--discover-only')) {
+  if(await hasModernAirportUi(page)){
+    // The redesigned airline UI shows day/cabin availability. Read only
+    // the rendered results; never call or consume API responses.
+    report.collection_engine='UI_ACCESSIBLE_ONLY';
+    console.log('OUTBOUND SCREEN-ONLY COLLECTION: '+selected.length+' routes, '+months.length+' months');
+    for(const route of selected){
+      checkStop();
+      const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&
+        !report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
+      let previousMonth=null;
+      for(const monthKey of routeMonths){
+        let success=false,lastError;
+        for(let attempt=1;attempt<=maxRetries&&!success;attempt++){
+          try{
+            checkStop();
+            const chronological=previousMonth&&new Date(monthKey+'-01T00:00:00Z').getTime()-
+              new Date(previousMonth+'-01T00:00:00Z').getTime()<32*86400000;
+            if(attempt===1&&chronological){
+              await page.getByRole('navigation',{name:'가는 여정'}).getByRole('button',{name:'다음 달',exact:true}).click();
+            }else{
+              await initializeSearchPage(report.source_updated_at);
+              await selectDestination(route);
+              await selectPublicMonth(page,monthKey);
+              await page.getByRole('button',{name:'조회',exact:true}).click();
+            }
+            const result=await readOutboundScreen(page,{
+              route,month:monthKey,start,end,sourceUpdatedAt:report.source_updated_at
+            });
+            if(result.status!=='COVERED')throw Error('Cannot safely publish unavailable route as zero seats');
+            report.rows.push(...result.rows);
+            report.coverage.push({destination:route.code,month:monthKey,days:result.days,
+              flightClassRows:result.rows.length,engine:'UI_ACCESSIBLE'});
+            report.acceleration.ui_months++;
+            store.run('ICN',route.code,monthKey,new Date().toISOString(),report.source_updated_at,
+              JSON.stringify({source:'UI_ACCESSIBLE',days:result.days,awards:result.rows.length}));
+            save();
+            console.log('OUTBOUND UI',route.code,monthKey,'COVERED',result.days,'days',result.rows.length,'award date/class markers');
+            previousMonth=monthKey;
+            await sleep(intervalMs);
+            success=true;
+          }catch(error){
+            lastError=error;
+            previousMonth=null;
+            console.error('OUTBOUND UI FAILURE',route.code,monthKey,attempt,error.message);
+            if(attempt<maxRetries)await sleep(5000*attempt);
+          }
+        }
+        if(!success){
+          const failure={destination:route.code,month:monthKey,status:'FAILED',
+            attempts:maxRetries,message:lastError?.message||'Unknown rendered calendar error',
+            checked_at:new Date().toISOString()};
+          report.failed.push(failure);
+          report.errors.push({destination:route.code,month:monthKey,message:failure.message});
+          save();
+          throw lastError||Error('Public UI could not be verified');
+        }
+      }
+    }
+  }else{
   let activeGroup=null;
   for (const route of selected) {
     const group=collectionGroup(route.region);
@@ -329,6 +389,7 @@ try {
         directTemplate=null;directVerified=false;
       }
     }
+  }
   }
   report.complete=report.failed.length===0&&report.target_routes.every(code=>months.every(month=>report.coverage.some(c=>c.destination===code&&c.month===month)));
   report.attempt_complete=report.failed.length===0&&report.target_routes.every(code=>months.every(month=>[...report.coverage,...report.unqueryable].some(c=>c.destination===code&&c.month===month)));
