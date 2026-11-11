@@ -5,7 +5,7 @@ import {PUBLIC_URL,PUBLIC_API,parsePublicApi,parsePublicCalendar,readPublicCalen
 import {queryPublicSeatMonth} from '../src/public-direct-client.mjs';
 import {selectPublicMonth} from '../src/public-month-ui.mjs';
 import {openPublicPage} from '../src/public-navigation.mjs';
-import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies} from '../src/public-ui.mjs';
+import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies,hasModernAirportUi} from '../src/public-ui.mjs';
 import {readLatestSourceUpdatedAt} from '../src/source-observer.mjs';
 import {getReturnOrigins,makeReturnMonth} from '../src/europe-returns.mjs';
 
@@ -56,7 +56,6 @@ async function setup(){
     throw error;
   }
   await dismissPublicCookies(page);
-  await selectPublicOneWay(page);
   const updated=await readLatestSourceUpdatedAt(page,{sampleMs:8000,intervalMs:750});
   if(!updated)throw Error('Missing Korean Air daily timestamp');
   if(report.source_updated_at&&report.source_updated_at!==updated)throw Error('Source changed during return collection');
@@ -72,6 +71,7 @@ async function selectOrigin(code){
   // Both directions use the same public UI. A new origin may reset destination.
   await choosePublicAirport(page,'departure','유럽',code);
   await choosePublicAirport(page,'destination','대한민국','ICN');
+  await selectPublicOneWay(page);
 }
 async function closePopups(){
   const calendar=page.locator('#travelCalendarCloseBtn');
@@ -131,7 +131,12 @@ async function uiMonth(origin,month){
 }
 try{
   await setup();
-  const selectable=await availableOrigins();
+  // Modern selectors load the current European airports lazily per route.
+  // Our allowed scope is already grounded in the last completed outbound
+  // publication; verify each route when actively selecting it below.
+  const selectable=await hasModernAirportUi(page)
+    ?new Set(origins.map(route=>route.code))
+    :await availableOrigins();
   console.log('RETURN ORIGINS',origins.map(o=>o.code).join(','),'UI selectable',selectable.size);
   for(const route of origins){
     const origin=route.code;
