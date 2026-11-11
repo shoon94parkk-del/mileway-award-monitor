@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
-import {PUBLIC_URL,PUBLIC_API,parsePublicApi,parsePublicCalendar,readPublicCalendar,monthRange} from '../src/public-calendar.mjs';
-import {queryPublicSeatMonth} from '../src/public-direct-client.mjs';
+import {PUBLIC_URL,monthRange} from '../src/public-calendar.mjs';
+import {readRenderedSeatCalendar,parseRenderedSeatMonth} from '../src/public-rendered-seats.mjs';
 import {selectPublicMonth} from '../src/public-month-ui.mjs';
 import {openPublicPage} from '../src/public-navigation.mjs';
 import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies,hasModernAirportUi} from '../src/public-ui.mjs';
@@ -17,7 +17,6 @@ const horizon=new Date(today+'T00:00:00Z');horizon.setUTCDate(horizon.getUTCDate
 const start=arg('--start',today),end=arg('--end',horizon.toISOString().slice(0,10));
 const months=monthRange(start,end),output=path.resolve(arg('--output','data/returns-europe.json'));
 const interval=Math.max(3500,Number(arg('--interval-ms','5000')));
-const directInterval=Math.max(1000,Number(arg('--direct-interval-ms','1500')));
 const retries=2;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const codes=arg('--route','').split(',').map(v=>v.trim().toUpperCase()).filter(Boolean);
@@ -30,14 +29,13 @@ const report={direction:'RETURN',destination:'ICN',region:'유럽',source:PUBLIC
   source_type:'KOREAN_AIR_PUBLIC_DAILY',source_updated_at:null,
   started_at:new Date().toISOString(),start_date:start,end_date:end,
   attempt_complete:false,complete:false,origins,coverage:[],unqueryable:[],failed:[],rows:[],
-  acceleration:{ui_months:0,direct_months:0,direct_templates_verified:0,direct_fallbacks:0}};
+  collection_engine:'UI_DOM_ONLY',acceleration:{ui_months:0}};
 fs.mkdirSync(path.dirname(output),{recursive:true});
 const save=()=>{const tmp=output+'.tmp';fs.writeFileSync(tmp,JSON.stringify(report,null,2));fs.renameSync(tmp,output);};
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless'),args:['--disable-http2','--disable-quic']});
 const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
 page.setDefaultTimeout(20000);
-const isApi=url=>url===PUBLIC_API||url.startsWith(PUBLIC_API+'?');
 const regionList=(kind,region)=>openPublicAirportRegion(page,kind,region);
 async function setup(){
   try{
@@ -79,124 +77,91 @@ async function closePopups(){
   const confirm=page.getByRole('button',{name:'확인',exact:true});
   if(await confirm.isVisible().catch(()=>false))await confirm.click().catch(()=>{});
 }
-function signature(data,origin,month){
-  return parsePublicApi(data,{origin,destination:'ICN',month,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at})
-    .map(r=>[r.date,r.flight,r.departureTime||'',r.cabin,r.fareClass,r.available].join('|')).sort().join('\n');
-}
-function record(origin,month,data,engine){
-  const item=makeReturnMonth(data,{origin,month,start,end,sourceUpdatedAt:report.source_updated_at});
+function record(origin,month,item){
   if(item.status==='UNQUERYABLE'){
-    report.unqueryable.push({origin,month,status:'UNQUERYABLE',reason:'항공사에서 해당 구간을 조회할 수 없음',engine});
-  }else{
-    report.coverage.push({origin,destination:'ICN',month,days:item.days,engine});
+    report.unqueryable.push({origin,month,status:'UNQUERYABLE',
+      reason:'대한항공 화면에 해당 구간 조회 불가가 명시됨',engine:'UI_DOM'});
+  }else if(item.status==='COVERED'){
+    report.coverage.push({origin,destination:'ICN',month,days:item.days,engine:'UI_DOM'});
     report.rows.push(...item.rows);
-  }
-  report.acceleration[engine==='UI'?'ui_months':'direct_months']++;
+  }else throw Error('Unrecognized public UI status');
+  report.acceleration.ui_months++;
   save();
-  console.log('RETURN',origin,'→ ICN',month,item.status,item.rows.length,engine);
+  console.log('RETURN UI ONLY',origin,'→ ICN',month,item.status,item.rows.length,'available date/class markers');
 }
 async function uiMonth(origin,month){
-  const layout=await selectPublicMonth(page,month);
-  const pending=page.waitForResponse(r=>isApi(r.url()),{timeout:30000});
+  await selectPublicMonth(page,month);
   await page.getByRole('button',{name:'조회',exact:true}).click();
-  const response=await pending;
-  if([403,429].includes(response.status()))throw Error('ACCESS_LIMIT '+response.status());
-  if(!response.ok())throw Error('Return public API HTTP '+response.status());
-  const request=JSON.parse(response.request().postData()||'{}'),data=await response.json();
-  if(request.departureAirport!==origin||request.arrivalAirport!=='ICN'||request.departureDate!==month.replace('-','')+'01')throw Error('Return UI request route/month mismatch');
-  if(data.departureAirport!==origin||data.arrivalAirport!=='ICN'||!Array.isArray(data.flightList))throw Error('Return API response route mismatch');
-  if(data.flightList.length&&layout==='legacy'){
-    await page.locator('#travelCalendarPopup [id^="day_"]').first().waitFor({timeout:20000});
-    const expectedLabel=new RegExp(month.replace(/^(\d{4})-(\d{2})$/,(_,year,m)=>year+'년\\s*'+Number(m)+'월'));
-    let snapshot=await page.evaluate(readPublicCalendar);
-    const displayDeadline=Date.now()+15000;
-    while(!expectedLabel.test(snapshot.month||'')&&Date.now()<displayDeadline){
-      await sleep(500);snapshot=await page.evaluate(readPublicCalendar);
-    }
-    if(!expectedLabel.test(snapshot.month||''))throw Error('Return UI calendar month did not advance to '+month);
-    const calendar=parsePublicCalendar(snapshot,{origin,destination:'ICN',startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
-    const api=parsePublicApi(data,{origin,destination:'ICN',month,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
-    for(const day of calendar.filter(r=>r.available!==null)){
-      const found=api.some(r=>r.date===day.date&&r.cabin===day.cabin&&r.available);
-      if(found!==day.available)throw Error('Return UI/calendar API mismatch '+origin+' '+day.date);
-    }
-  }else if(!data.flightList.length&&layout==='legacy'){
-    await page.getByText('검색하신 여정은 조회가 불가합니다.',{exact:true}).waitFor({timeout:8000});
+  const deadline=Date.now()+20000;
+  let lastError;
+  while(Date.now()<deadline){
+    const snapshot=await page.evaluate(readRenderedSeatCalendar);
+    try{
+      const parsed=parseRenderedSeatMonth(snapshot,{origin,destination:'ICN',month,
+        startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
+      await closePopups();
+      await sleep(interval);
+      return parsed;
+    }catch(error){lastError=error;}
+    await sleep(850);
   }
-  // For modern UI, validated route/month API JSON is the only availability
-  // truth; old travelCalendarPopup selectors no longer exist.
-  await closePopups();
-  await sleep(interval);
-  return {data,request};
+  // A request denied by the airline leaves no verifiable calendar in the UI.
+  // Never convert that case to zero inventory or publish a successful report.
+  const aria=await page.locator('body').ariaSnapshot().catch(()=> '');
+  const i=aria.indexOf('heading "보너스 좌석 조회"');
+  console.error('RETURN UI RESULT DIAGNOSTIC',JSON.stringify({
+    origin,destination:'ICN',month,reason:lastError?.message,
+    visiblePageOutline:aria.slice(Math.max(0,i),Math.max(0,i)+1200)
+  }));
+  throw Error('Public UI displayed no verifiable award calendar for '+origin+'→ICN '+month+
+    ': '+(lastError?.message||'no dated result'));
 }
 try{
   await setup();
-  // Modern selectors load the current European airports lazily per route.
-  // Our allowed scope is already grounded in the last completed outbound
-  // publication; verify each route when actively selecting it below.
-  const selectable=await hasModernAirportUi(page)
-    ?new Set(origins.map(route=>route.code))
-    :await availableOrigins();
-  console.log('RETURN ORIGINS',origins.map(o=>o.code).join(','),'UI selectable',selectable.size);
+  // Route scope is the last validated outbound discovery. The public picker
+  // is used to verify each European origin before the return-month search.
   for(const route of origins){
-    const origin=route.code;
-    if(!selectable.has(origin)){
-      console.warn('Return origin absent from source selector:',origin);
-      for(const month of months)report.unqueryable.push({origin,month,status:'UNQUERYABLE',reason:'출발 공항 선택 불가'});
-      save();continue;
-    }
-    let template=null,directTrusted=false;
     for(const month of months){
-      let success=false,lastError;
-      for(let attempt=1;attempt<=retries&&!success;attempt++){
+      let completed=false,lastError=null;
+      for(let attempt=1;attempt<=retries&&!completed;attempt++){
         try{
-          await selectOrigin(origin);
-          if(directTrusted&&template){
-            try{
-              const remote=await queryPublicSeatMonth(page,template,{origin,destination:'ICN',month});
-              record(origin,month,remote.data,'DIRECT_API');
-              await sleep(directInterval);
-              success=true;break;
-            }catch(error){
-              if(/ACCESS_LIMIT/.test(error.message))throw error;
-              report.acceleration.direct_fallbacks++;
-              directTrusted=false;
-              console.warn('Return direct/API fallback to UI',origin,month,error.message);
-            }
-          }
-          const ui=await uiMonth(origin,month);
-          record(origin,month,ui.data,'UI');
-          if(!template){
-            template=ui.request;
-            try{
-              const direct=await queryPublicSeatMonth(page,template,{origin,destination:'ICN',month});
-              if(signature(direct.data,origin,month)!==signature(ui.data,origin,month))throw Error('Return direct/UI verification mismatch');
-              report.acceleration.direct_templates_verified++;
-              directTrusted=true;
-              await sleep(directInterval);
-            }catch(error){
-              if(/ACCESS_LIMIT/.test(error.message))throw error;
-              console.warn('Return route remains UI-only',origin,error.message);
-            }
-          }
-          success=true;
+          await selectOrigin(route.code);
+          const result=await uiMonth(route.code,month);
+          record(route.code,month,result);
+          completed=true;
         }catch(error){
           lastError=error;
-          console.error('RETURN FAILURE',origin,month,attempt,error.message);
-          if(/ACCESS_LIMIT|Source changed/.test(error.message))throw error;
+          console.error('RETURN UI FAILURE',route.code,month,attempt,error.message);
           await closePopups().catch(()=>{});
-          if(attempt<retries){await sleep(12000);await setup();}
+          if(attempt<retries){
+            await sleep(6000);
+            await setup();
+          }
         }
       }
-      if(!success){report.failed.push({origin,month,status:'FAILED',message:lastError?.message||'Unknown error'});save();}
+      if(!completed){
+        report.failed.push({origin:route.code,month,status:'FAILED',
+          message:lastError?.message||'Unknown public UI failure'});
+        save();
+        // Failure is not zero seats. Stop rather than scan other months against
+        // an inaccessible or structurally changed official result page.
+        throw lastError;
+      }
     }
   }
   report.finished_at=new Date().toISOString();
   report.attempt_complete=report.failed.length===0;
   report.complete=report.attempt_complete&&!report.unqueryable.length;
   save();
-  if(!report.attempt_complete)throw Error(report.failed.length+' return route/month failures; previous publication preserved');
-  console.log('RETURN COMPLETE',report.coverage.length,'covered',report.unqueryable.length,'unqueryable',report.rows.length,'available');
+  if(!report.attempt_complete)throw Error('Unfinished public UI return collection');
+  console.log('RETURN UI COMPLETE',report.coverage.length,'covered',
+    report.unqueryable.length,'unqueryable',report.rows.length,'available');
 }catch(error){
-  report.failure=error.message;save();console.error(error);process.exitCode=1;
-}finally{await page.close().catch(()=>{});await browser.close().catch(()=>{});}
+  report.failure=error.message;
+  save();
+  console.error(error);
+  process.exitCode=1;
+}finally{
+  await page.close().catch(()=>{});
+  await browser.close().catch(()=>{});
+}
