@@ -14,6 +14,7 @@ async function getJson(url,timeoutMs=8000){
 async function load(){
  try{
   const latest=await getJson(SOURCE).catch(()=>getJson('./returns-data.json',5000));
+  if(latest?.status==='pending')throw Error('귀국편 첫 수집 결과를 기다리고 있습니다.');
   if(latest?.direction!=='RETURN'||latest?.destination!=='ICN'||!Array.isArray(latest?.rows))throw Error('귀국편 데이터 형식을 확인할 수 없습니다.');
   report=latest;
   const previous=$('#origin').value,monthsValue=$('#month').value;
