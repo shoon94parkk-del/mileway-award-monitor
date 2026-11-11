@@ -28,7 +28,13 @@ export function parsePublicAccessibleAwardMonth(tree,{origin,destination,month,s
   }
   // A valid zero-seat result needs a real visible calendar, not just the
   // pre-query form or an airline error screen.
-  if(days.size<Math.min(20,maxDay))throw Error('Accessible award result lacks dated calendar buttons: '+days.size);
+  const boundedStart=startDate.startsWith(month)?Number(startDate.slice(-2)):1;
+  const boundedEnd=endDate.startsWith(month)?Number(endDate.slice(-2)):maxDay;
+  const expectedVisible=Math.max(1,Math.min(maxDay,boundedEnd)-Math.max(1,boundedStart)+1);
+  // The airline legitimately hides elapsed dates in the current month and
+  // dates beyond the 360-day horizon in the final month.
+  const minimumVisible=Math.min(20,expectedVisible);
+  if(days.size<minimumVisible)throw Error('Accessible award result lacks dated calendar buttons: '+days.size+'/'+minimumVisible);
   if(![...days.values()].some(v=>LABELS.some(label=>v.includes(label))))
     throw Error('Award calendar seat-status vocabulary cannot be confirmed');
   const rows=[];
