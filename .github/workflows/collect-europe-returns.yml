@@ -1,6 +1,11 @@
 name: Collect Europe to Incheon award returns
 on:
   workflow_dispatch:
+  # Trigger the initial production scan when this workflow itself is enabled.
+  # Subsequent collector publications do not match this path.
+  push:
+    branches: [main]
+    paths: ['.github/workflows/collect-europe-returns.yml']
   schedule:
     # 03:40 KST daily, after the usual outbound collection window.
     - cron: '40 18 * * *'
