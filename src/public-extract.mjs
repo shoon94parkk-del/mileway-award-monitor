@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import {PUBLIC_URL,PUBLIC_API,readPublicCalendar,parsePublicCalendar,parsePublicApi,monthRange} from './public-calendar.mjs';
 import {queryPublicSeatMonth} from './public-direct-client.mjs';
+import {selectPublicMonth} from './public-month-ui.mjs';
 import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
 import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
@@ -163,12 +164,7 @@ async function collectMonthDirect(route,monthKey,template){
 }
 async function collectMonth(route,monthKey) {
   checkStop();pending.clear();apiErrors=[];lastPublicResponse=null;
-  await page.locator('#seatCalendarBtn').click();
-  const baseYear=Number(await page.locator('#monthCalendarPopup').innerText().then(t=>t.match(/20\d{2}/)?.[0]));
-  if(!Number.isFinite(baseYear)) throw new Error('Month calendar did not expose a base year');
-  const [year,month]=monthKey.split('-').map(Number);
-  await page.locator(`#monthCalendarPopup [id="${(year-baseYear)*12+month-1}"]`).click();
-  await page.getByRole('button',{name:'선택',exact:true}).click();
+  const layout=await selectPublicMonth(page,monthKey);
   const responsePromise=waitForMonth();
   await page.getByRole('button',{name:'조회',exact:true}).click();
   const response=await responsePromise;
@@ -181,11 +177,26 @@ async function collectMonth(route,monthKey) {
   report.acceleration.ui_months++;
   if(data.departureAirport==='ICN'&&data.arrivalAirport===route.code&&Array.isArray(data.flightList)&&data.flightList.length===0){
     const notice='검색하신 여정은 조회가 불가합니다.';
-    await page.getByText(notice,{exact:true}).waitFor({state:'visible'});
+    if(layout==='legacy')await page.getByText(notice,{exact:true}).waitFor({state:'visible'});
     const record={destination:route.code,month:monthKey,status:'UNQUERYABLE',reason:notice,checked_at:new Date().toISOString(),engine:'UI'};
     report.unqueryable.push(record);store.run('ICN',route.code,monthKey,record.checked_at,report.source_updated_at,JSON.stringify({api:data,notice}));save();
     console.log(`${route.code} ${monthKey}: UNQUERYABLE (not unavailable seats)`);
-    await page.getByRole('button',{name:'확인',exact:true}).click();await sleep(intervalMs);return requested;
+    if(layout==='legacy')await page.getByRole('button',{name:'확인',exact:true}).click();await sleep(intervalMs);return requested;
+  }
+  if(layout==='modern'){
+    // The redesigned page no longer provides the legacy day_ nodes.
+    // Keep the same flight-level O/A parser and route/month verification.
+    // Never infer availability if the public API request fails.
+    const options={origin:'ICN',destination:route.code,month:monthKey,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at};
+    const rows=parsePublicApi(data,options);
+    const dayCount=new Set(data.flightList.map(day=>day.departureDate)).size;
+    report.rows.push(...rows.map(r=>({...r,region:route.region})));
+    report.coverage.push({destination:route.code,month:monthKey,days:dayCount,flightClassRows:rows.length,engine:'UI'});
+    store.run('ICN',route.code,monthKey,new Date().toISOString(),report.source_updated_at,JSON.stringify({api:data,ui_layout:'modern'}));
+    save();
+    console.log(`${route.code} ${monthKey}: MODERN UI ${dayCount} flight days, ${rows.filter(r=>r.available).length} available flight/class matches`);
+    await sleep(intervalMs);
+    return requested;
   }
   await page.locator('#travelCalendarPopup [id^="day_"]').first().waitFor();
   await sleep(intervalMs);
