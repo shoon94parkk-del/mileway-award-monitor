@@ -57,9 +57,9 @@ function render(){
  $('#results').innerHTML=rows.length?rows.slice(0,500).map(r=>{
   const city=cityName(r.origin,names);
   const cabinName=r.cabin==='FIRST'?'일등석':'프레스티지';
-  return '<article class="flight"><div><div class="city">'+esc(city)+' → 인천</div><div class="route">'+esc(r.origin)+' → ICN · 대한항공 직항</div></div>'+
+  return '<article class="flight"><div><div class="city">'+esc(city)+' → 인천</div><div class="route">'+esc(r.origin)+' → ICN · 대한항공 공개 좌석 현황</div></div>'+
     '<div><div class="date">'+esc(r.date)+'</div><div class="sub">현지 출발 '+esc(r.departureTime||'시각 미제공')+'</div></div>'+
-    '<div><span class="cabin '+(r.cabin==='FIRST'?'first':'')+'">'+cabinName+'</span><div class="sub">'+esc(r.flight)+'</div></div>'+
+    '<div><span class="cabin '+(r.cabin==='FIRST'?'first':'')+'">'+cabinName+'</span><div class="sub">'+esc(r.flight||'날짜별 좌석 표시')+'</div></div>'+
     '<a href="'+official+'" target="_blank" rel="noopener noreferrer">예약 확인 ↗</a></article>';
  }).join('')+(rows.length>500?'<div class="empty">표시 성능을 위해 상위 500건만 보여줍니다. 기간과 도시를 좁혀 주세요.</div>':''):'<div class="empty"><b>선택한 조건에서 확인된 좌석이 없습니다.</b>좌석 없음으로 확정할 수는 없습니다. 다른 도시·날짜를 선택하거나 대한항공에서 다시 확인해 주세요.</div>';
 }
