@@ -2,6 +2,10 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-11 — Europe → ICN return exploration, isolated from outbound
+
+User-requested direction expansion is implemented as an isolated daily browser collector + independent return report and new site page. The verified list of European outbound destinations is reused only as a list of European departure candidates; live Korean Air UI must confirm reverse-origin selectability. API requests must be verified as origin=European airport, destination=ICN and consistent with the public UI before direct acceleration. UNQUERYABLE is never no-seat; failures cannot overwrite a successful snapshot. Return Telegram alerts are intentionally not yet wired and must not be inferred from outbound alert coverage.
+
 ## 2026-09-22 — Durable project memory
 Added repository-level rules, memory, guardrails, and regression contract so scheduler/source/alert fixes are not later reverted.
 

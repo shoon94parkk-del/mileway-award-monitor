@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mileway · 유럽 → 인천 대한항공 비즈니스 보너스석</title>
+<meta name="description" content="유럽 출발 인천 도착 대한항공 직항 마일리지 프레스티지석 및 일등석 공개 일일 현황.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/returns.css">
+<script type="module" src="/returns.js"></script>
+</head>
+<body>
+<header class="masthead"><a href="/" class="logo"><b>m.</b> mileway<span>.</span></a><nav><a href="/">인천 출발</a><a class="current" href="/returns.html" aria-current="page">유럽 귀국편</a></nav></header>
+<main>
+<section class="hero"><div class="eyebrow">KOREAN AIR · SKYPASS AWARD</div>
+<h1>유럽에서 인천으로,<br><em>돌아오는 비즈니스석</em> 찾기</h1>
+<p>파리·런던·로마 등 기존 유럽 모니터링 도시에서 <strong>인천(ICN)행 대한항공 직항</strong> 공개 보너스 좌석을 살펴보세요.</p>
+<div class="hero-meta"><span id="update-time">귀국편 데이터 확인 중</span><span>실시간 재고 아님 · 매일 수집</span></div></section>
+<section class="summary" id="summary" aria-label="귀국편 모니터링 요약"></section>
+<section class="search-panel" aria-label="귀국편 검색">
+<div class="section-head"><div><div class="eyebrow">SEARCH YOUR RETURN</div><h2>귀국편 검색 조건</h2></div><button id="clear" class="plain" type="button">초기화</button></div>
+<div class="fields">
+<label>유럽 출발 도시<select id="origin"><option value="">모든 유럽 도시</option></select></label>
+<label>출발 월<select id="month"><option value="">모든 월</option></select></label>
+<label>좌석 등급<select id="cabin"><option value="PRESTIGE">프레스티지(비즈니스)</option><option value="">비즈니스 + 일등석</option><option value="FIRST">일등석</option></select></label>
+<label>정렬<select id="sort"><option value="date">빠른 출발일순</option><option value="latest">늦은 출발일순</option><option value="origin">출발 도시순</option></select></label>
+<label>시작일<input id="start" type="date"></label><label>종료일<input id="end" type="date"></label>
+</div>
+<div class="quick-row"><button class="chip" type="button" id="april">2027년 4월만 보기</button><label class="weekend"><input type="checkbox" id="weekend"> 주말 출발만</label></div>
+</section>
+<section class="results-section"><div class="results-title"><div><div class="eyebrow">AVAILABLE AWARD SEATS</div><h2>검색된 귀국편 <span id="count"></span></h2></div><a class="official" href="https://www.koreanair.com/booking/book-and-manage/award-seat-availability" target="_blank" rel="noopener noreferrer">대한항공에서 최종 확인 ↗</a></div>
+<p id="coverage" class="coverage"></p><div id="results" class="results" aria-live="polite"><div class="empty">귀국편 자료를 불러오는 중입니다.</div></div></section>
+<section class="footnote"><h3>자료 해석 안내</h3><p>대한항공 공개 일일 보너스 좌석 자료입니다. 한 항공편의 프레스티지석 가능 표시가 확인되어도 잔여 좌석 수나 2명 이상 예약 가능 여부는 알 수 없습니다. 조회 불가·수집 실패는 좌석 없음과 다릅니다. 출발 시각은 현지 기준이며 최종 발권은 대한항공에서 확인해야 합니다.</p></section>
+</main><footer>mileway · EUROPE → INCHEON · ONE-WAY AWARD EXPLORER</footer>
+</body></html>

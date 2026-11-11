@@ -107,6 +107,18 @@ Actions → **Collect public daily award seats** → **Run workflow**.
 
 The collector uses only Korean Air's public daily award-seat source. No airline login, CAPTCHA bypass or authentication circumvention is used.
 
+## Europe to Incheon return awards
+
+The site also has a **유럽 귀국편 검색** page at https://mileway-hoon.onrender.com/returns.html. It uses the currently verified European outbound destinations as the *European departure-airport* monitoring scope, with ICN as the fixed arrival airport. This is a separate daily collector, not a modification of outbound data.
+
+- Scheduled GitHub Actions: Collect Europe to Incheon award returns — 03:40 KST daily, or manual workflow_dispatch.
+- Source: Korean Air public **daily** award calendar; one-way, O (Prestige) and A (First), never Z upgrades.
+- Browser UI selects Europe origin and ICN arrival, verifies each route's first API request against the UI, then only accelerates subsequent months if the direct query matches.
+- Publication: public-data/returns.json; failures do not publish partial scans, and unqueryable route/months preserve previous seats only as **unverified**, excluded from current available counts.
+- Site: filters by Europe departure city, month, dates, cabin and weekends; current ICN-outbound home remains unchanged.
+- **Not yet enabled:** return-route Telegram push alerts. Existing outbound device alert rules are unchanged; adding return notifications needs direction-specific rules and API integration.
+- First production collection requires a successful GitHub Actions run. A code deploy alone does **not** establish real return availability.
+
 ## Known work still in progress
 
 - Persisting route/month checkpoints across separate GitHub runner executions.

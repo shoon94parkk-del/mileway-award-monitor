@@ -1,0 +1,45 @@
+name: Collect Europe to Incheon award returns
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:40 KST daily, after the usual outbound collection window.
+    - cron: '40 18 * * *'
+permissions:
+  contents: write
+concurrency:
+  group: mileway-europe-return-collection
+  cancel-in-progress: false
+jobs:
+  returns:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 230
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify parsers and safeguards
+        run: node --test test/europe-returns.test.mjs test/public-calendar.test.mjs test/public-direct-client.test.mjs
+      - name: Install browser automation
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Collect Europe departures to ICN (official public daily data)
+        run: node --no-warnings scripts/collect-europe-returns.mjs --output data/returns-europe.json
+      - name: Publish only a validated completed return scan
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git pull --rebase origin main
+          node --no-warnings scripts/publish-europe-returns.mjs data/returns-europe.json public-data/returns.json
+          git add public-data/returns.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Europe-to-ICN return award seats"
+            for i in 1 2 3; do
+              git pull --rebase origin main
+              if git push origin HEAD:main; then exit 0; fi
+              sleep $((5*i))
+            done
+            exit 1
+          fi
