@@ -39,9 +39,37 @@ export function prioritizeRoutes(routes){
 
 export function parseDestinationButton(text,region){
   const label=String(text||'').replace(/\s+/g,' ').trim();
-  const code=label.match(IATA)?.[1];
+  const code=label.match(IATA)?.[1]||label.match(/\\b([A-Z]{3})$/)?.[1];
   if(!code||DOMESTIC.has(code))return null;
-  const city=label.replace(IATA,'').trim().replace(/^[-·|]\s*/,'')||code;
+  const city=label.replace(IATA,'').replace(new RegExp('\\\\b'+code+'
+  const route={code,region,label,city};
+  // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
+  return monitoredRoute(route)?route:null;
+}
+
+export function candidateRegionLabels(texts){
+  const controls=new Set(['닫기','이전','모든 지역 보기','대한민국','선택','확인','취소','검색','출발지','도착지']);
+  const parsed=[...new Set((texts||[]).map(t=>String(t||'').replace(/\s+/g,' ').trim()).filter(t=>t&&!controls.has(t)&&!IATA.test(t)))];
+  const monitored=parsed.filter(monitoredRegion);
+  // Discover only source groups that can contain a user-monitored route. This avoids repeatedly opening
+  // Northeast Asia, Russia/Mongolia/Central Asia and Middle East/Africa on every regional collection.
+  // If the responsive DOM hides region labels, fall back to the four current monitored source groups.
+  return monitored.length>=3?monitored:[...MONITORED_REGION_LABELS];
+}
+
+export function validateDiscovery(regions,routes){
+  if(!Array.isArray(regions)||regions.length<3||!Array.isArray(routes)||routes.length<20)throw Error('Suspiciously small route discovery');
+  const seen=new Set();
+  for(const route of routes){
+    // Historical/publication snapshots may still contain intentionally excluded routes.
+    // Live discovery already removes them in parseDestinationButton(), so keep this validator structural only.
+    if(!/^[A-Z]{3}$/.test(route.code)||DOMESTIC.has(route.code)||seen.has(route.code)||!regions.includes(route.region))throw Error('Invalid, domestic or duplicate discovered airport');
+    seen.add(route.code);
+  }
+  if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered region has no airports');
+  return true;
+}
+),'').trim().replace(/^[-·|]\\s*/,'')||code;
   const route={code,region,label,city};
   // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
   return monitoredRoute(route)?route:null;
