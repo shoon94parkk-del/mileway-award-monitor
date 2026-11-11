@@ -39,9 +39,9 @@ export function prioritizeRoutes(routes){
 
 export function parseDestinationButton(text,region){
   const label=String(text||'').replace(/\s+/g,' ').trim();
-  const code=label.match(IATA)?.[1]||label.match(/\\b([A-Z]{3})$/)?.[1];
+  const code=label.match(IATA)?.[1]||label.match(/\b([A-Z]{3})$/)?.[1];
   if(!code||DOMESTIC.has(code))return null;
-  const city=label.replace(IATA,'').replace(new RegExp('\\\\b'+code+'
+  const city=label.replace(IATA,'').replace(new RegExp('\\b'+code+'
   const route={code,region,label,city};
   // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
   return monitoredRoute(route)?route:null;
@@ -69,7 +69,7 @@ export function validateDiscovery(regions,routes){
   if(regions.some(region=>!routes.some(r=>r.region===region)))throw Error('Discovered region has no airports');
   return true;
 }
-),'').trim().replace(/^[-·|]\\s*/,'')||code;
+),'').trim().replace(/^[-·|]\s*/,'')||code;
   const route={code,region,label,city};
   // Drop excluded destinations at discovery time so they never enter the collection queue or logs.
   return monitoredRoute(route)?route:null;
