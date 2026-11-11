@@ -43,7 +43,21 @@ const regionList=async(kind,region)=>{
   return page.locator('[id^="acc-panel-mobile-web"]:visible button:visible');
 };
 async function setup(){
-  await openPublicPage(page);
+  try{
+    await openPublicPage(page);
+  }catch(error){
+    // Record public page state on failures without logging cookies, sessions or tokens.
+    const state=await page.evaluate(()=>({
+      url:location.origin+location.pathname,
+      title:document.title,
+      readyState:document.readyState,
+      bodyPreview:(document.body?.innerText||'').slice(0,650),
+      visibleDepartureButtons:document.querySelectorAll('[id^="departureBtn"]').length,
+      captchaLike:/(captcha|cloudflare|access denied|접근이 제한|로봇이 아닙니다|403 forbidden)/i.test(document.body?.innerText||'')
+    })).catch(e=>({diagnosticError:e.message}));
+    console.error('RETURN PUBLIC NAV DIAGNOSTIC',JSON.stringify(state));
+    throw error;
+  }
   const banner=page.locator('kc-global-cookie-banner');
   if(await banner.count()){
     const reject=banner.getByRole('button',{name:/거부|필수.*허용|Reject|필수 쿠키/i}).first();
