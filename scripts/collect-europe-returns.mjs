@@ -34,7 +34,7 @@ fs.mkdirSync(path.dirname(output),{recursive:true});
 const save=()=>{const tmp=output+'.tmp';fs.writeFileSync(tmp,JSON.stringify(report,null,2));fs.renameSync(tmp,output);};
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless'),args:['--disable-http2','--disable-quic']});
-const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
+const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
 page.setDefaultTimeout(20000);
 const regionList=(kind,region)=>openPublicAirportRegion(page,kind,region);
 async function setup(){
