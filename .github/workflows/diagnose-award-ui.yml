@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/diagnose-award-ui.yml']
+    paths: ['.github/workflows/diagnose-award-ui.yml', 'scripts/diagnose-public-flow.mjs']
 permissions:
   contents: read
 jobs:
