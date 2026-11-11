@@ -29,7 +29,7 @@ async function load(){
  }catch(error){
   if(!report){
    $('#update-time').textContent='귀국편 첫 수집 전 또는 자료 연결을 확인하고 있습니다.';
-   $('#results').innerHTML='<div class="empty"><b>귀국편 수집 결과가 아직 없습니다.</b>첫 수집이 완료되면 이 화면에 유럽 → 인천 노선이 표시됩니다. 기존 인천 출발 검색은 정상적으로 이용할 수 있습니다.</div>';
+   $('#results').innerHTML='<div class="empty"><b>귀국편 수집 결과가 아직 없습니다.</b>첫 수집이 완료되면 이 화면에 유럽 → 인천 노선이 표시됩니다. 인천 출발편은 별도 화면에서 마지막 게시된 자료와 수집 상태를 확인할 수 있습니다.</div>';
    $('#coverage').textContent='데이터를 받지 못했습니다: '+error.message;
   }
  }finally{firstLoad=false;}
