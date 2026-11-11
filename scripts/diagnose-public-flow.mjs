@@ -49,7 +49,7 @@ try{
    await europe.click({timeout:12000});
    await page.waitForTimeout(700);
    await snapshot('EUROPE');
-   const cdg=page.getByRole('tabpanel',{name:'유럽'}).getByRole('button',{name:/\\bCDG\\b/}).first();
+   const cdg=page.getByRole('tabpanel',{name:'유럽'}).getByRole('button',{name:/CDG/}).first();
    console.log('CDG BUTTON',await cdg.count());
    if(await cdg.isVisible().catch(()=>false)){
     await cdg.click({timeout:12000});
@@ -59,7 +59,7 @@ try{
     await page.waitForTimeout(400);
     await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
     await page.getByRole('tab',{name:'대한민국',exact:true}).click();
-    await page.getByRole('tabpanel',{name:'대한민국'}).getByRole('button',{name:/\\bICN\\b/}).first().click();
+    await page.getByRole('tabpanel',{name:'대한민국'}).getByRole('button',{name:/ICN/}).first().click();
     await page.getByRole('radio',{name:'편도'}).click();
     await page.waitForTimeout(800);
     await snapshot('ROUTE_COMPLETE');
