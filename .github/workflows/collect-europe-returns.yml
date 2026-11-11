@@ -1,7 +1,7 @@
 name: Collect Europe to Incheon award returns
 on:
   workflow_dispatch:
-  # Trigger the initial production scan when this workflow itself is enabled.
+  # Trigger a fresh scan on workflow configuration updates, including diagnostics.
   # Subsequent collector publications do not match this path.
   push:
     branches: [main]
