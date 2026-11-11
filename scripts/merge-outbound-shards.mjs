@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {OUTBOUND_SHARDS,GROUP_NAMES,validateShardPlan,groupCodes} from './outbound-shards.mjs';
 import {collectionGroup,monitoredRoute,validateDiscovery} from '../src/route-discovery.mjs';
 import {validatePublication} from '../src/publication-validation.mjs';
@@ -68,7 +69,7 @@ export function mergeOutboundShards(entries){
   }
   return output;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===path.resolve(new URL(import.meta.url).pathname)){
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const input=path.resolve(process.argv[2]||'data/outbound-shards');
   const output=path.resolve(process.argv[3]||'data/outbound-merged');
   fs.mkdirSync(output,{recursive:true});
