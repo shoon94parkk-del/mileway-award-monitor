@@ -109,6 +109,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Auto-register Telegram target
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/register-telegram.mjs
       - name: Record collection and publication status
         env:
           INSTALL_OUTCOME: success
@@ -130,6 +136,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898242+github-actions[bot]@users.noreply.github.com'
           git add public-data/health.json public-data/status.json
+          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
           if ! git diff --cached --quiet; then
             git commit -m "Record five-runner outbound scanner status"
             git pull --rebase origin main
