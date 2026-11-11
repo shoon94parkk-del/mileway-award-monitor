@@ -25,13 +25,13 @@ jobs:
         with:
           node-version: '24'
       - name: Verify parsers and safeguards
-        run: node --test test/europe-returns.test.mjs test/public-calendar.test.mjs test/public-direct-client.test.mjs
+        run: node --test test/europe-returns.test.mjs test/public-calendar.test.mjs test/public-rendered-seats.test.mjs test/public-accessible-award.test.mjs test/public-modern-ui.test.mjs
       - name: Install browser automation
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Diagnose Korean Air award-seat UI (read-only)
         run: node --no-warnings scripts/diagnose-public-award.mjs
         timeout-minutes: 4
-      - name: Collect Europe departures to ICN (official public daily data)
+      - name: Collect Europe departures to ICN from rendered official UI (no API)
         run: node --no-warnings scripts/collect-europe-returns.mjs --output data/returns-europe.json
       - name: Publish only a validated completed return scan
         shell: bash
