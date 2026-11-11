@@ -1,6 +1,9 @@
 name: Collect public daily award seats
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/collect.yml']
 permissions:
   contents: write
 concurrency:
@@ -45,16 +48,13 @@ jobs:
       - name: Test collection-critical parsers
         id: tests
         run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-direct-client.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs
-      - name: Collect and publish Europe, Americas, Oceania, then Asia
+      - name: Collect and publish Europe, Americas, Oceania, Bali via public calendar UI
         id: collect
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          # Guarded hybrid mode: the first month of each route is still collected
-          # through the verified Korean Air UI. The captured request then drives
-          # the remaining months through the same public API. Any unexpected
-          # response automatically falls back to the existing UI collector.
-          MILEWAY_DIRECT_API: '1'
-          COLLECT_DIRECT_INTERVAL_MS: '1000'
+          # Redesigned Korean Air page: derive availability only from rendered
+          # calendar accessibility controls, never direct/intercepted API.
+          MILEWAY_DIRECT_API: '0'
         run: node --no-warnings scripts/collect-regions.mjs
       - name: Report acceleration metrics
         if: always()
