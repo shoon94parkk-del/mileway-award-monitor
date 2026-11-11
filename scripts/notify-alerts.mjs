@@ -67,6 +67,9 @@ async function main(){
  if(has('--test')){if(!telegramToken)throw new Error('TELEGRAM_BOT_TOKEN이 설정되지 않았습니다.');await sendLegacyTest(telegramToken);return;}
  if(!telegramToken){console.log('Telegram Bot Token 미설정: 좌석 알림을 건너뜁니다.');return;}
  const snapshot=readJson(snapshotPath);if(!Array.isArray(snapshot.rows))throw new Error('알림용 snapshot rows가 없습니다.');
+ if((snapshot.bootstrap?.report||snapshot.report||{}).collection_engine==='UI_ACCESSIBLE_ONLY'){
+  console.log('화면 날짜별 좌석 자료는 편명 확인 전까지 신규 편명 알림 전송을 보류합니다.');return;
+ }
  await notifyViaApi(telegramToken,snapshot);
  if(process.env.RESEND_API_KEY)console.log('Email 알림은 공개 사용자 규칙과 분리하기 위해 현재 Telegram 전용 경로에서 비활성화되어 있습니다.');
 }
