@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {PUBLIC_URL,PUBLIC_API,parsePublicApi,parsePublicCalendar,readPublicCalendar,monthRange} from '../src/public-calendar.mjs';
 import {queryPublicSeatMonth} from '../src/public-direct-client.mjs';
+import {selectPublicMonth} from '../src/public-month-ui.mjs';
 import {openPublicPage} from '../src/public-navigation.mjs';
 import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies} from '../src/public-ui.mjs';
 import {readLatestSourceUpdatedAt} from '../src/source-observer.mjs';
@@ -95,12 +96,7 @@ function record(origin,month,data,engine){
   console.log('RETURN',origin,'→ ICN',month,item.status,item.rows.length,engine);
 }
 async function uiMonth(origin,month){
-  await page.locator('#seatCalendarBtn').click();
-  const baseYear=Number((await page.locator('#monthCalendarPopup').innerText()).match(/20\d{2}/)?.[0]);
-  if(!Number.isFinite(baseYear))throw Error('No month calendar base year');
-  const [year,number]=month.split('-').map(Number);
-  await page.locator('#monthCalendarPopup [id="'+((year-baseYear)*12+number-1)+'"]').click();
-  await page.getByRole('button',{name:'선택',exact:true}).click();
+  const layout=await selectPublicMonth(page,month);
   const pending=page.waitForResponse(r=>isApi(r.url()),{timeout:30000});
   await page.getByRole('button',{name:'조회',exact:true}).click();
   const response=await pending;
@@ -109,7 +105,7 @@ async function uiMonth(origin,month){
   const request=JSON.parse(response.request().postData()||'{}'),data=await response.json();
   if(request.departureAirport!==origin||request.arrivalAirport!=='ICN'||request.departureDate!==month.replace('-','')+'01')throw Error('Return UI request route/month mismatch');
   if(data.departureAirport!==origin||data.arrivalAirport!=='ICN'||!Array.isArray(data.flightList))throw Error('Return API response route mismatch');
-  if(data.flightList.length){
+  if(data.flightList.length&&layout==='legacy'){
     await page.locator('#travelCalendarPopup [id^="day_"]').first().waitFor({timeout:20000});
     const expectedLabel=new RegExp(month.replace(/^(\d{4})-(\d{2})$/,(_,year,m)=>year+'년\\s*'+Number(m)+'월'));
     let snapshot=await page.evaluate(readPublicCalendar);
@@ -124,9 +120,11 @@ async function uiMonth(origin,month){
       const found=api.some(r=>r.date===day.date&&r.cabin===day.cabin&&r.available);
       if(found!==day.available)throw Error('Return UI/calendar API mismatch '+origin+' '+day.date);
     }
-  }else{
+  }else if(!data.flightList.length&&layout==='legacy'){
     await page.getByText('검색하신 여정은 조회가 불가합니다.',{exact:true}).waitFor({timeout:8000});
   }
+  // For modern UI, validated route/month API JSON is the only availability
+  // truth; old travelCalendarPopup selectors no longer exist.
   await closePopups();
   await sleep(interval);
   return {data,request};
