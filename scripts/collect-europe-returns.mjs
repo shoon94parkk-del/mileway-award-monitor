@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {PUBLIC_URL,monthRange} from '../src/public-calendar.mjs';
 import {readRenderedSeatCalendar,parseRenderedSeatMonth} from '../src/public-rendered-seats.mjs';
+import {parsePublicAccessibleAwardMonth} from '../src/public-accessible-award.mjs';
 import {selectPublicMonth} from '../src/public-month-ui.mjs';
 import {openPublicPage} from '../src/public-navigation.mjs';
 import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies,hasModernAirportUi} from '../src/public-ui.mjs';
@@ -95,23 +96,37 @@ async function uiMonth(origin,month){
   const deadline=Date.now()+20000;
   let lastError;
   while(Date.now()<deadline){
-    const snapshot=await page.evaluate(readRenderedSeatCalendar);
+    const tree=await page.locator('body').ariaSnapshot();
+    let parsed;
     try{
-      const parsed=parseRenderedSeatMonth(snapshot,{origin,destination:'ICN',month,
-        startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
+      parsed=parsePublicAccessibleAwardMonth(tree,{
+        origin,destination:'ICN',month,startDate:start,endDate:end,
+        sourceUpdatedAt:report.source_updated_at
+      });
+    }catch(error){
+      lastError=error;
+      if(!tree.includes('heading "보너스 좌석 상황"')){
+        const snapshot=await page.evaluate(readRenderedSeatCalendar);
+        try{
+          parsed=parseRenderedSeatMonth(snapshot,{origin,destination:'ICN',month,
+            startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
+        }catch(legacyError){lastError=legacyError;}
+      }
+    }
+    if(parsed){
       await closePopups();
       await sleep(interval);
       return parsed;
-    }catch(error){lastError=error;}
+    }
     await sleep(850);
   }
   // A request denied by the airline leaves no verifiable calendar in the UI.
   // Never convert that case to zero inventory or publish a successful report.
   const aria=await page.locator('body').ariaSnapshot().catch(()=> '');
-  const i=aria.indexOf('heading "보너스 좌석 조회"');
+  const i=Math.max(0,aria.indexOf('heading "보너스 좌석 상황"'));
   console.error('RETURN UI RESULT DIAGNOSTIC',JSON.stringify({
     origin,destination:'ICN',month,reason:lastError?.message,
-    visiblePageOutline:aria.slice(Math.max(0,i),Math.max(0,i)+1200)
+    visiblePageOutline:aria.slice(i,i+10500)
   }));
   throw Error('Public UI displayed no verifiable award calendar for '+origin+'→ICN '+month+
     ': '+(lastError?.message||'no dated result'));
