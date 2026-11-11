@@ -36,7 +36,7 @@ export function dailySourceIsStale(current,now=new Date()){
   const currentKey=sourceTimestampKey(current);
   // The public site now also publishes snapshots at 01:30 KST. Compare
   // against that cadence only for data carrying the new timestamp format.
-  if(/일\\s*01:30$/.test(String(current||''))){
+  if(/일\s*01:30$/.test(String(current||''))){
     const kst=new Date(now.getTime()+9*60*60*1000);
     if(kst.getUTCHours()<1||(kst.getUTCHours()===1&&kst.getUTCMinutes()<30))kst.setUTCDate(kst.getUTCDate()-1);
     const expected=sourceTimestampKey(`${kst.getUTCFullYear()}년 ${kst.getUTCMonth()+1}월 ${kst.getUTCDate()}일 01:30`);
