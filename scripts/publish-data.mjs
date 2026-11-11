@@ -10,7 +10,7 @@ validatePublication(incoming);
 const oldReport=fs.existsSync('public-data/results.json.gz')?JSON.parse(gunzipSync(fs.readFileSync('public-data/results.json.gz')).toString('utf8')):null;
 const report=incoming.scope==='REGION'?mergeCompletedRegion(oldReport,incoming):incoming;
 const pick=(o,keys)=>Object.fromEntries(keys.filter(k=>o[k]!==undefined).map(k=>[k,o[k]]));
-const safe=pick(report,['source','source_type','source_updated_at','start_date','end_date','started_at','finished_at','complete','attempt_complete','target_routes','scope','discovery','region_status','mixed_sources','worldwide_complete','publication_id']);
+const safe=pick(report,['source','source_type','collection_engine','source_updated_at','start_date','end_date','started_at','finished_at','complete','attempt_complete','target_routes','scope','discovery','region_status','mixed_sources','worldwide_complete','publication_id']);
 safe.routes=report.routes.map(r=>pick(r,['code','region','label','city','country']));
 safe.coverage=report.coverage.map(r=>pick(r,['destination','month','days','flightClassRows','source_updated_at']));
 safe.unqueryable=(report.unqueryable||[]).map(r=>pick(r,['destination','month','status','reason','checked_at']));
@@ -23,7 +23,10 @@ const previousCoverage=new Set((previousSnapshot?.bootstrap?.report?.coverage||[
 const newAvailable=safe.rows.filter(r=>r.available===true),oldMap=new Map(previousRows.filter(r=>r.available!==false&&r.available!==0).map(r=>[key(r),r])),newMap=new Map(newAvailable.map(r=>[key(r),r]));
 const historyPath='public-data/changes.json',oldHistory=(()=>{try{return JSON.parse(fs.readFileSync(historyPath,'utf8'));}catch{return {version:1,events:[]};}})();
 let events=Array.isArray(oldHistory.events)?oldHistory.events:[];
-if(previousSnapshot?.bootstrap?.report?.source_updated_at&&(previousSnapshot.bootstrap.report.source_updated_at!==safe.source_updated_at||incoming.scope==='REGION')){
+// An airline day-level calendar cannot identify an individual flight.
+// A former KE-number row and a new '편명 미제공' row are different levels of
+// observation, not a genuine seat opening or closure. Prevent false alerts.
+if(incoming.collection_engine!=='UI_ACCESSIBLE_ONLY'&&previousSnapshot?.bootstrap?.report?.source_updated_at&&(previousSnapshot.bootstrap.report.source_updated_at!==safe.source_updated_at||incoming.scope==='REGION')){
  const detectedAt=new Date().toISOString();
  for(const [id,row] of newMap){const baseline=`${row.destination}|${row.date.slice(0,7)}`;if(!oldMap.has(id)&&previousCoverage.has(baseline))events.unshift({id,kind:'OPENED',destination:row.destination,date:row.date,flight:row.flight,time:row.departureTime||'',cabin:row.cabin,source_updated_at:safe.source_updated_at,detected_at:detectedAt});}
  for(const [id,row] of oldMap)if(!newMap.has(id)&&confidentlyAbsent(row,incoming))events.unshift({id,kind:'CLOSED',destination:row.destination,date:row.date,flight:row.flight,time:row.time||row.departureTime||'',cabin:row.cabin,source_updated_at:safe.source_updated_at,detected_at:detectedAt});
