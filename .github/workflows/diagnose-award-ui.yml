@@ -16,5 +16,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Smoke Incheon outbound UI collector (ICN to CDG, April-May 2027)
+        run: node --no-warnings src/public-extract.mjs --route CDG --start 2027-04-01 --end 2027-05-31 --output data/smoke-outbound-ui --max-retries 1
       - name: Smoke Europe to Incheon UI collector (CDG, April-May 2027)
         run: node --no-warnings scripts/collect-europe-returns.mjs --route CDG --start 2027-04-01 --end 2027-05-31 --output data/smoke-europe-return.json
