@@ -8,10 +8,15 @@ const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless
 try{
  const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900},timezoneId:'Asia/Seoul'});
  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
- await page.waitForTimeout(6000);
+ await page.locator('kds-fromto_1 button.ui-fromto__button').first().waitFor({state:'visible',timeout:45000});
  const cookie=page.getByRole('button',{name:'필수 쿠키만 허용'});
+ await cookie.waitFor({state:'visible',timeout:20000}).catch(()=>{});
  console.log('COOKIE BUTTON',await cookie.count());
- if(await cookie.isVisible().catch(()=>false))await cookie.click();
+ if(await cookie.isVisible().catch(()=>false)){
+  await cookie.click({timeout:10000});
+  await page.getByRole('dialog',{name:'쿠키 활용 동의 안내'}).waitFor({state:'hidden',timeout:12000}).catch(()=>{});
+ }
+ await page.waitForTimeout(500);
  const snapshot=async label=>{
   const aria=(await page.locator('body').ariaSnapshot().catch(e=>'ARIA '+e.message));
   const detail=await page.evaluate(()=>{
