@@ -28,6 +28,9 @@ jobs:
         run: node --test test/europe-returns.test.mjs test/public-calendar.test.mjs test/public-direct-client.test.mjs
       - name: Install browser automation
         run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Diagnose Korean Air award-seat UI (read-only)
+        run: node --no-warnings scripts/diagnose-public-award.mjs
+        timeout-minutes: 4
       - name: Collect Europe departures to ICN (official public daily data)
         run: node --no-warnings scripts/collect-europe-returns.mjs --output data/returns-europe.json
       - name: Publish only a validated completed return scan
