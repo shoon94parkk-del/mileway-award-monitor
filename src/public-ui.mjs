@@ -10,7 +10,13 @@ export async function openPublicAirportRegion(page,kind,region){
   if(await hasModernAirportUi(page)){
     await page.locator('kds-fromto_1 button.ui-fromto__button').nth(kind==='departure'?0:1).click();
     await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
-    await page.getByRole('tab',{name:region,exact:true}).click();
+    const tab=page.getByRole('tab',{name:region,exact:true});
+    if(!await tab.isVisible().catch(()=>false)){
+      const aria=await page.locator('body').ariaSnapshot().catch(()=> '');
+      const i=aria.indexOf('dialog "지역과 도시 선택"');
+      console.log('PUBLIC REGION DIAGNOSTIC',kind,region,aria.slice(Math.max(0,i),Math.max(0,i)+1400));
+    }
+    await tab.click();
     return page.getByRole('tabpanel',{name:region,exact:true}).getByRole('button');
   }
   await page.locator('[id^="'+kind+'Btn"]').click();
