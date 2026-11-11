@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "healthy",
+  "status": "degraded",
   "alerts": {
     "rules_scope": "private_api",
     "rules_configured": null,
@@ -13,8 +13,8 @@
   },
   "source_updated_at": "2026년 11월 10일 23:00",
   "last_successful_scan_at": "2026-11-10T14:09:54.014Z",
-  "last_error_at": "2026-11-03T14:10:25.902Z",
-  "last_error_step": "notification",
+  "last_error_at": "2026-11-11T14:16:10.466Z",
+  "last_error_step": "collection",
   "recovered_at": "2026-11-04T14:09:59.125Z",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z"
 }
