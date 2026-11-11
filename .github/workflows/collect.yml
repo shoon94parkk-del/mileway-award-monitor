@@ -8,128 +8,130 @@ permissions:
   contents: write
 concurrency:
   group: public-daily-collection
-  cancel-in-progress: false
+  # Cancel the older two-lane scanner when the new five-runner scan starts.
+  cancel-in-progress: true
+
 jobs:
-  collect:
+  scan:
     if: github.event.repository.private == false
+    name: Outbound browser runner ${{ matrix.id }} (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - { id: 0, label: 'Europe A', routes: 'LHR,FCO,LIS,MAD,MXP,BCN,BUD' }
+          - { id: 1, label: 'Europe B', routes: 'VIE,AMS,IST,ZRH,CDG,PRG,FRA' }
+          - { id: 2, label: 'Americas A', routes: 'JFK,EWR,DFW,LAS,LAX,YVR,BOS' }
+          - { id: 3, label: 'Americas B', routes: 'SFO,SEA,ORD,ATL,IAD,YYZ,HNL' }
+          - { id: 4, label: 'Oceania + Bali', routes: 'MEL,BNE,SYD,AKL,DPS' }
     runs-on: windows-latest
-    timeout-minutes: 240
+    timeout-minutes: 160
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Resolve KST collection cycle
-        id: cycle
-        shell: pwsh
-        run: |
-          $cycle = node --no-warnings scripts/cycle-info.mjs --prewarm-minutes 15 | ConvertFrom-Json
-          $safe = $cycle.cycle_id -replace '[:+]','-'
-          "id=$safe" >> $env:GITHUB_OUTPUT
-          Write-Host "Collection cycle: $($cycle.cycle_id)"
-      # A forced/interlock scan must really query Korean Air again. Do not restore
-      # route/month checkpoints from an older run just because a previous run saw
-      # the same source marker. In-process retries still resume local files.
-      - name: Start with clean route-month checkpoints
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force data/region-0,data/region-1,data/region-2,data/region-3 -ErrorAction SilentlyContinue
-          Write-Host "Fresh full scan armed: no cross-run route/month cache will be reused."
-      - name: Auto-register Telegram target
-        id: telegram
-        continue-on-error: true
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: node --no-warnings scripts/register-telegram.mjs
-      - name: Install collector dependency
-        id: install
+      - name: Install browser dependency
         run: npm install --no-save --package-lock=false playwright@1.62.1
-      - name: Test collection-critical parsers
-        id: tests
-        run: node --test test/public-source-check.test.mjs test/public-navigation.test.mjs test/public-direct-client.test.mjs test/public-report.test.mjs test/publication-validation.test.mjs test/regional-publication.test.mjs test/route-discovery.test.mjs test/collection-cycle.test.mjs
-      - name: Collect and publish Europe, Americas, Oceania, Bali via public calendar UI
-        id: collect
+      - name: Validate public UI collector and 5-runner partitions
+        run: node --test test/outbound-ui-collector.test.mjs test/outbound-five-runner.test.mjs test/public-accessible-award.test.mjs test/public-modern-ui.test.mjs
+      - name: Scrape Korean Air rendered seat calendar
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          # Redesigned Korean Air page: derive availability only from rendered
-          # calendar accessibility controls, never direct/intercepted API.
           MILEWAY_DIRECT_API: '0'
-        run: node --no-warnings scripts/collect-regions.mjs
-      - name: Report acceleration metrics
-        if: always()
         shell: pwsh
         run: |
-          $files = Get-ChildItem data -Filter results.json -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match 'region-[0-3]' }
-          $ui=0; $direct=0; $verified=0; $verifyCalls=0; $fallbacks=0; $verifyFail=0; $elapsed=@()
-          foreach ($file in $files) {
-            $r = Get-Content $file.FullName -Raw | ConvertFrom-Json
-            if ($r.acceleration) {
-              $ui += [int]$r.acceleration.ui_months
-              $direct += [int]$r.acceleration.direct_months
-              $verified += [int]$r.acceleration.direct_templates_verified
-              $verifyCalls += [int]$r.acceleration.direct_verification_calls
-              $fallbacks += [int]$r.acceleration.direct_fallbacks
-              $verifyFail += [int]$r.acceleration.direct_verification_failures
-            }
-            if ($r.elapsed_ms) { $elapsed += [int64]$r.elapsed_ms }
-          }
-          $covered = $ui + $direct
-          $share = if ($covered -gt 0) { [math]::Round(100*$direct/$covered,1) } else { 0 }
-          $maxElapsed = if ($elapsed.Count) { ($elapsed | Measure-Object -Maximum).Maximum } else { 0 }
-          Write-Host "ACCELERATION TOTAL UI=$ui DIRECT=$direct DIRECT_SHARE=$share% VERIFIED=$verified/$verifyCalls FALLBACKS=$fallbacks VERIFY_FAIL=$verifyFail MAX_REGION_ELAPSED_MS=$maxElapsed"
-          "### Mileway collection acceleration" >> $env:GITHUB_STEP_SUMMARY
-          "- UI months: $ui" >> $env:GITHUB_STEP_SUMMARY
-          "- Direct API months: $direct ($share%)" >> $env:GITHUB_STEP_SUMMARY
-          "- Direct templates verified: $verified / $verifyCalls" >> $env:GITHUB_STEP_SUMMARY
-          "- Direct fallbacks: $fallbacks" >> $env:GITHUB_STEP_SUMMARY
-          "- Verification failures: $verifyFail" >> $env:GITHUB_STEP_SUMMARY
-          "- Slowest regional collector: $maxElapsed ms" >> $env:GITHUB_STEP_SUMMARY
-      - name: Recheck matching seat alerts after all regional publications
-        id: notify
-        if: always() && steps.collect.outputs.published == 'true'
-        continue-on-error: true
-        env:
-          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
-        run: node --no-warnings scripts/notify-alerts.mjs --snapshot public-data/snapshot.json --state public-data/alert-state.json
-      - name: Update public health
-        id: health
-        if: always()
-        env:
-          INSTALL_OUTCOME: ${{ steps.install.outcome }}
-          SOURCE_OUTCOME: skipped
-          TESTS_OUTCOME: ${{ steps.tests.outcome }}
-          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
-          BUILD_OUTCOME: ${{ steps.collect.outputs.published == 'true' && 'success' || 'skipped' }}
-          NOTIFY_OUTCOME: ${{ steps.notify.outcome }}
-          FULL_SCAN: ${{ steps.collect.outcome == 'success' }}
-          ALERT_RULES_JSON: ${{ secrets.ALERT_RULES_JSON }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
-        run: node --no-warnings scripts/write-health.mjs public-data/health.json
-      - name: Refresh public status from final snapshot
-        id: status
-        if: always()
-        run: node --no-warnings scripts/build-public-status.mjs
-      - name: Persist public state
-        if: always()
+          Write-Host "Runner ${{ matrix.id }} scanning: ${{ matrix.routes }}"
+          node --no-warnings src/public-extract.mjs --route "${{ matrix.routes }}" --output data/shard-results --interval-ms 3000 --max-retries 2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: outbound-shard-${{ matrix.id }}
+          path: data/shard-results/results.json
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    name: Merge 5 runners, validate 4 regions and publish
+    needs: scan
+    if: needs.scan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: outbound-shard-*
+          path: data/outbound-shards
+      - name: Check five shards and validate all regional coverage
+        run: node --no-warnings scripts/merge-outbound-shards.mjs data/outbound-shards data/outbound-merged
+      - name: Publish all validated regions together
+        id: publish
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898242+github-actions[bot]@users.noreply.github.com"
+          set -euo pipefail
+          for i in 0 1 2 3; do
+            node --no-warnings scripts/publish-data.mjs "data/outbound-merged/$i.json"
+            node --no-warnings scripts/build-cloud.mjs
+            cp dist/snapshot.json public-data/snapshot.json
+          done
+          node --check dist/app.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898242+github-actions[bot]@users.noreply.github.com'
+          git add public-data/results.json.gz public-data/snapshot.json public-data/changes.json
+          git diff --cached --quiet && { echo 'No changes to publish'; exit 0; }
+          git commit -m "Publish five-runner outbound award-seat scan"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Check seat alerts
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node --no-warnings scripts/notify-alerts.mjs --snapshot public-data/snapshot.json
+
+  status:
+    name: Record full scan health
+    needs: [scan, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Record collection and publication status
+        env:
+          INSTALL_OUTCOME: success
+          SOURCE_OUTCOME: skipped
+          TESTS_OUTCOME: ${{ needs.scan.result }}
+          COLLECT_OUTCOME: ${{ needs.scan.result }}
+          BUILD_OUTCOME: ${{ needs.publish.result }}
+          FULL_SCAN: ${{ needs.publish.result == 'success' }}
+          NOTIFY_OUTCOME: skipped
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          node --no-warnings scripts/write-health.mjs public-data/health.json
+          node --no-warnings scripts/build-public-status.mjs
+      - name: Publish health state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898242+github-actions[bot]@users.noreply.github.com'
           git add public-data/health.json public-data/status.json
-          if [ -f public-data/alert-state.json ]; then git add public-data/alert-state.json; fi
-          if [ -f public-data/telegram-target.json ]; then git add public-data/telegram-target.json; fi
           if ! git diff --cached --quiet; then
-            git commit -m "Update Mileway public state"
+            git commit -m "Record five-runner outbound scanner status"
             git pull --rebase origin main
-            git push
+            git push origin HEAD:main
           fi
