@@ -5,6 +5,8 @@ const FIRST='일등석 보너스/좌석승급';
 const UNQUERYABLE='검색하신 여정은 조회가 불가합니다.';
 
 export function readRenderedSeatCalendar(){
+  // Playwright serializes this function into the page; no module closures exist there.
+  const PRESTIGE='프레스티지석 보너스',FIRST='일등석 보너스/좌석승급',UNQUERYABLE='검색하신 여정은 조회가 불가합니다.';
   const visible=el=>!!(el&&el.getClientRects().length&&!el.closest('[aria-hidden="true"]'));
   const modern=document.querySelector('kds-fromto_1');
   const origin=modern?.getAttribute('is-from-code')||null;
