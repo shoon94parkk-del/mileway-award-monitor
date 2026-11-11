@@ -1,0 +1,19 @@
+name: Diagnose Korean Air public award UI
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnose-award-ui.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: windows-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: node --no-warnings scripts/diagnose-public-award.mjs
