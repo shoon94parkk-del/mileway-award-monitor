@@ -32,7 +32,19 @@ try{
  await from.click({timeout:15000});
  await page.waitForTimeout(1200);
  await snapshot('FROM_OPEN');
- const candidate=page.getByText(/모든 지역|유럽|대한민국/).first();
- console.log('REGION TEXT',await candidate.count());
+ const region=page.getByRole('button',{name:'모든 지역 보기',exact:true});
+ console.log('ALL REGIONS BTN',await region.count());
+ if(await region.isVisible().catch(()=>false)){
+  await region.click({timeout:12000});
+  await page.waitForTimeout(1000);
+  await snapshot('ALL_REGIONS');
+  const europe=page.getByRole('button',{name:'유럽',exact:true});
+  console.log('EUROPE BTN',await europe.count());
+  if(await europe.isVisible().catch(()=>false)){
+   await europe.click({timeout:12000});
+   await page.waitForTimeout(1000);
+   await snapshot('EUROPE');
+  }
+ }
  await page.close();
 }finally{await browser.close()}
