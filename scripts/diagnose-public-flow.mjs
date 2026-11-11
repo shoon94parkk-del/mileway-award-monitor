@@ -66,6 +66,24 @@ try{
     await page.getByRole('button',{name:/탑승월/}).click();
     await page.waitForTimeout(700);
     await snapshot('DATE_OPEN');
+    const monthDialog=page.getByRole('dialog',{name:'탑승월 선택'});
+    await monthDialog.getByRole('group',{name:'2027'}).getByRole('button',{name:'4월',exact:true}).click();
+    await monthDialog.getByRole('button',{name:'선택',exact:true}).click();
+    await snapshot('MONTH_SELECTED');
+    const responses=[];
+    page.on('response',async response=>{
+      const url=response.url();
+      if(!/bonusSeatView|bonusSeat|award/i.test(url)||responses.length>=8)return;
+      const req=response.request();
+      const body=req.postData()||'';
+      let sample='';
+      try{const json=await response.json();sample=JSON.stringify(json).slice(0,1500);}catch{}
+      responses.push({status:response.status(),path:new URL(url).pathname,body:body.slice(0,1600),sample});
+    });
+    await page.getByRole('button',{name:'조회',exact:true}).click();
+    await page.waitForTimeout(8500);
+    await snapshot('QUERY');
+    console.log('PUBLIC API CAPTURE',JSON.stringify(responses).slice(0,9000));
    }
   }
  }
