@@ -90,9 +90,7 @@ function record(origin,month,item){
   save();
   console.log('RETURN UI ONLY',origin,'→ ICN',month,item.status,item.rows.length,'available date/class markers');
 }
-async function uiMonth(origin,month){
-  await selectPublicMonth(page,month);
-  await page.getByRole('button',{name:'조회',exact:true}).click();
+async function readUiMonthResult(origin,month){
   const deadline=Date.now()+20000;
   let lastError;
   while(Date.now()<deadline){
@@ -131,27 +129,43 @@ async function uiMonth(origin,month){
   throw Error('Public UI displayed no verifiable award calendar for '+origin+'→ICN '+month+
     ': '+(lastError?.message||'no dated result'));
 }
+async function uiMonth(origin,month){
+  await selectPublicMonth(page,month);
+  await page.getByRole('button',{name:'조회',exact:true}).click();
+  return readUiMonthResult(origin,month);
+}
+async function uiNextMonth(origin,month){
+  const navigation=page.getByRole('navigation',{name:'가는 여정'});
+  await navigation.getByRole('button',{name:'다음 달',exact:true}).click();
+  return readUiMonthResult(origin,month);
+}
 try{
   await setup();
   // Route scope is the last validated outbound discovery. The public picker
   // is used to verify each European origin before the return-month search.
-  for(const route of origins){
-    for(const month of months){
+  for(const [routeIndex,route] of origins.entries()){
+    for(const [monthIndex,month] of months.entries()){
       let completed=false,lastError=null;
       for(let attempt=1;attempt<=retries&&!completed;attempt++){
         try{
-          await selectOrigin(route.code);
-          const result=await uiMonth(route.code,month);
+          let result;
+          if(attempt===1&&monthIndex>0){
+            // Reuse the visible airline result calendar. Its own next-month
+            // control avoids an unnecessary new route search / network call.
+            result=await uiNextMonth(route.code,month);
+          }else{
+            // First month of a route, or a retry after a failed calendar step.
+            if(routeIndex>0||monthIndex>0||attempt>1)await setup();
+            await selectOrigin(route.code);
+            result=await uiMonth(route.code,month);
+          }
           record(route.code,month,result);
           completed=true;
         }catch(error){
           lastError=error;
           console.error('RETURN UI FAILURE',route.code,month,attempt,error.message);
           await closePopups().catch(()=>{});
-          if(attempt<retries){
-            await sleep(6000);
-            await setup();
-          }
+          if(attempt<retries)await sleep(6000);
         }
       }
       if(!completed){
