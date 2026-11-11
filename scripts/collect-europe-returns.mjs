@@ -50,8 +50,6 @@ async function setup(){
     if(await reject.count())await reject.click();
     else {const close=banner.getByRole('button',{name:/닫기|Close/i}).first();if(await close.count())await close.click();}
   }
-  await regionList('destination','대한민국');
-  await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
   await page.locator('label[for="bonusTripType_OW"]').click();
   const updated=await readLatestSourceUpdatedAt(page,{sampleMs:8000,intervalMs:750});
   if(!updated)throw Error('Missing Korean Air daily timestamp');
@@ -65,8 +63,11 @@ async function availableOrigins(){
   return new Set(labels.map(value=>value.trim().match(/^([A-Z]{3})\b/)?.[1]).filter(Boolean));
 }
 async function selectOrigin(code){
+  // Selecting the European origin can reset the destination. Always set ICN afterwards.
   await regionList('departure','유럽');
   await page.getByRole('button',{name:new RegExp('^'+code+' ')}).click();
+  await regionList('destination','대한민국');
+  await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
 }
 async function closePopups(){
   const calendar=page.locator('#travelCalendarCloseBtn');
@@ -107,7 +108,13 @@ async function uiMonth(origin,month){
   if(data.departureAirport!==origin||data.arrivalAirport!=='ICN'||!Array.isArray(data.flightList))throw Error('Return API response route mismatch');
   if(data.flightList.length){
     await page.locator('#travelCalendarPopup [id^="day_"]').first().waitFor({timeout:20000});
-    const snapshot=await page.evaluate(readPublicCalendar);
+    const expectedLabel=new RegExp(month.replace(/^(\d{4})-(\d{2})$/,(_,year,m)=>year+'년\\s*'+Number(m)+'월'));
+    let snapshot=await page.evaluate(readPublicCalendar);
+    const displayDeadline=Date.now()+15000;
+    while(!expectedLabel.test(snapshot.month||'')&&Date.now()<displayDeadline){
+      await sleep(500);snapshot=await page.evaluate(readPublicCalendar);
+    }
+    if(!expectedLabel.test(snapshot.month||''))throw Error('Return UI calendar month did not advance to '+month);
     const calendar=parsePublicCalendar(snapshot,{origin,destination:'ICN',startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
     const api=parsePublicApi(data,{origin,destination:'ICN',month,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at});
     for(const day of calendar.filter(r=>r.available!==null)){
