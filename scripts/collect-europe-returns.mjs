@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import {PUBLIC_URL,PUBLIC_API,parsePublicApi,parsePublicCalendar,readPublicCalendar,monthRange} from '../src/public-calendar.mjs';
 import {queryPublicSeatMonth} from '../src/public-direct-client.mjs';
 import {openPublicPage} from '../src/public-navigation.mjs';
+import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies} from '../src/public-ui.mjs';
 import {readLatestSourceUpdatedAt} from '../src/source-observer.mjs';
 import {getReturnOrigins,makeReturnMonth} from '../src/europe-returns.mjs';
 
@@ -36,12 +37,7 @@ const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless
 const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
 page.setDefaultTimeout(20000);
 const isApi=url=>url===PUBLIC_API||url.startsWith(PUBLIC_API+'?');
-const regionList=async(kind,region)=>{
-  await page.locator('[id^="'+kind+'Btn"]').click();
-  await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
-  await page.getByRole('button',{name:region,exact:true}).click();
-  return page.locator('[id^="acc-panel-mobile-web"]:visible button:visible');
-};
+const regionList=(kind,region)=>openPublicAirportRegion(page,kind,region);
 async function setup(){
   try{
     await openPublicPage(page);
@@ -58,13 +54,8 @@ async function setup(){
     console.error('RETURN PUBLIC NAV DIAGNOSTIC',JSON.stringify(state));
     throw error;
   }
-  const banner=page.locator('kc-global-cookie-banner');
-  if(await banner.count()){
-    const reject=banner.getByRole('button',{name:/거부|필수.*허용|Reject|필수 쿠키/i}).first();
-    if(await reject.count())await reject.click();
-    else {const close=banner.getByRole('button',{name:/닫기|Close/i}).first();if(await close.count())await close.click();}
-  }
-  await page.locator('label[for="bonusTripType_OW"]').click();
+  await dismissPublicCookies(page);
+  await selectPublicOneWay(page);
   const updated=await readLatestSourceUpdatedAt(page,{sampleMs:8000,intervalMs:750});
   if(!updated)throw Error('Missing Korean Air daily timestamp');
   if(report.source_updated_at&&report.source_updated_at!==updated)throw Error('Source changed during return collection');
@@ -73,15 +64,13 @@ async function setup(){
 async function availableOrigins(){
   const buttons=await regionList('departure','유럽');
   const labels=await buttons.allTextContents();
-  await page.getByRole('button',{name:'닫기',exact:true}).click();
-  return new Set(labels.map(value=>value.trim().match(/^([A-Z]{3})\b/)?.[1]).filter(Boolean));
+  await closePublicAirportRegion(page);
+  return new Set(labels.map(value=>value.trim().match(/^([A-Z]{3})\b/)?.[1]||value.trim().match(/\b([A-Z]{3})$/)?.[1]).filter(Boolean));
 }
 async function selectOrigin(code){
-  // Selecting the European origin can reset the destination. Always set ICN afterwards.
-  await regionList('departure','유럽');
-  await page.getByRole('button',{name:new RegExp('^'+code+' ')}).click();
-  await regionList('destination','대한민국');
-  await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
+  // Both directions use the same public UI. A new origin may reset destination.
+  await choosePublicAirport(page,'departure','유럽',code);
+  await choosePublicAirport(page,'destination','대한민국','ICN');
 }
 async function closePopups(){
   const calendar=page.locator('#travelCalendarCloseBtn');
