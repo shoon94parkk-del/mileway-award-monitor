@@ -9,6 +9,7 @@ import {writePublicReport} from './public-report.mjs';
 import {claimCollection} from './collection-lock.mjs';
 import {candidateRegionLabels,parseDestinationButton,validateDiscovery,prioritizeRoutes,collectionGroup} from './route-discovery.mjs';
 import {openPublicPage} from './public-navigation.mjs';
+import {openPublicAirportRegion,choosePublicAirport,closePublicAirportRegion,selectPublicOneWay,dismissPublicCookies,hasModernAirportUi} from './public-ui.mjs';
 import {readLatestSourceUpdatedAt} from './source-observer.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -69,12 +70,14 @@ if(process.argv.includes('--diagnose')) page.on('response',async r=>{
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const waitForMonth=()=>page.waitForResponse(r=>isPublicSeatApi(r.url()),{timeout:30000});
 async function regionList(kind,region) {
-  await page.locator(`[id^="${kind}Btn"]`).click();
-  await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
-  await page.getByRole('button',{name:region,exact:true}).click();
-  return page.locator('[id^="acc-panel-mobile-web"]:visible button:visible');
+  return openPublicAirportRegion(page,kind,region);
 }
 async function discoverDestinationRegions() {
+  if(await hasModernAirportUi(page)){
+    // The new public UI displays all regions as tabs. Keep the original
+    // monitored-group scope and do not expand to unrelated airports.
+    return ['미주','동남아시아/서남아시아','유럽','대양주/괌'];
+  }
   await page.locator('[id^="destinationBtn"]').click();
   await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
   const texts=await page.locator('[id^="acc-panel-mobile-web"]:visible button:visible').allTextContents();
@@ -83,22 +86,15 @@ async function discoverDestinationRegions() {
   if(!regions.length)throw new Error('No destination regions discovered from Korean Air public selector');
   return regions;
 }
-async function dismissCookie() {
-  const cookie=page.locator('kc-global-cookie-banner');
-  if(!await cookie.count()) return;
-  const reject=cookie.getByRole('button',{name:/거부|필수.*허용|Reject|필수 쿠키/i}).first();
-  if(await reject.count()) { await reject.click(); return; }
-  const close=cookie.getByRole('button',{name:/닫기|Close/i}).first();
-  if(await close.count()) { await close.click(); return; }
-  throw new Error('Cookie banner needs a supported dismissal: '+(await cookie.locator('button').allTextContents()).join('|'));
+async function dismissCookie(){
+  await dismissPublicCookies(page);
 }
 async function initializeSearchPage(expectedSourceUpdatedAt=null) {
   pending.clear();apiErrors=[];lastPublicResponse=null;
   await openPublicPage(page);
   await dismissCookie();
-  await regionList('departure','대한민국');
-  await page.getByRole('button',{name:/^ICN 서울\/인천/}).click();
-  await page.locator('label[for="bonusTripType_OW"]').click();
+  await choosePublicAirport(page,'departure','대한민국','ICN');
+  await selectPublicOneWay(page);
   const sourceUpdatedAt=await readLatestSourceUpdatedAt(page,{sampleMs:8000,intervalMs:750});
   if(!sourceUpdatedAt) throw new Error('Missing public data update timestamp');
   if(expectedSourceUpdatedAt&&sourceUpdatedAt!==expectedSourceUpdatedAt) {
@@ -112,8 +108,7 @@ async function assertSourceStillCurrent() {
   if(report.source_updated_at&&observed!==report.source_updated_at)throw new Error(`Public source timestamp changed during collection: ${report.source_updated_at} -> ${observed}`);
 }
 async function selectDestination(route) {
-  await regionList('destination',route.region);
-  await page.getByRole('button',{name:new RegExp(`^${route.code} `)}).click();
+  await choosePublicAirport(page,'destination',route.region,route.code);
 }
 function seatSignature(data,route,monthKey){
   const options={origin:'ICN',destination:route.code,month:monthKey,startDate:start,endDate:end,sourceUpdatedAt:report.source_updated_at};
@@ -247,7 +242,7 @@ try {
       const route=parseDestinationButton(text,region);
       if(route&&!routes.some(r=>r.code===route.code)){routes.push(route);found.push(route);}
     }
-    await page.getByRole('button',{name:'닫기',exact:true}).click();
+    await closePublicAirportRegion(page);
     if(!found.length)throw new Error(`Destination region ${region} contained no airport buttons`);
   }
   validateDiscovery(regions,routes);
