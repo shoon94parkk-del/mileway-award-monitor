@@ -9,6 +9,9 @@ try{
  const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900},timezoneId:'Asia/Seoul'});
  await page.goto(PUBLIC_URL,{waitUntil:'commit',timeout:30000});
  await page.waitForTimeout(6000);
+ const cookie=page.getByRole('button',{name:'필수 쿠키만 허용'});
+ console.log('COOKIE BUTTON',await cookie.count());
+ if(await cookie.isVisible().catch(()=>false))await cookie.click();
  const snapshot=async label=>{
   const aria=(await page.locator('body').ariaSnapshot().catch(e=>'ARIA '+e.message));
   const detail=await page.evaluate(()=>{
