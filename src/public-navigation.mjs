@@ -41,8 +41,11 @@ export async function openPublicPage(page,{attempts=2,delay=ms=>new Promise(r=>s
       const response=await page.goto(target.toString(),{waitUntil:'commit',timeout:30000});
       if(response&&[403,429].includes(response.status()))throw Error(`ACCESS_LIMIT ${response.status()}: stop public navigation`);
       if(response&&!response.ok())throw Error(`Public page HTTP ${response.status()}`);
-      await page.locator('[id^="departureBtn"]').first().waitFor({state:'visible',timeout:60000});
-      console.log('PUBLIC UI READY: departureBtn');
+      const layout=await Promise.any([
+        page.locator('[id^="departureBtn"]').first().waitFor({state:'visible',timeout:60000}).then(()=> 'legacy'),
+        page.locator('kds-fromto_1 button.ui-fromto__button').first().waitFor({state:'visible',timeout:60000}).then(()=> 'modern'),
+      ]);
+      console.log('PUBLIC UI READY: '+layout);
       return;
     }catch(error){
       last=error;
