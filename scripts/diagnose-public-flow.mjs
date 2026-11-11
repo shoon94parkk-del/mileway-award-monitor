@@ -43,12 +43,30 @@ try{
   await region.click({timeout:12000});
   await page.waitForTimeout(1000);
   await snapshot('ALL_REGIONS');
-  const europe=page.getByRole('button',{name:'유럽',exact:true});
-  console.log('EUROPE BTN',await europe.count());
+  const europe=page.getByRole('tab',{name:'유럽',exact:true});
+  console.log('EUROPE TAB',await europe.count());
   if(await europe.isVisible().catch(()=>false)){
    await europe.click({timeout:12000});
-   await page.waitForTimeout(1000);
+   await page.waitForTimeout(700);
    await snapshot('EUROPE');
+   const cdg=page.getByRole('tabpanel',{name:'유럽'}).getByRole('button',{name:/\\bCDG\\b/}).first();
+   console.log('CDG BUTTON',await cdg.count());
+   if(await cdg.isVisible().catch(()=>false)){
+    await cdg.click({timeout:12000});
+    await page.waitForTimeout(700);
+    await snapshot('ORIGIN_SELECTED');
+    await page.locator('kds-fromto_1 button.ui-fromto__button').nth(1).click({timeout:15000});
+    await page.waitForTimeout(400);
+    await page.getByRole('button',{name:'모든 지역 보기',exact:true}).click();
+    await page.getByRole('tab',{name:'대한민국',exact:true}).click();
+    await page.getByRole('tabpanel',{name:'대한민국'}).getByRole('button',{name:/\\bICN\\b/}).first().click();
+    await page.getByRole('radio',{name:'편도'}).click();
+    await page.waitForTimeout(800);
+    await snapshot('ROUTE_COMPLETE');
+    await page.getByRole('button',{name:/탑승월/}).click();
+    await page.waitForTimeout(700);
+    await snapshot('DATE_OPEN');
+   }
   }
  }
  await page.close();
