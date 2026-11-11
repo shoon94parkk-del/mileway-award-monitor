@@ -48,7 +48,7 @@ db.exec('CREATE TABLE IF NOT EXISTS snapshots (origin TEXT, destination TEXT, mo
 const store=db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?)');
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
-const page=await browser.newPage({locale:'ko-KR',viewport:{width:480,height:900}});
+const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
 page.setDefaultTimeout(20000);
 const pending=new Set();
 let apiErrors=[];
