@@ -46,6 +46,9 @@ export async function selectPublicOneWay(page){
 
 export async function dismissPublicCookies(page){
   const cookie=page.getByRole('button',{name:'필수 쿠키만 허용',exact:true});
+  if(await page.locator('kc-global-cookie-banner').count()){
+    await cookie.waitFor({state:'visible',timeout:6500}).catch(()=>{});
+  }
   if(await cookie.isVisible().catch(()=>false)){
     await cookie.click({timeout:10000});
     await page.getByRole('dialog',{name:'쿠키 활용 동의 안내'}).waitFor({state:'hidden',timeout:10000}).catch(()=>{});
