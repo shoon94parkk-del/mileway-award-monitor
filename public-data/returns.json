@@ -1,0 +1,2584 @@
+{
+  "direction": "RETURN",
+  "destination": "ICN",
+  "region": "유럽",
+  "source": "https://www.koreanair.com/booking/book-and-manage/award-seat-availability",
+  "source_type": "KOREAN_AIR_PUBLIC_DAILY",
+  "source_updated_at": "2026년 11월 12일 01:30",
+  "started_at": "2026-11-12T00:37:35.079Z",
+  "start_date": "2026-11-12",
+  "end_date": "2027-11-06",
+  "attempt_complete": true,
+  "complete": false,
+  "origins": [
+    {
+      "code": "LHR",
+      "city": "런던",
+      "region": "유럽",
+      "country": "영국"
+    },
+    {
+      "code": "FCO",
+      "city": "로마",
+      "region": "유럽",
+      "country": "이탈리아"
+    },
+    {
+      "code": "LIS",
+      "city": "리스본",
+      "region": "유럽",
+      "country": "포르투갈"
+    },
+    {
+      "code": "MAD",
+      "city": "마드리드",
+      "region": "유럽",
+      "country": "스페인"
+    },
+    {
+      "code": "MXP",
+      "city": "밀라노",
+      "region": "유럽",
+      "country": "이탈리아"
+    },
+    {
+      "code": "BCN",
+      "city": "바르셀로나",
+      "region": "유럽",
+      "country": "스페인"
+    },
+    {
+      "code": "BUD",
+      "city": "부다페스트",
+      "region": "유럽",
+      "country": "헝가리"
+    },
+    {
+      "code": "VIE",
+      "city": "비엔나",
+      "region": "유럽",
+      "country": "오스트리아"
+    },
+    {
+      "code": "AMS",
+      "city": "암스테르담",
+      "region": "유럽",
+      "country": "네덜란드"
+    },
+    {
+      "code": "IST",
+      "city": "이스탄불",
+      "region": "유럽",
+      "country": "튀르키예"
+    },
+    {
+      "code": "ZRH",
+      "city": "취리히",
+      "region": "유럽",
+      "country": "스위스"
+    },
+    {
+      "code": "CDG",
+      "city": "파리",
+      "region": "유럽",
+      "country": "프랑스"
+    },
+    {
+      "code": "PRG",
+      "city": "프라하",
+      "region": "유럽",
+      "country": "체코"
+    },
+    {
+      "code": "FRA",
+      "city": "프랑크푸르트",
+      "region": "유럽",
+      "country": "독일"
+    }
+  ],
+  "coverage": [
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LHR",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FCO",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "LIS",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MAD",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "MXP",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BUD",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "VIE",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "AMS",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "IST",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "CDG",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "PRG",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2026-11",
+      "days": 19,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2026-12",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-01",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-02",
+      "days": 28,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-03",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-04",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-05",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-06",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-07",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-08",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-09",
+      "days": 30,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-10",
+      "days": 31,
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "FRA",
+      "destination": "ICN",
+      "month": "2027-11",
+      "days": 7,
+      "engine": "UI_DOM"
+    }
+  ],
+  "unqueryable": [
+    {
+      "origin": "BCN",
+      "month": "2026-11",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "month": "2026-12",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "month": "2027-01",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "month": "2027-02",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "BCN",
+      "month": "2027-03",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "month": "2026-11",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "month": "2026-12",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "month": "2027-01",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "month": "2027-02",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    },
+    {
+      "origin": "ZRH",
+      "month": "2027-11",
+      "status": "UNQUERYABLE",
+      "reason": "대한항공 화면에 해당 구간 조회 불가가 명시됨",
+      "engine": "UI_DOM"
+    }
+  ],
+  "failed": [],
+  "rows": [
+    {
+      "date": "2026-11-22",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:09.663Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-26",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:49.850Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-12",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:54.286Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-13",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:54.286Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-01",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:58.725Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-02",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:58.725Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-04",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:58.725Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-11-04",
+      "origin": "LHR",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:03.170Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-10",
+      "origin": "MAD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:42.815Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-01",
+      "origin": "MXP",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:41.622Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-06-03",
+      "origin": "MXP",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:46.068Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-12",
+      "origin": "MXP",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:55.081Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-02",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:30.566Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-03",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:30.566Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-04",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:30.566Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-09",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:30.566Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-13",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:30.566Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-12",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:35.026Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-13",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:35.026Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-14",
+      "origin": "BCN",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:35.026Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-02",
+      "origin": "BUD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:23.836Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-07-29",
+      "origin": "BUD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:32.739Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-01",
+      "origin": "BUD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:46.093Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-19",
+      "origin": "BUD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:46.093Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-11-06",
+      "origin": "BUD",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:50.519Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-11-17",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:31.105Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-11-29",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:31.105Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-17",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:35.554Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-22",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:35.554Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-24",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:35.554Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-29",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:35.554Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-31",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:35.554Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-03",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:41:11.974Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-10",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:41:16.409Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-08",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:41:20.833Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-31",
+      "origin": "AMS",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:41:20.833Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-02",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:19.925Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-13",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:19.925Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-07-29",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:28.879Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-08",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:33.316Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-09",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:33.316Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-02",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:37.739Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-10-21",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:42.181Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-11-06",
+      "origin": "IST",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:46.610Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-11",
+      "origin": "CDG",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:50.214Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-08-14",
+      "origin": "CDG",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:42:50.214Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-11-16",
+      "origin": "PRG",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:05.923Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-11-23",
+      "origin": "PRG",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:05.923Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-11-06",
+      "origin": "PRG",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:38:59.450Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-13",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:27.627Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2026-12-16",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:27.627Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-01-08",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:32.090Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-01-10",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:32.090Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-03",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:49.934Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-05-15",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:39:49.934Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-11",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:07.795Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    },
+    {
+      "date": "2027-09-13",
+      "origin": "FRA",
+      "destination": "ICN",
+      "flight": null,
+      "departureTime": null,
+      "aircraft": null,
+      "cabin": "PRESTIGE",
+      "fareClass": "O",
+      "available": true,
+      "availabilityType": "AWARD",
+      "seats": null,
+      "sourcePath": "PUBLIC_UI_RENDERED",
+      "sourceUpdatedAt": "2026년 11월 12일 01:30",
+      "checkedAt": "2026-11-12T00:40:07.795Z",
+      "source": "KOREAN_AIR_PUBLIC_DAILY",
+      "region": "유럽",
+      "direction": "RETURN",
+      "verified": true,
+      "carried_from_previous": false
+    }
+  ],
+  "collection_engine": "UI_ACCESSIBLE_5_RUNNERS",
+  "acceleration": {
+    "ui_months": 182
+  },
+  "finished_at": "2026-11-12T00:43:07.032Z",
+  "preserved_unknown_rows": 0,
+  "last_successful_scan_at": "2026-11-12T00:43:07.032Z"
+}
