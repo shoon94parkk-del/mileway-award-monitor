@@ -283,7 +283,7 @@ try {
       checkStop();
       const routeMonths=months.filter(month=>!report.coverage.some(c=>c.destination===route.code&&c.month===month)&&
         !report.unqueryable.some(c=>c.destination===route.code&&c.month===month));
-      let previousMonth=null;
+      let previousMonth=null,queryFormReady=false;
       for(const monthKey of routeMonths){
         let success=false,lastError;
         for(let attempt=1;attempt<=maxRetries&&!success;attempt++){
@@ -294,29 +294,38 @@ try {
             if(attempt===1&&chronological){
               await page.getByRole('navigation',{name:'가는 여정'}).getByRole('button',{name:'다음 달',exact:true}).click();
             }else{
-              await initializeSearchPage(report.source_updated_at);
-              await selectDestination(route);
+              if(!(attempt===1&&queryFormReady)){
+                await initializeSearchPage(report.source_updated_at);
+                await selectDestination(route);
+              }
               await selectPublicMonth(page,monthKey);
               await page.getByRole('button',{name:'조회',exact:true}).click();
+              queryFormReady=false;
             }
             const result=await readOutboundScreen(page,{
               route,month:monthKey,start,end,sourceUpdatedAt:report.source_updated_at
             });
-            if(result.status!=='COVERED')throw Error('Cannot safely publish unavailable route as zero seats');
-            report.rows.push(...result.rows);
-            report.coverage.push({destination:route.code,month:monthKey,days:result.days,
-              flightClassRows:result.rows.length,engine:'UI_ACCESSIBLE'});
+            if(result.status==='UNQUERYABLE'){
+              report.unqueryable.push({destination:route.code,month:monthKey,status:'UNQUERYABLE',
+                reason:result.reason,checked_at:new Date().toISOString(),engine:'UI_ACCESSIBLE'});
+              previousMonth=null;
+              queryFormReady=true;
+            }else if(result.status==='COVERED'){
+              report.rows.push(...result.rows);
+              report.coverage.push({destination:route.code,month:monthKey,days:result.days,
+                flightClassRows:result.rows.length,engine:'UI_ACCESSIBLE'});
+              previousMonth=monthKey;
+            }else throw Error('Unknown airline public-screen result');
             report.acceleration.ui_months++;
             store.run('ICN',route.code,monthKey,new Date().toISOString(),report.source_updated_at,
               JSON.stringify({source:'UI_ACCESSIBLE',days:result.days,awards:result.rows.length}));
             save();
-            console.log('OUTBOUND UI',route.code,monthKey,'COVERED',result.days,'days',result.rows.length,'award date/class markers');
-            previousMonth=monthKey;
+            console.log('OUTBOUND UI',route.code,monthKey,result.status,result.days,'days',result.rows.length,'award date/class markers');
             await sleep(intervalMs);
             success=true;
           }catch(error){
             lastError=error;
-            previousMonth=null;
+            previousMonth=null;queryFormReady=false;
             console.error('OUTBOUND UI FAILURE',route.code,monthKey,attempt,error.message);
             if(attempt<maxRetries)await sleep(5000*attempt);
           }
