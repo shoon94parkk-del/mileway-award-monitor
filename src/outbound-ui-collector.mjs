@@ -24,5 +24,9 @@ export async function readOutboundScreen(page,{route,month,start,end,sourceUpdat
       await page.waitForTimeout(850);
     }
   }
+  const currentTree=await page.locator('body').ariaSnapshot().catch(()=> '');
+  const resultAnchor=currentTree.indexOf('heading "보너스 좌석');
+  const outline=currentTree.slice(Math.max(0,resultAnchor),Math.max(0,resultAnchor)+3500);
+  console.error('OUTBOUND SCREEN DIAGNOSTIC',JSON.stringify({route:route.code,month,reason:lastError?.message,outline}));
   throw Error('Outbound screen '+route.code+' '+month+' did not show a verified award calendar: '+(lastError?.message||'unknown'));
 }
