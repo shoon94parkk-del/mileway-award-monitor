@@ -17,6 +17,12 @@ export async function readOutboundScreen(page,{route,month,start,end,sourceUpdat
   let lastError;
   while(Date.now()<deadline){
     const tree=await page.locator('body').ariaSnapshot();
+    // The official site explicitly marks some routes/months as unqueryable.
+    // This is not evidence of zero award seats and must stay distinct.
+    if(tree.includes('dialog "확인"')&&tree.includes('검색하신 여정은 조회가 불가합니다.')){
+      await page.getByRole('dialog',{name:'확인'}).getByRole('button',{name:'확인'}).click();
+      return {status:'UNQUERYABLE',reason:'대한항공 공개 화면에서 해당 여정 조회 불가',rows:[],days:0,engine:'UI_ACCESSIBLE'};
+    }
     try{
       return outwardFromAccessibleTree(tree,{route,month,start,end,sourceUpdatedAt});
     }catch(error){
