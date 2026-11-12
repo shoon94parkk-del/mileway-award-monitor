@@ -25,7 +25,7 @@ try { pw=require('playwright'); } catch {
 const value=(flag,fallback)=>{const i=process.argv.indexOf(flag);return i<0?fallback:process.argv[i+1]};
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const start=value('--start',today);
-const horizon=new Date(`${today}T00:00:00Z`);horizon.setUTCDate(horizon.getUTCDate()+360);
+const horizon=new Date(`${today}T00:00:00Z`);horizon.setUTCDate(horizon.getUTCDate()+359);
 const end=value('--end',horizon.toISOString().slice(0,10));
 const months=monthRange(start,end);
 const only=value('--route',null)?.split(',');
