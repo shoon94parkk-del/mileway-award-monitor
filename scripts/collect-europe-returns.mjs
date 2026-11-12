@@ -95,6 +95,12 @@ async function readUiMonthResult(origin,month){
   let lastError;
   while(Date.now()<deadline){
     const tree=await page.locator('body').ariaSnapshot();
+    // The airline sometimes states that an origin/month is unqueryable.
+    // Record unknown coverage, not a false zero-inventory observation.
+    if(tree.includes('dialog "확인"')&&tree.includes('검색하신 여정은 조회가 불가합니다.')){
+      await page.getByRole('dialog',{name:'확인'}).getByRole('button',{name:'확인'}).click();
+      return {status:'UNQUERYABLE',rows:[],days:0,engine:'UI_ACCESSIBLE'};
+    }
     let parsed;
     try{
       parsed=parsePublicAccessibleAwardMonth(tree,{
@@ -144,25 +150,27 @@ try{
   // Route scope is the last validated outbound discovery. The public picker
   // is used to verify each European origin before the return-month search.
   for(const [routeIndex,route] of origins.entries()){
+    let resultCalendarReady=false;
     for(const [monthIndex,month] of months.entries()){
       let completed=false,lastError=null;
       for(let attempt=1;attempt<=retries&&!completed;attempt++){
         try{
           let result;
-          if(attempt===1&&monthIndex>0){
-            // Reuse the visible airline result calendar. Its own next-month
-            // control avoids an unnecessary new route search / network call.
+          if(attempt===1&&monthIndex>0&&resultCalendarReady){
+            // Reuse the calendar's next-month button only after a real result.
+            // An official UNQUERYABLE dialog leaves no calendar to advance.
             result=await uiNextMonth(route.code,month);
           }else{
-            // First month of a route, or a retry after a failed calendar step.
             if(routeIndex>0||monthIndex>0||attempt>1)await setup();
             await selectOrigin(route.code);
             result=await uiMonth(route.code,month);
           }
           record(route.code,month,result);
+          resultCalendarReady=result.status==='COVERED';
           completed=true;
         }catch(error){
           lastError=error;
+          resultCalendarReady=false;
           console.error('RETURN UI FAILURE',route.code,month,attempt,error.message);
           await closePopups().catch(()=>{});
           if(attempt<retries)await sleep(6000);
