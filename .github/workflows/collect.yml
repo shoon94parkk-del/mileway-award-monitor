@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/collect.yml']
+    paths: ['.github/workflows/collect.yml', 'src/public-extract.mjs', 'src/outbound-ui-collector.mjs', 'src/public-accessible-award.mjs']
 permissions:
   contents: write
 concurrency:
