@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/diagnose-award-ui.yml', 'src/public-ui.mjs', 'src/public-month-ui.mjs', 'src/public-rendered-seats.mjs', 'scripts/collect-europe-returns.mjs']
+    paths: ['.github/workflows/diagnose-award-ui.yml', 'src/public-ui.mjs', 'src/public-month-ui.mjs', 'src/public-rendered-seats.mjs', 'src/public-extract.mjs', 'src/outbound-ui-collector.mjs', 'scripts/collect-europe-returns.mjs']
 permissions:
   contents: read
 jobs:
