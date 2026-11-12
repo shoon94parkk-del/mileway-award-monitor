@@ -14,7 +14,7 @@ const require=createRequire(import.meta.url);
 const {chromium}=require('playwright');
 const arg=(name,fallback)=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:fallback;};
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const horizon=new Date(today+'T00:00:00Z');horizon.setUTCDate(horizon.getUTCDate()+360);
+const horizon=new Date(today+'T00:00:00Z');horizon.setUTCDate(horizon.getUTCDate()+359);
 const start=arg('--start',today),end=arg('--end',horizon.toISOString().slice(0,10));
 const months=monthRange(start,end),output=path.resolve(arg('--output','data/returns-europe.json'));
 const interval=Math.max(3500,Number(arg('--interval-ms','5000')));
