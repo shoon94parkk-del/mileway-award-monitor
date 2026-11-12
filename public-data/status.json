@@ -1,11 +1,11 @@
 {
   "version": 2,
   "schema_version": 2,
-  "generated_at": "2026-11-12T00:25:55.240Z",
-  "cycle_id": "2026-11-11T23:00:00+09:00",
-  "collector_status": "succeeded",
+  "generated_at": "2026-11-12T14:03:02.309Z",
+  "cycle_id": "2026-11-12T23:00:00+09:00",
+  "collector_status": "failed",
   "source_status": "current",
-  "expected_source_at": "2026년 11월 11일 23:00",
+  "expected_source_at": "2026년 11월 12일 23:00",
   "observed_source_at": "2026년 11월 12일 01:30",
   "source_observed_at": "2026-11-12T00:25:55.201Z",
   "last_successful_collection_at": "2026-11-12T00:25:55.201Z",
@@ -13,8 +13,8 @@
   "publication_id": "2026-11-12T00:25:29.327Z|아시아",
   "notification_status": "checked",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z",
-  "heartbeat_at": "2026-11-12T00:25:55.240Z",
-  "error_code": null,
+  "heartbeat_at": "2026-11-12T14:03:02.309Z",
+  "error_code": "tests",
   "regions": {
     "미주": {
       "status": "success",
