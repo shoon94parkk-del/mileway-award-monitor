@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "degraded",
+  "status": "healthy",
   "alerts": {
     "rules_scope": "private_api",
     "rules_configured": null,
@@ -11,10 +11,10 @@
     "telegram_bot_username": "koreaairseat99_bot",
     "email_configured": false
   },
-  "source_updated_at": "2026년 11월 10일 23:00",
-  "last_successful_scan_at": "2026-11-10T14:09:54.014Z",
+  "source_updated_at": "2026년 11월 12일 01:30",
+  "last_successful_scan_at": "2026-11-12T00:25:55.201Z",
   "last_error_at": "2026-11-11T23:56:11.681Z",
   "last_error_step": "tests",
-  "recovered_at": "2026-11-04T14:09:59.125Z",
+  "recovered_at": "2026-11-12T00:25:55.201Z",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z"
 }
