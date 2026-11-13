@@ -1,7 +1,7 @@
 {
   "version": 2,
   "schema_version": 2,
-  "generated_at": "2026-11-13T16:32:42.443Z",
+  "generated_at": "2026-11-13T16:42:41.814Z",
   "cycle_id": "2026-11-13T23:00:00+09:00",
   "collector_status": "failed",
   "source_status": "delayed",
@@ -13,7 +13,7 @@
   "publication_id": "2026-11-12T00:25:29.327Z|아시아",
   "notification_status": "checked",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z",
-  "heartbeat_at": "2026-11-13T16:32:42.443Z",
+  "heartbeat_at": "2026-11-13T16:42:41.814Z",
   "error_code": "tests",
   "regions": {
     "미주": {
