@@ -48,7 +48,8 @@ function syncVisibleValues(){
  ensureRail();
  const source=$('#source-time')?.textContent||'';
  const previous=$('#ux-health-value')?.textContent==='접근 제한';
- $('#ux-source-value')&&( $('#ux-source-value').textContent=compactSource(source)+(previous?' · 이전 자료':'') );
+ if(Number.isFinite(sourceStamp(source))&&$('#ux-source-value'))
+  $('#ux-source-value').textContent=compactSource(source)+(previous?' · 이전 자료':'');
  const count=$('#result-count')?.textContent?.trim();if(count&&$('#ux-result-value'))$('#ux-result-value').textContent=count;
 }
 async function fetchJson(url){try{const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():null;}catch{return null;}}

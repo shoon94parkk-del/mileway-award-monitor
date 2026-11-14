@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-async function render({status={},health={},report={},deviceToken=''}={}){
+async function render({status={},health={},report={},deviceToken='',sourceBannerText}={}){
  const elements=new Map(['#ux-status-rail','#ux-health-value','#ux-source-value','#ux-result-value',
   '#ux-alert-value','.ux-health'].map(id=>[id,{textContent:'',title:'',classList:{toggle(){}}}]));
+ if(sourceBannerText!==undefined)elements.set('#source-time',{textContent:sourceBannerText});
  const context=vm.createContext({Date,Intl,Number,String,Promise,console,
   document:{documentElement:{dataset:{uxReferenceBound:'1'}},querySelector:id=>elements.get(id)||null},
   localStorage:{getItem:()=>deviceToken},setTimeout(){},setInterval(){},
@@ -20,6 +21,7 @@ async function render({status={},health={},report={},deviceToken=''}={}){
  });
  vm.runInContext(fs.readFileSync('web/ux-reference-polish.js','utf8'),context);
  await vm.runInContext('syncHealth()',context);
+ if(sourceBannerText!==undefined)vm.runInContext('syncVisibleValues()',context);
  return elements;
 }
 
@@ -45,4 +47,10 @@ test('general collection failure retains its separate label',async()=>{
 test('device alert status is read from the current production alert API',async()=>{
  const e=await render({deviceToken:'private-test-device'});
  assert.equal(e.get('#ux-alert-value').textContent,'Telegram ON · 2개');
+});
+test('background regional banner updates cannot replace the verified source date with prose',async()=>{
+ const e=await render({status:{collector_status:'failed',error_code:'ACCESS_LIMIT'},
+  report:{source_updated_at:'2026년 11월 12일 01:30'},
+  sourceBannerText:'완료된 지역부터 즉시 반영 · 실시간 자료 아님'});
+ assert.equal(e.get('#ux-source-value').textContent,'11/12 01:30 · 이전 자료');
 });
