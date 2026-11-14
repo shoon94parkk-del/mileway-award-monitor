@@ -1,16 +1,8 @@
 name: Refresh external ZoomMyTrip references
+# Manual opt-in until the external publisher permits automated feed access.
+# The publisher currently returns HTTP 403 to GitHub; do not hammer it.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/external-links.yml'
-      - 'scripts/refresh-external-links.mjs'
-      - 'test/external-links.test.mjs'
-  schedule:
-    # Low-frequency public RSS TITLE+LINK discovery only (KST 04:10, 08:20).
-    - cron: '10 19 * * *'
-    - cron: '20 23 * * *'
 permissions:
   contents: write
 concurrency:
