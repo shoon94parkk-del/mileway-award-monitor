@@ -85,8 +85,10 @@ async function outbound(){
  }
  node('scripts/build-cloud.mjs',[],'Build validated public site snapshot');
  writePublishedSnapshot();
+ node('scripts/record-owned-collector-health.mjs',[],'Record only validated official snapshot as recovered');
+ node('scripts/build-public-status.mjs',[],'Refresh public source/collector status');
  publishCommit('Publish locally verified Korean Air official outbound availability',
-  ['public-data/results.json.gz','public-data/snapshot.json','public-data/changes.json']);
+  ['public-data/results.json.gz','public-data/snapshot.json','public-data/changes.json','public-data/health.json','public-data/status.json']);
 }
 async function europeReturns(){
  for(const shard of RETURN_SHARDS){
