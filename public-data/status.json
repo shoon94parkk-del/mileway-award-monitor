@@ -1,7 +1,7 @@
 {
   "version": 2,
   "schema_version": 2,
-  "generated_at": "2026-11-14T01:26:50.884Z",
+  "generated_at": "2026-11-14T02:26:39.457Z",
   "cycle_id": "2026-11-13T23:00:00+09:00",
   "collector_status": "failed",
   "source_status": "delayed",
@@ -13,9 +13,9 @@
   "publication_id": "2026-11-12T00:25:29.327Z|아시아",
   "notification_status": "checked",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z",
-  "heartbeat_at": "2026-11-14T01:26:50.884Z",
+  "heartbeat_at": "2026-11-14T02:26:39.457Z",
   "error_code": "ACCESS_LIMIT",
-  "retry_after_at": "2026-11-14T01:53:03.462Z",
+  "retry_after_at": "2026-11-14T03:26:03.100Z",
   "regions": {
     "미주": {
       "status": "success",

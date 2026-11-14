@@ -13,10 +13,10 @@
   },
   "source_updated_at": "2026년 11월 12일 01:30",
   "last_successful_scan_at": "2026-11-12T00:25:55.201Z",
-  "last_error_at": "2026-11-14T00:53:03.462Z",
+  "last_error_at": "2026-11-14T02:26:39.420Z",
   "last_error_step": "collection",
   "recovered_at": "2026-11-12T00:25:55.201Z",
   "last_notification_check_at": "2026-11-10T14:09:54.014Z",
   "last_error_code": "ACCESS_LIMIT",
-  "last_access_limit_at": "2026-11-14T00:53:03.462Z"
+  "last_access_limit_at": "2026-11-14T02:26:03.100Z"
 }
