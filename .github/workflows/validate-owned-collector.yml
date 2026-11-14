@@ -1,0 +1,41 @@
+name: Validate user-owned official Korean Air collector
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/run-owned-windows-collector.mjs'
+      - 'scripts/record-owned-collector-health.mjs'
+      - 'scripts/install-owned-windows-collector.ps1'
+      - 'scripts/install-owned-windows-collector.cmd'
+      - 'scripts/invoke-owned-windows-collector.ps1'
+      - 'test/owned-windows-collector.test.mjs'
+      - '.github/workflows/validate-owned-collector.yml'
+permissions:
+  contents: read
+jobs:
+  safe-check:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify no airline requests occur during dry-run
+        run: node --no-warnings scripts/run-owned-windows-collector.mjs --dry-run
+      - name: Test Korean Air only workflow and publication safeguards
+        run: node --test test/owned-windows-collector.test.mjs
+      - name: Check Windows task-installer and entrypoint PowerShell syntax
+        shell: pwsh
+        run: |
+          foreach($name in @('scripts/install-owned-windows-collector.ps1','scripts/invoke-owned-windows-collector.ps1')){
+            $tokens=$null;$errors=$null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $name).Path,[ref]$tokens,[ref]$errors) | Out-Null
+            if($errors.Count -ne 0){
+              foreach($error in $errors){Write-Host $error.ToString()}
+              throw ("Invalid PowerShell: "+$name)
+            }
+          }
+          Write-Host 'Windows script syntax validated without contacting Korean Air'
