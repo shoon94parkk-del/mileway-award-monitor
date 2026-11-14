@@ -35,13 +35,14 @@ test('outbound reader stops an already denied query before parsing any calendar'
  await assert.rejects(readOutboundScreen(page,{route:{code:'LHR'},month:'2026-11',
   start:'2026-11-14',end:'2026-11-30',sourceUpdatedAt:null}),error=>error.code==='ACCESS_LIMIT');
 });
-test('denial arriving during the last polling delay retains its access-limit classification',async()=>{
+test('denial arriving during the last polling delay retains its access-limit classification',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:100000});
  const page=new EventEmitter();
  page.locator=()=>({ariaSnapshot:async()=>'- heading "보너스 좌석 조회"'});
  page.waitForTimeout=async()=>{
   page.emit('response',response(403));
-  await new Promise(resolve=>setTimeout(resolve,5));
+  t.mock.timers.tick(1001);
  };
  await assert.rejects(readOutboundScreen(page,{route:{code:'LHR'},month:'2026-11',
-  start:'2026-11-14',end:'2026-11-30',sourceUpdatedAt:null,timeoutMs:2}),error=>error.code==='ACCESS_LIMIT');
+  start:'2026-11-14',end:'2026-11-30',sourceUpdatedAt:null,timeoutMs:1000}),error=>error.code==='ACCESS_LIMIT');
 });

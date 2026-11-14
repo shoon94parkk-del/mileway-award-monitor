@@ -24,9 +24,9 @@ export function shouldSkipDispatch({cycle,status,runs}){
  }
  const start=Date.parse(cycle.cycle_start_utc),end=start+86400000;
  for(const run of runs||[]){
+  if(run.status==='queued'||run.status==='in_progress')return `collector run ${run.id} is already ${run.status}`;
   const created=Date.parse(run.created_at);
   if(!Number.isFinite(created)||created<start||created>=end)continue;
-  if(run.status==='queued'||run.status==='in_progress')return `collector run ${run.id} is already ${run.status}`;
   if(run.status==='completed'&&run.conclusion==='success')return `collector run ${run.id} already succeeded for this cycle`;
  }
  return '';

@@ -14,6 +14,17 @@ test('dispatcher skips an active or successful same-cycle collector',()=>{
  assert.equal(shouldSkipDispatch({cycle,status:null,runs:[{id:3,status:'completed',conclusion:'failure',created_at:'2026-09-14T15:01:00Z'}]}),'');
 });
 
+test('recovery never dispatches over an active collector from the previous cycle',()=>{
+ for(const status of ['queued','in_progress']){
+  assert.match(shouldSkipDispatch({cycle,status:null,runs:[{
+   id:4,status,created_at:'2026-09-14T13:59:00Z'
+  }]}),/already/);
+ }
+ assert.equal(shouldSkipDispatch({cycle,status:null,runs:[{
+  id:5,status:'completed',conclusion:'success',created_at:'2026-09-13T14:01:00Z'
+ }]}),'');
+});
+
 test('dispatcher waits for 23:00 KST and sends one workflow dispatch',async()=>{
  const calls=[];
  const waits=[];

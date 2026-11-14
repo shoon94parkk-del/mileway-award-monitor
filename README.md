@@ -25,6 +25,7 @@ Collection start priority is **Europe → Americas → Oceania → Bali**. Exclu
 - Both use the shared KST cycle calculation in `src/collection-cycle.mjs`; the prewarmed 22:47/22:50 jobs target the upcoming same-day 23:00 cycle rather than the previous day.
 - A stale Korean Air DOM timestamp is not treated as proof that the API is stale. After the refresh window, a guarded safety collection can run even if a US edge still serves the previous marker.
 - Duplicate active collectors are blocked, and the 23:05 interlock does not start another collector when that cycle already has a successful run.
+- `recover-access-limit.yml` checks hourly for an access-limited failure. After the sixty-minute cooldown it can dispatch the existing collector, using GitHub-only checks and the same duplicate protections. A successful full scan ends these recovery attempts.
 - Regional collection uses two browser lanes by default. 403/429 access limits stop parallel mode and fall back conservatively rather than increasing concurrency.
 - A completed region is queued to one isolated publisher immediately. The publisher uses a separate Git worktree, so Git rebases/pushes never replace source files underneath still-running collectors.
 - Failed or incomplete regions never replace the last good published region.

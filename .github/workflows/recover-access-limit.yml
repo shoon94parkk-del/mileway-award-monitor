@@ -1,0 +1,26 @@
+name: Recover access-limited collection
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: public-access-limit-recovery
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Recover after the public-source access-limit cooldown
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node --no-warnings scripts/recover-access-limit.mjs
