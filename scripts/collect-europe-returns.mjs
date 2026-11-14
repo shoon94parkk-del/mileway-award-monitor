@@ -35,8 +35,16 @@ const report={direction:'RETURN',destination:'ICN',region:'유럽',source:PUBLIC
 fs.mkdirSync(path.dirname(output),{recursive:true});
 const save=()=>{const tmp=output+'.tmp';fs.writeFileSync(tmp,JSON.stringify(report,null,2));fs.renameSync(tmp,output);};
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
-const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless'),args:['--disable-http2','--disable-quic']});
-const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
+const standardChrome=process.env.MILEWAY_STANDARD_CHROME==='1';
+const browser=await chromium.launch(standardChrome?{
+  channel:'chrome',headless:process.argv.includes('--headless')
+}:{...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless'),args:['--disable-http2','--disable-quic']});
+const browserContext=await browser.newContext({
+  locale:'ko-KR',viewport:{width:1280,height:900},
+  ...(standardChrome?{timezoneId:'Asia/Seoul'}:{})
+});
+const page=await browserContext.newPage();
+if(standardChrome)console.log('RETURN BROWSER: installed standard Chrome, native browser networking');
 const publicAccess=watchPublicAccess(page);
 page.setDefaultTimeout(20000);
 const regionList=(kind,region)=>openPublicAirportRegion(page,kind,region);
