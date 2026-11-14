@@ -431,6 +431,8 @@ try {
   if(e.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(e.message)){
     report.failure_code='ACCESS_LIMIT';report.access_limited_at=report.finished_at;
     report.complete=false;report.attempt_complete=false;
+    const denial=await publicAccess.denialDiagnostic();
+    if(denial){report.access_denial=denial;console.error('PUBLIC ACCESS DENIAL',JSON.stringify(denial));}
   }
   if(report.coverage.length||report.unqueryable.length||report.failed.length||report.failure_code)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
   console.error(e.message);process.exitCode=/ACCESS_LIMIT/.test(e.message)?75:1;

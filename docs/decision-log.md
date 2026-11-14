@@ -2,6 +2,12 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-14 — Explicit immediate manual retry, with bounded denial diagnostics
+
+After the current cooldown was explained, the user explicitly requested an immediate rerun. `workflow_dispatch` therefore has an optional `retry_now` input, false by default. Only an explicit manual dispatch can skip the local waiting period; scheduled and push-triggered runs retain it. This does not skip the single-browser check, permit failed queries to publish, or change any airline request/access mechanism.
+
+For the next received 403/429 only, collect a bounded safe diagnostic: HTTP status, allowlisted content type, response format, and a conservative error-kind enum. Inspect at most a 16 KiB error envelope and wait at most one second before browser teardown. Never store or log raw error bodies, cookies, tokens, or availability data. A response format alone does not identify the refusing system.
+
 ## 2026-11-14 — Verify the Windows preflight on Windows
 
 Runs `43602576432` and `43603463237` failed before querying the airline. Two workflow-contract tests introduced with the single-browser access check parsed raw YAML with LF-only regular expressions; Windows checkouts used CRLF, so the assertions failed even though the workflow gates were present. Normalize fixture line endings and exercise the same full contract against both LF and CRLF. Keep the contract assertions intact.

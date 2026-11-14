@@ -12,6 +12,23 @@ const limitedAt='2026-11-14T08:00:00.000Z';
 const priorHealth={status:'degraded',last_error_step:'collection',last_error_code:'ACCESS_LIMIT',
  last_access_limit_at:limitedAt,last_error_at:limitedAt,source_updated_at:'2026년 9월 12일 23:00'};
 
+test('only an explicit manual workflow request can retry the canary during the local cooldown',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-manual-retry-'));
+ try{
+  const file=path.join(dir,'health.json');
+  fs.writeFileSync(file,JSON.stringify({...priorHealth,last_access_limit_at:new Date().toISOString()}));
+  for(const [event,requested,exitCode] of [
+   ['schedule','true',75],['push','true',75],['workflow_dispatch','false',75],['workflow_dispatch','true',0]
+  ]){
+   const output=path.join(dir,'output');fs.rmSync(output,{force:true});
+   const run=spawnSync(process.execPath,[preflight,file],{encoding:'utf8',env:{...process.env,
+    GITHUB_EVENT_NAME:event,MILEWAY_MANUAL_RETRY:requested,GITHUB_OUTPUT:output}});
+   assert.equal(run.status,exitCode,event+' '+requested+' '+run.stderr);
+   assert.match(fs.readFileSync(output,'utf8'),exitCode===0?/allowed=true/:/allowed=false/);
+  }
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('public status reports a new test failure separately from an unresolved older access denial',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-primary-error-'));
  try{

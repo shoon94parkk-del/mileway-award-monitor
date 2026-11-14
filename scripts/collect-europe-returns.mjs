@@ -211,6 +211,8 @@ try{
   if(error.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(error.message)){
     report.failure_code='ACCESS_LIMIT';report.access_limited_at=new Date().toISOString();
     report.complete=false;report.attempt_complete=false;
+    const denial=await publicAccess.denialDiagnostic();
+    if(denial){report.access_denial=denial;console.error('PUBLIC ACCESS DENIAL',JSON.stringify(denial));}
   }
   save();
   console.error(error);

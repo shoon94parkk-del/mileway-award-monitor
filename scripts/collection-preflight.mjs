@@ -15,9 +15,15 @@ export function collectionCooldown(health,now=new Date()){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  let health={};try{health=JSON.parse(fs.readFileSync(process.argv[2]||'public-data/health.json','utf8'));}catch{}
  const result=collectionCooldown(health);
+ const manualRetry=process.env.GITHUB_EVENT_NAME==='workflow_dispatch'&&process.env.MILEWAY_MANUAL_RETRY==='true';
+ if(manualRetry){
+  result.allowed=true;
+ }
  const outputs='allowed='+result.allowed+'\nretry_after_at='+(result.retry_after_at||'')+'\n';
  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,outputs);
- if(result.allowed)console.log('Collection preflight: no active access-limit cooldown.');
+ if(result.allowed)console.log(manualRetry?
+  'Collection preflight: explicit user-requested manual retry; the full scan still requires a successful public UI check.':
+  'Collection preflight: no active access-limit cooldown.');
  else{
   console.error('ACCESS_LIMIT: collection paused until '+result.retry_after_at+'; no browser launched.');
   // Keep the workflow unsuccessful: watchdogs must not mistake a cooldown skip

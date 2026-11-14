@@ -1,6 +1,12 @@
 name: Collect public daily award seats
 on:
   workflow_dispatch:
+    inputs:
+      retry_now:
+        description: 'Run one user-requested public UI check without waiting for the local cooldown'
+        type: boolean
+        required: false
+        default: false
   push:
     branches: [main]
     paths: ['.github/workflows/collect.yml', 'src/public-extract.mjs', 'src/outbound-ui-collector.mjs', 'src/public-accessible-award.mjs']
@@ -26,6 +32,8 @@ jobs:
           node-version: '24'
       - name: Stop before any browser launch during access-limit cooldown
         id: cooldown
+        env:
+          MILEWAY_MANUAL_RETRY: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_now == true }}
         run: node scripts/collection-preflight.mjs public-data/health.json
 
   canary:
