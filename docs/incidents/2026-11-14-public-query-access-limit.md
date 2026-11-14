@@ -29,3 +29,9 @@ The observed GitHub runner remains denied by the airline. These changes repair d
 The follow-up patch adds a one-browser access check before either five-worker matrix and a shared non-cancelling concurrency group. A blocked check cannot start matrix workers or publish its output as seats. Return-side denial also updates shared cooldown state. Later local dependency or test failures retain outstanding recovery eligibility until a completed full scan. The site labels this state `접근 제한`, preserves the last confirmed data, and reads device alert state from the current production API.
 
 Healthy measured runtimes and post-check estimates are documented in [collection-runtime.md](../operations/collection-runtime.md). The new access check has not yet completed a successful production full scan; its added runtime remains an estimate.
+
+## Follow-up at 14:10 UTC: preflight test portability failure
+
+[Run 43603463237](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43603463237), like the 14:00 run, failed two workflow-contract assertions before the public UI query step. The workflow files had CRLF line endings on Windows, while the tests split and matched LF-only text. This is an internal regression introduced by the earlier mitigation, not a new observation of airline access denial. The last verified HTTP 403 remains the 02:26 UTC observation until a later real query runs.
+
+The fix normalizes fixture line endings, validates unchanged contracts using both LF and CRLF inputs, and adds a dedicated Windows CI preflight job. Public status now distinguishes the current `tests` failure from the retained older access-limit state used for recovery eligibility. The runtime preflight remains enabled; no failed test or source query is treated as success.

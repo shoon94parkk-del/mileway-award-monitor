@@ -24,6 +24,8 @@ Last updated: 2026-11-14
 - Report measured worker-stage failures accurately; never label the full scan job result as a unit-test outcome.
 - An explicit public-source access limit stops source queries and gates browser launches for sixty minutes. Do not move the observation timestamp forward on cooldown skips or count skipped workflows as successful cycles.
 - A failed one-browser access check must not start the five-worker matrix. Outbound and return scans must not overlap or cancel each other. Canary output never enters published seat snapshots.
+- Run the exact Windows collector preflight suite in Windows CI. Workflow fixture checks must pass with both LF and CRLF; Linux-only success does not verify the production runner.
+- Keep the latest measured failure stage visible even when an older access-limit observation remains unresolved for recovery scheduling.
 
 ## Alerts
 - Device alert rules/secrets are private and not published.

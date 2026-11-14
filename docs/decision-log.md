@@ -2,6 +2,12 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-14 — Verify the Windows preflight on Windows
+
+Runs `43602576432` and `43603463237` failed before querying the airline. Two workflow-contract tests introduced with the single-browser access check parsed raw YAML with LF-only regular expressions; Windows checkouts used CRLF, so the assertions failed even though the workflow gates were present. Normalize fixture line endings and exercise the same full contract against both LF and CRLF. Keep the contract assertions intact.
+
+CI now runs the exact four-file collector preflight suite on a Windows runner as well as the full Ubuntu suite/build. This job does not launch a browser or contact the airline. An older unresolved access-limit observation can keep recovery eligible, but public status must show the latest measured preflight test failure as `tests`, separately from that old access state. Only an actual completed scan/publication establishes recovery.
+
 ## 2026-11-14 — A real denied retry is not a completed search
 
 Verification run `43546142771` started at 02:24:40 UTC after the cooldown expired. All five Windows workers reached the public source and received HTTP 403 on their first award query; no route/month result was collected and publication was skipped. Keep the current state failed and the last-good seat data intact. A lightweight recovery job succeeding means only that it dispatched or deferred work.

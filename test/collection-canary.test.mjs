@@ -66,8 +66,13 @@ test('exit zero without completed exact route and month UI evidence cannot permi
  ])await checkProbe({...report(),...change},0,gate=>assert.equal(gate.allowed,false,JSON.stringify(change)));
 });
 
-test('both workflow matrices require a successful allowed canary and share a noncancelling browser budget',()=>{
- const configs=['collect.yml','collect-europe-returns.yml'].map(name=>fs.readFileSync('.github/workflows/'+name,'utf8'));
+for(const [lineEndingName,lineEnding] of [['LF','\n'],['CRLF','\r\n']]){
+ // Exercise both checkout formats, then parse a consistent workflow representation.
+ const readWorkflow=name=>fs.readFileSync('.github/workflows/'+name,'utf8')
+  .replace(/\r?\n/g,lineEnding).replace(/\r\n/g,'\n');
+
+test('both workflow matrices require a successful allowed canary and share a noncancelling browser budget ('+lineEndingName+')',()=>{
+ const configs=['collect.yml','collect-europe-returns.yml'].map(readWorkflow);
  for(const workflow of configs){
   const group=workflow.match(/^concurrency:\n  group: (.+)\n  cancel-in-progress: (.+)$/m);
   assert.ok(group,'workflow must serialize all public browser collection');
@@ -89,8 +94,8 @@ test('both workflow matrices require a successful allowed canary and share a non
  }
 });
 
-test('return-side denied canary publishes shared cooldown health without claiming scan recovery',()=>{
- const workflow=fs.readFileSync('.github/workflows/collect-europe-returns.yml','utf8');
+test('return-side denied canary publishes shared cooldown health without claiming scan recovery ('+lineEndingName+')',()=>{
+ const workflow=readWorkflow('collect-europe-returns.yml');
  const status=workflow.split('\n  status:\n')[1];
  assert.ok(status,'return denials must reach shared health even when the matrix is skipped');
  assert.match(status,/needs: \[preflight, canary, scan, publish\]/);
@@ -104,3 +109,4 @@ test('return-side denied canary publishes shared cooldown health without claimin
  assert.match(status,/git add public-data\/health\.json public-data\/status\.json/);
  assert.doesNotMatch(status,/git add .*returns\.json/);
 });
+}

@@ -54,3 +54,11 @@ test('background regional banner updates cannot replace the verified source date
   sourceBannerText:'완료된 지역부터 즉시 반영 · 실시간 자료 아님'});
  assert.equal(e.get('#ux-source-value').textContent,'11/12 01:30 · 이전 자료');
 });
+test('a new preflight test failure is visible even while an earlier access denial remains unresolved',async()=>{
+ const e=await render({status:{collector_status:'failed',error_code:'tests'},
+  health:{status:'degraded',last_error_step:'tests',last_error_code:'ACCESS_LIMIT'},
+  report:{source_updated_at:'2026년 11월 12일 01:30'}});
+ assert.equal(e.get('#ux-health-value').textContent,'검증 오류');
+ assert.match(e.get('.ux-health').title,/새 좌석을 조회하지 못했습니다/);
+ assert.equal(e.get('#ux-source-value').textContent,'11/12 01:30 · 이전 자료');
+});

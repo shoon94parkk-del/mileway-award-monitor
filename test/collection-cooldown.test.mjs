@@ -12,6 +12,20 @@ const limitedAt='2026-11-14T08:00:00.000Z';
 const priorHealth={status:'degraded',last_error_step:'collection',last_error_code:'ACCESS_LIMIT',
  last_access_limit_at:limitedAt,last_error_at:limitedAt,source_updated_at:'2026년 9월 12일 23:00'};
 
+test('public status reports a new test failure separately from an unresolved older access denial',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-primary-error-'));
+ try{
+  fs.mkdirSync(path.join(dir,'public-data'));
+  fs.writeFileSync(path.join(dir,'public-data/health.json'),JSON.stringify({...priorHealth,last_error_step:'tests'}));
+  const build=spawnSync(process.execPath,[statusBuilder],{cwd:dir,encoding:'utf8'});
+  assert.equal(build.status,0,build.stderr);
+  const status=JSON.parse(fs.readFileSync(path.join(dir,'public-data/status.json'),'utf8'));
+  assert.equal(status.collector_status,'failed');
+  assert.equal(status.error_code,'tests');
+  assert.equal(status.retry_after_at,'2026-11-14T09:00:00.000Z');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('actual collector preflight fails closed while cooling down and resumes after sixty minutes',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-cooldown-'));
  try{

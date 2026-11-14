@@ -28,6 +28,10 @@ const collectorFailureSteps=new Set(['dependency_install','source_check','tests'
 const collectorFailure=healthFailureCurrent&&collectorFailureSteps.has(health.last_error_step);
 const notificationFailure=healthFailureCurrent&&health.last_error_step==='notification';
 const collectorStatus=collectorFailure?'failed':report.attempt_complete?'succeeded':'partial';
+// An outstanding access-limit observation keeps recovery eligible, while the
+// latest measured failing stage remains the current public explanation.
+const currentErrorCode=health.last_error_step&&health.last_error_step!=='collection'?
+  health.last_error_step:(health.last_error_code||health.last_error_step||'unknown');
 const status={
   version:2,
   schema_version:2,
@@ -44,7 +48,7 @@ const status={
   notification_status:notificationFailure?'failed':health.last_notification_check_at?'checked':'unknown',
   last_notification_check_at:health.last_notification_check_at||null,
   heartbeat_at:now.toISOString(),
-  error_code:healthFailureCurrent?(health.last_error_code||health.last_error_step||'unknown'):null,
+  error_code:healthFailureCurrent?currentErrorCode:null,
   retry_after_at:healthFailureCurrent&&health.last_error_code==='ACCESS_LIMIT'?accessLimitRetryAfter(health):null,
   regions
 };

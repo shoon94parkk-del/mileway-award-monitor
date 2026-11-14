@@ -57,3 +57,15 @@ jobs:
           test -s dist/cloud-enhancements.css
           test -s dist/seat-info.css
           test -s dist/manifest.webmanifest
+
+  windows-preflight:
+    name: Validate public collection preflight on Windows
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test public collection gates without launching a browser
+        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs

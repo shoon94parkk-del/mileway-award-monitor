@@ -47,7 +47,7 @@ function ensureRail(){
 function syncVisibleValues(){
  ensureRail();
  const source=$('#source-time')?.textContent||'';
- const previous=$('#ux-health-value')?.textContent==='접근 제한';
+ const previous=['접근 제한','검증 오류','수집 실패'].includes($('#ux-health-value')?.textContent);
  if(Number.isFinite(sourceStamp(source))&&$('#ux-source-value'))
   $('#ux-source-value').textContent=compactSource(source)+(previous?' · 이전 자료':'');
  const count=$('#result-count')?.textContent?.trim();if(count&&$('#ux-result-value'))$('#ux-result-value').textContent=count;
@@ -76,15 +76,18 @@ async function syncHealth(){
   const healthCollectionFailure=h?.status==='degraded'&&h?.last_error_step!=='notification'&&!successfulSnapshotAfterError;
   const health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
   const operationalFailure=collector==='failed'||healthCollectionFailure;
-  const accessLimited=operationalFailure&&(
+  const verificationFailed=operationalFailure&&(
+   statusMatchesSnapshot&&status?.error_code==='tests'||
+   healthCollectionFailure&&h?.last_error_step==='tests');
+  const accessLimited=operationalFailure&&!verificationFailed&&(
    statusMatchesSnapshot&&status?.error_code==='ACCESS_LIMIT'||
-   healthCollectionFailure&&h?.last_error_code==='ACCESS_LIMIT');
-  if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source)+(accessLimited?' · 이전 자료':'');
+   healthCollectionFailure&&h?.last_error_step==='collection'&&h?.last_error_code==='ACCESS_LIMIT');
+  if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source)+(operationalFailure?' · 이전 자료':'');
   const delayed=sourceStatus==='delayed';
   const partial=collector==='partial';
   const ok=!operationalFailure&&!delayed&&!partial&&sourceStatus==='current';
-  if(value)value.textContent=accessLimited?'접근 제한':operationalFailure?'수집 실패':delayed?'원자료 지연':partial?'부분 반영':ok?'정상':'확인 중';
-  if(health)health.title=accessLimited?'대한항공 조회가 제한되어 마지막 확인 자료를 표시합니다. 새 좌석 수집은 아직 완료되지 않았습니다.':'';
+  if(value)value.textContent=verificationFailed?'검증 오류':accessLimited?'접근 제한':operationalFailure?'수집 실패':delayed?'원자료 지연':partial?'부분 반영':ok?'정상':'확인 중';
+  if(health)health.title=verificationFailed?'수집 전 검증 단계에서 오류가 발생해 새 좌석을 조회하지 못했습니다. 마지막 확인 자료를 표시합니다.':accessLimited?'대한항공 조회가 제한되어 마지막 확인 자료를 표시합니다. 새 좌석 수집은 아직 완료되지 않았습니다.':'';
   health?.classList.toggle('is-ok',ok);
   health?.classList.toggle('is-warn',operationalFailure||delayed||partial);
   if(alert)alert.textContent=device.label;
