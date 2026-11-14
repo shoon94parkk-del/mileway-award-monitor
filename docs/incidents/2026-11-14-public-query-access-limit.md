@@ -41,3 +41,7 @@ The fix normalizes fixture line endings, validates unchanged contracts using bot
 [CI run 43604488304](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43604488304) passed both the full Ubuntu suite/build (220 tests) and the exact Windows preflight suite (28 tests). The same Windows validation step then passed in [real collector run 43604555166](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43604555166).
 
 That run reached the public award query and observed `ACCESS_LIMIT HTTP 403` at **2026-11-14 14:24:00.826 UTC (23:24 KST)**. The single-browser gate failed, the five-worker matrix and publication were skipped, and shared health recorded a new sixty-minute cooldown ending at 15:24 UTC. This verifies that the internal test regression is fixed and that access denial still prevents actual seat collection. The last-good seat publication remains unchanged.
+
+## Native-header comparison and edge-provider evidence
+
+On 2026-11-14 15:08:49 UTC, [run 43608441256](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43608441256) still received HTML `ACCESS_DENIED` after the independently reproduced cross-origin header defect was fixed. Safe response classification found an `AKAMAI` edge-provider hint. This narrows the observed refusal but does not identify an IP, region, session, or bot-rule cause. The complete evidence, corrected client behavior, unresolved questions and operator-side resolution steps are in [the analysis](../operations/access-denial-analysis-2026-11-15.md).
