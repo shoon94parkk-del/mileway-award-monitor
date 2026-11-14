@@ -7,6 +7,12 @@ import {PUBLIC_URL} from './public-calendar.mjs';
 // watcher and the full collector see the same Korea-time snapshot as users.
 const timezoneSessions=new WeakMap();
 async function enforceSeoulTimezone(page){
+  // Standard installed Chrome contexts use Playwright's supported timezoneId.
+  // Leave the browser's normal network stack, cache and request headers intact.
+  if(process.env.MILEWAY_STANDARD_CHROME==='1'){
+    console.log('PUBLIC TIMEZONE: Asia/Seoul (standard Chrome context)');
+    return;
+  }
   if(timezoneSessions.has(page))return;
   const context=typeof page.context==='function'?page.context():null;
   if(!context||typeof context.newCDPSession!=='function')return;
@@ -24,7 +30,7 @@ async function stopHungNavigation(page){
   if(typeof page.waitForTimeout==='function')await page.waitForTimeout(500).catch(()=>{});
 }
 
-export async function openPublicPage(page,{attempts=2,delay=ms=>new Promise(r=>setTimeout(r,ms)),cacheBust=true}={}){
+export async function openPublicPage(page,{attempts=2,delay=ms=>new Promise(r=>setTimeout(r,ms)),cacheBust=process.env.MILEWAY_STANDARD_CHROME!=='1'}={}){
   let last;
   for(let attempt=1;attempt<=attempts;attempt++){
     try{
