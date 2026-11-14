@@ -21,18 +21,7 @@ if errorlevel 1 (
   goto :failed
 )
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ErrorActionPreference='Stop';" ^
-  "$folder=Join-Path $env:TEMP ('Mileway-Local-Check-'+[guid]::NewGuid().ToString('N'));" ^
-  "New-Item -ItemType Directory -Force -Path $folder | Out-Null;" ^
-  "$zip=Join-Path $folder 'main.zip';" ^
-  "Write-Host 'GitHub 공개 프로젝트의 최신 버전을 가져오는 중...';" ^
-  "Invoke-WebRequest -Uri 'https://github.com/shoon94parkk-del/mileway-award-monitor/archive/refs/heads/main.zip' -OutFile $zip;" ^
-  "Expand-Archive -LiteralPath $zip -DestinationPath $folder -Force;" ^
-  "$project=Get-ChildItem -Path $folder -Directory | Where-Object Name -like 'mileway-award-monitor-*' | Select-Object -First 1;" ^
-  "if(-not $project){throw '프로젝트 폴더를 찾을 수 없습니다.'};" ^
-  "Write-Host ('로컬 검사 폴더: '+$project.FullName);" ^
-  "& (Join-Path $project.FullName 'scripts/run-local-standard-chrome-check.ps1');" ^
-  "exit $LASTEXITCODE"
+  "$ErrorActionPreference='Stop'; $folder=Join-Path $env:TEMP ('Mileway-Local-Check-'+[guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Force -Path $folder | Out-Null; $zip=Join-Path $folder 'main.zip'; Write-Host 'GitHub 공개 프로젝트의 최신 버전을 가져오는 중...'; Invoke-WebRequest -Uri 'https://github.com/shoon94parkk-del/mileway-award-monitor/archive/refs/heads/main.zip' -OutFile $zip; Expand-Archive -LiteralPath $zip -DestinationPath $folder -Force; $project=Get-ChildItem -Path $folder -Directory | Where-Object Name -like 'mileway-award-monitor-*' | Select-Object -First 1; if(-not $project){throw '프로젝트 폴더를 찾을 수 없습니다.'}; Write-Host ('로컬 검사 폴더: '+$project.FullName); & (Join-Path $project.FullName 'scripts/run-local-standard-chrome-check.ps1'); exit $LASTEXITCODE"
 set "RESULT=%ERRORLEVEL%"
 echo.
 if "%RESULT%"=="0" (
