@@ -1,0 +1,44 @@
+name: One-shot standard Chrome public award access probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-standard-chrome.yml']
+permissions:
+  contents: read
+concurrency:
+  group: standard-chrome-single-access-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    name: Test one normal ICN-LHR airline award-calendar query
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser reader
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Read one real daily award date using native installed Chrome
+        env:
+          MILEWAY_STANDARD_CHROME: '1'
+          MILEWAY_DIRECT_API: '0'
+        shell: pwsh
+        run: |
+          Write-Host 'Single user-requested diagnostic. No IP rotation, no retries, no parallel workers.'
+          node --no-warnings scripts/collection-canary.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload non-sensitive official UI probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-chrome-single-probe
+          path: |
+            data/public-canary/results.json
+            data/public-canary/last-run-error.json
+            data/public-canary/last-public-error.json
+            data/public-canary/last-calendar-error.json
+          if-no-files-found: warn
+          retention-days: 3
