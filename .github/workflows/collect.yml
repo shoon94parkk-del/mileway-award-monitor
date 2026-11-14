@@ -57,6 +57,8 @@ jobs:
         run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs test/public-navigation.test.mjs test/public-access-limit.test.mjs
       - name: Query one public ICN-to-LHR month through the regular UI
         id: probe
+        env:
+          MILEWAY_STANDARD_CHROME: '1'
         run: node scripts/collection-canary.mjs
       - name: Record measured canary stage outcomes
         if: always()
@@ -118,6 +120,7 @@ jobs:
         id: collect
         env:
           MILEWAY_DIRECT_API: '0'
+          MILEWAY_STANDARD_CHROME: '1'
         shell: pwsh
         run: |
           Write-Host "Runner ${{ matrix.id }} scanning: ${{ matrix.routes }}"
