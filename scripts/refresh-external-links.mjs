@@ -55,7 +55,8 @@ async function readPublic(url){
  const signal=AbortSignal.timeout(16000);
  const response=await fetch(url,{signal,headers:{'Accept':'application/rss+xml, application/xml, text/html;q=0.8'}});
  const resolved=new URL(response.url);
- if(resolved.hostname!=='milengo.kr'||resolved.protocol!=='https:'||!response.ok)throw Error('External public listing unavailable');
+ if(resolved.hostname!=='milengo.kr'||resolved.protocol!=='https:')throw Error('External public listing redirected outside the allowed host');
+ if(!response.ok)throw Error('External public listing HTTP '+response.status);
  const content=await response.text();
  if(content.length>LIMIT)throw Error('External public listing too large');
  return content;
