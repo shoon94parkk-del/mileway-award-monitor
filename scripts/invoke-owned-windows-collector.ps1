@@ -1,7 +1,8 @@
 # This script runs exclusively on a Windows PC you control.
 # It never exports browser cookies/passwords or calls the airline's private API.
 param([switch]$CanaryOnly,[switch]$DryRun)
-$ErrorActionPreference='Stop'
+# Native Node stderr must be logged, not converted into terminating PowerShell errors.
+$ErrorActionPreference='Continue'
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $logFolder=Join-Path $env:LOCALAPPDATA 'MilewayCollector\logs'
 New-Item -ItemType Directory -Force -Path $logFolder | Out-Null
