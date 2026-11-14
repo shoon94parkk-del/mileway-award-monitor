@@ -25,10 +25,12 @@ async function render({status={},health={},report={},deviceToken=''}={}){
 
 test('access denied is visibly distinct from general collection failure and keeps last-good meaning',async()=>{
  const e=await render({status:{collector_status:'failed',error_code:'ACCESS_LIMIT'},
-  health:{status:'degraded',last_error_step:'collection',last_error_code:'ACCESS_LIMIT'}});
+  health:{status:'degraded',last_error_step:'collection',last_error_code:'ACCESS_LIMIT'},
+  report:{source_updated_at:'2026년 11월 12일 01:30'}});
  assert.equal(e.get('#ux-health-value').textContent,'접근 제한');
  assert.match(e.get('.ux-health').title,/대한항공/);
  assert.match(e.get('.ux-health').title,/마지막 확인 자료/);
+ assert.equal(e.get('#ux-source-value').textContent,'11/12 01:30 · 이전 자료');
 });
 test('an old denied attempt cannot label a newer successful publication blocked',async()=>{
  const e=await render({status:{publication_id:'old',collector_status:'failed',error_code:'ACCESS_LIMIT'},

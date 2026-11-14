@@ -46,7 +46,9 @@ function ensureRail(){
 }
 function syncVisibleValues(){
  ensureRail();
- const source=$('#source-time')?.textContent||'';$('#ux-source-value')&&( $('#ux-source-value').textContent=compactSource(source) );
+ const source=$('#source-time')?.textContent||'';
+ const previous=$('#ux-health-value')?.textContent==='접근 제한';
+ $('#ux-source-value')&&( $('#ux-source-value').textContent=compactSource(source)+(previous?' · 이전 자료':'') );
  const count=$('#result-count')?.textContent?.trim();if(count&&$('#ux-result-value'))$('#ux-result-value').textContent=count;
 }
 async function fetchJson(url){try{const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});return r.ok?await r.json():null;}catch{return null;}}
@@ -72,11 +74,11 @@ async function syncHealth(){
   const successfulSnapshotAfterError=!!report.attempt_complete&&isoStamp(report.finished_at)>isoStamp(h?.last_error_at);
   const healthCollectionFailure=h?.status==='degraded'&&h?.last_error_step!=='notification'&&!successfulSnapshotAfterError;
   const health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
-  if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source);
   const operationalFailure=collector==='failed'||healthCollectionFailure;
   const accessLimited=operationalFailure&&(
    statusMatchesSnapshot&&status?.error_code==='ACCESS_LIMIT'||
    healthCollectionFailure&&h?.last_error_code==='ACCESS_LIMIT');
+  if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source)+(accessLimited?' · 이전 자료':'');
   const delayed=sourceStatus==='delayed';
   const partial=collector==='partial';
   const ok=!operationalFailure&&!delayed&&!partial&&sourceStatus==='current';
