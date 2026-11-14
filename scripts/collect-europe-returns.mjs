@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {watchPublicAccess} from '../src/public-access-limit.mjs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {PUBLIC_URL,monthRange} from '../src/public-calendar.mjs';
@@ -36,9 +37,11 @@ const save=()=>{const tmp=output+'.tmp';fs.writeFileSync(tmp,JSON.stringify(repo
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await chromium.launch({...(edge?{executablePath:edge}:{}),headless:process.argv.includes('--headless'),args:['--disable-http2','--disable-quic']});
 const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
+const publicAccess=watchPublicAccess(page);
 page.setDefaultTimeout(20000);
 const regionList=(kind,region)=>openPublicAirportRegion(page,kind,region);
 async function setup(){
+  publicAccess.throwIfBlocked();
   try{
     await openPublicPage(page);
   }catch(error){
@@ -94,7 +97,9 @@ async function readUiMonthResult(origin,month){
   const deadline=Date.now()+20000;
   let lastError;
   while(Date.now()<deadline){
+    publicAccess.throwIfBlocked();
     const tree=await page.locator('body').ariaSnapshot();
+    publicAccess.throwIfBlocked();
     // The airline sometimes states that an origin/month is unqueryable.
     // Record unknown coverage, not a false zero-inventory observation.
     if(tree.includes('dialog "확인"')&&tree.includes('검색하신 여정은 조회가 불가합니다.')){
@@ -124,9 +129,11 @@ async function readUiMonthResult(origin,month){
     }
     await sleep(850);
   }
+  publicAccess.throwIfBlocked();
   // A request denied by the airline leaves no verifiable calendar in the UI.
   // Never convert that case to zero inventory or publish a successful report.
   const aria=await page.locator('body').ariaSnapshot().catch(()=> '');
+  publicAccess.throwIfBlocked();
   const i=Math.max(0,aria.indexOf('heading "보너스 좌석 상황"'));
   console.error('RETURN UI RESULT DIAGNOSTIC',JSON.stringify({
     origin,destination:'ICN',month,reason:lastError?.message,
@@ -136,11 +143,14 @@ async function readUiMonthResult(origin,month){
     ': '+(lastError?.message||'no dated result'));
 }
 async function uiMonth(origin,month){
+  publicAccess.throwIfBlocked();
   await selectPublicMonth(page,month);
+  publicAccess.throwIfBlocked();
   await page.getByRole('button',{name:'조회',exact:true}).click();
   return readUiMonthResult(origin,month);
 }
 async function uiNextMonth(origin,month){
+  publicAccess.throwIfBlocked();
   const navigation=page.getByRole('navigation',{name:'가는 여정'});
   await navigation.getByRole('button',{name:'다음 달',exact:true}).click();
   return readUiMonthResult(origin,month);
@@ -169,6 +179,8 @@ try{
           resultCalendarReady=result.status==='COVERED';
           completed=true;
         }catch(error){
+          publicAccess.throwIfBlocked();
+          if(error.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(error.message))throw error;
           lastError=error;
           resultCalendarReady=false;
           console.error('RETURN UI FAILURE',route.code,month,attempt,error.message);
@@ -194,10 +206,15 @@ try{
   console.log('RETURN UI COMPLETE',report.coverage.length,'covered',
     report.unqueryable.length,'unqueryable',report.rows.length,'available');
 }catch(error){
+  try{publicAccess.throwIfBlocked();}catch(accessError){error=accessError;}
   report.failure=error.message;
+  if(error.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(error.message)){
+    report.failure_code='ACCESS_LIMIT';report.access_limited_at=new Date().toISOString();
+    report.complete=false;report.attempt_complete=false;
+  }
   save();
   console.error(error);
-  process.exitCode=1;
+  process.exitCode=report.failure_code==='ACCESS_LIMIT'?75:1;
 }finally{
   await page.close().catch(()=>{});
   await browser.close().catch(()=>{});

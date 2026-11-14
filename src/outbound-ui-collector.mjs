@@ -1,4 +1,5 @@
 import {parsePublicAccessibleAwardMonth} from './public-accessible-award.mjs';
+import {watchPublicAccess} from './public-access-limit.mjs';
 
 // The Korean Air public UI displays day/cabin inventory without a flight number.
 // Give the cloud store a truthful stable label rather than pretending it is KExxx.
@@ -13,10 +14,13 @@ export function outwardFromAccessibleTree(tree,{route,month,start,end,sourceUpda
 }
 
 export async function readOutboundScreen(page,{route,month,start,end,sourceUpdatedAt,timeoutMs=18000}){
+  const access=watchPublicAccess(page);
   const deadline=Date.now()+timeoutMs;
   let lastError;
   while(Date.now()<deadline){
+    access.throwIfBlocked();
     const tree=await page.locator('body').ariaSnapshot();
+    access.throwIfBlocked();
     // The official site explicitly marks some routes/months as unqueryable.
     // This is not evidence of zero award seats and must stay distinct.
     if(tree.includes('dialog "확인"')&&tree.includes('검색하신 여정은 조회가 불가합니다.')){
@@ -30,7 +34,9 @@ export async function readOutboundScreen(page,{route,month,start,end,sourceUpdat
       await page.waitForTimeout(850);
     }
   }
+  access.throwIfBlocked();
   const currentTree=await page.locator('body').ariaSnapshot().catch(()=> '');
+  access.throwIfBlocked();
   const resultAnchor=currentTree.indexOf('heading "보너스 좌석');
   const outline=currentTree.slice(Math.max(0,resultAnchor),Math.max(0,resultAnchor)+3500);
   console.error('OUTBOUND SCREEN DIAGNOSTIC',JSON.stringify({route:route.code,month,reason:lastError?.message,outline}));

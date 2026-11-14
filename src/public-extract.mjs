@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {watchPublicAccess} from './public-access-limit.mjs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
@@ -50,6 +51,7 @@ const store=db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?)');
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
 const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
+const publicAccess=watchPublicAccess(page);
 page.setDefaultTimeout(20000);
 const pending=new Set();
 let apiErrors=[];
@@ -92,6 +94,7 @@ async function dismissCookie(){
   await dismissPublicCookies(page);
 }
 async function initializeSearchPage(expectedSourceUpdatedAt=null) {
+  publicAccess.throwIfBlocked();
   pending.clear();apiErrors=[];lastPublicResponse=null;
   await openPublicPage(page);
   await dismissCookie();
@@ -128,9 +131,10 @@ async function verifyDirectTemplate(route,monthKey,template,uiData){
     save();
     return true;
   }catch(error){
+    publicAccess.throwIfBlocked();
+    if(/ACCESS_LIMIT/.test(error.message))throw error;
     report.acceleration.direct_verification_failures++;
     console.warn(`${route.code} ${monthKey}: DIRECT TEMPLATE VERIFY FAILED; UI-only for this route: ${error.message}`);
-    if(/ACCESS_LIMIT/.test(error.message))await sleep(Math.max(10000,intervalMs));
     save();
     return false;
   }
@@ -154,6 +158,7 @@ function storeDirectResult(route,monthKey,data){
   console.log(`${route.code} ${monthKey}: DIRECT ${dayCount} flight days, ${rows.filter(r=>r.available).length} flight/class matches`);
 }
 async function collectMonthDirect(route,monthKey,template){
+  publicAccess.throwIfBlocked();
   checkStop();pending.clear();apiErrors=[];lastPublicResponse=null;
   const result=await queryPublicSeatMonth(page,template,{origin:'ICN',destination:route.code,month:monthKey});
   lastPublicResponse={request:JSON.stringify(result.body),data:result.data,direct:true};
@@ -164,8 +169,10 @@ async function collectMonthDirect(route,monthKey,template){
   await sleep(directIntervalMs);
 }
 async function collectMonth(route,monthKey) {
+  publicAccess.throwIfBlocked();
   checkStop();pending.clear();apiErrors=[];lastPublicResponse=null;
   const layout=await selectPublicMonth(page,monthKey);
+  publicAccess.throwIfBlocked();
   const responsePromise=waitForMonth();
   await page.getByRole('button',{name:'조회',exact:true}).click();
   const response=await responsePromise;
@@ -289,6 +296,7 @@ try {
         for(let attempt=1;attempt<=maxRetries&&!success;attempt++){
           try{
             checkStop();
+            publicAccess.throwIfBlocked();
             const chronological=previousMonth&&new Date(monthKey+'-01T00:00:00Z').getTime()-
               new Date(previousMonth+'-01T00:00:00Z').getTime()<32*86400000;
             if(attempt===1&&chronological){
@@ -299,6 +307,7 @@ try {
                 await selectDestination(route);
               }
               await selectPublicMonth(page,monthKey);
+              publicAccess.throwIfBlocked();
               await page.getByRole('button',{name:'조회',exact:true}).click();
               queryFormReady=false;
             }
@@ -324,6 +333,8 @@ try {
             await sleep(intervalMs);
             success=true;
           }catch(error){
+            publicAccess.throwIfBlocked();
+            if(error.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(error.message))throw error;
             lastError=error;
             previousMonth=null;queryFormReady=false;
             console.error('OUTBOUND UI FAILURE',route.code,monthKey,attempt,error.message);
@@ -362,7 +373,8 @@ try {
             try{
               await collectMonthDirect(route,monthKey,directTemplate);
             }catch(directError){
-              if(/Collection stopped by user|Public source timestamp changed/.test(directError.message))throw directError;
+              publicAccess.throwIfBlocked();
+              if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(directError.message))throw directError;
               report.acceleration.direct_fallbacks++;
               console.warn(`${route.code} ${monthKey}: DIRECT fallback to UI and disable acceleration for this route: ${directError.message}`);
               directTemplate=null;directVerified=false;directDisabled=true;
@@ -377,6 +389,7 @@ try {
           }
           success=true;break;
         } catch(e) {
+          publicAccess.throwIfBlocked();
           if(/ACCESS_LIMIT|Collection stopped by user|Public source timestamp changed/.test(e.message))throw e;
           lastError=e;await writeFailureDiagnostic(route,monthKey,attempt,e);
           console.error(`${route.code} ${monthKey}: attempt ${attempt}/${maxRetries} failed: ${e.message}`);
@@ -413,8 +426,13 @@ try {
   }
   }
 } catch(e) {
+  try{publicAccess.throwIfBlocked();}catch(accessError){e=accessError;}
   report.failure=e.message;report.finished_at=new Date().toISOString();report.elapsed_ms=new Date(report.finished_at).getTime()-new Date(report.started_at).getTime();
-  if(report.coverage.length||report.unqueryable.length||report.failed.length)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
+  if(e.code==='ACCESS_LIMIT'||/ACCESS_LIMIT/.test(e.message)){
+    report.failure_code='ACCESS_LIMIT';report.access_limited_at=report.finished_at;
+    report.complete=false;report.attempt_complete=false;
+  }
+  if(report.coverage.length||report.unqueryable.length||report.failed.length||report.failure_code)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
   console.error(e.message);process.exitCode=/ACCESS_LIMIT/.test(e.message)?75:1;
 }
 finally {await browser.close();db.close();releaseCollection();}
