@@ -11,7 +11,7 @@ test('RSS and listing discover only published title, date and link, not seat inv
  assert.equal(entries.length,1);
  assert.equal(entries[0].region,'Europe');
  assert.equal(entries[0].date,'2026-11-14');
- assert.equal(entries[0].url,href);
+ assert.equal(entries[0].url,new URL(href).toString());
  assert.ok(!JSON.stringify(entries).includes('PRIVATE'));
  const html='<div><a href="'+href+'"><span>'+title+'</span> M zoommytrip 2시간전</a></div>';
  assert.equal(parsePublicListing(html)[0].region,'Europe');
