@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Diagnose public query response and rendered result readiness
+        run: node --no-warnings scripts/diagnose-query-runtime.mjs
       - name: Smoke Incheon outbound UI collector (ICN to CDG, April-May 2027)
         run: node --no-warnings src/public-extract.mjs --route CDG --start 2027-04-01 --end 2027-05-31 --output data/smoke-outbound-ui --max-retries 1
       - name: Probe outbound Oceania UI error (ICN to MEL, April 2027)
