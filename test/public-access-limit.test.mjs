@@ -8,9 +8,12 @@ const response=(status,url='https://www.koreanair.com/api/hmp/bonusSeatView/bonu
  status:()=>status,url:()=>url,
  json:()=>{throw Error('Seat response body must never be read');}
 });
-const denialResponse=(status,contentType,body)=>({
+const denialResponse=(status,contentType,body,server=null)=>({
  ...response(status),
- headerValue:async name=>{assert.equal(name,'content-type');return contentType;},
+ headerValue:async name=>{
+  assert.ok(['content-type','server'].includes(name));
+  return name==='content-type'?contentType:server;
+ },
  body:async()=>Buffer.from(body)
 });
 test('public query denial is latched from HTTP metadata and never becomes empty seats',()=>{
@@ -58,8 +61,35 @@ test('denial diagnostics retain only fixed classifications from an explicit HTML
   '<html><title>Access Denied</title><body>Request blocked. Reference '+secret+'</body></html>'));
  assert.throws(()=>access.throwIfBlocked(),error=>error.code==='ACCESS_LIMIT'&&!error.message.includes(secret));
  assert.deepEqual(await access.denialDiagnostic(),{
-  http_status:403,content_type:'text/html',response_kind:'HTML',denial_kind:'ACCESS_DENIED'
+  http_status:403,content_type:'text/html',response_kind:'HTML',denial_kind:'ACCESS_DENIED',edge_provider_hint:'UNKNOWN'
  });
+});
+test('edge provider hints require exact known server markers and never retain raw header values',async()=>{
+ for(const [server,want] of [['AkamaiGHost','AKAMAI'],[' cloudflare ','CLOUDFLARE'],
+  ['akamai','UNKNOWN'],['nginx private-header-secret','UNKNOWN'],['cloudflare.private-header-secret','UNKNOWN']]){
+  const page=new EventEmitter(),access=watchPublicAccess(page);
+  page.emit('response',denialResponse(403,'text/html','<title>Access Denied</title>private-body-secret',server));
+  const diagnostic=await access.denialDiagnostic();
+  assert.deepEqual(diagnostic,{http_status:403,content_type:'text/html',response_kind:'HTML',
+   denial_kind:'ACCESS_DENIED',edge_provider_hint:want});
+  assert.doesNotMatch(JSON.stringify(diagnostic),/private-|AkamaiGHost|cloudflare/);
+ }
+});
+test('only explicit Akamai error-page URL domains provide an HTML vendor hint',async()=>{
+ for(const [body,want] of [
+  ['<title>Access Denied</title><p>https://errors.edgesuite.net/private-reference-token</p>','AKAMAI'],
+  ['<title>Access Denied</title><a href="https://errors.akamai.com/private-reference-token">Error details</a>','AKAMAI'],
+  ['<title>Access Denied</title><p>HTTP 403 Forbidden</p>','UNKNOWN'],
+  ['<title>Access Denied</title><p>Served by Akamai or Cloudflare</p>','UNKNOWN'],
+  ['<title>Access Denied</title><a href="https://errors.edgesuite.net.evil.example/private-reference-token">Error</a>','UNKNOWN'],
+  ['<script>const help="https://errors.akamai.com/private-reference-token";</script><title>Error</title>','UNKNOWN']
+ ]){
+  const page=new EventEmitter(),access=watchPublicAccess(page);
+  page.emit('response',denialResponse(403,'text/html',body));
+  const diagnostic=await access.denialDiagnostic();
+  assert.equal(diagnostic.edge_provider_hint,want);
+  assert.doesNotMatch(JSON.stringify(diagnostic),/private-|edgesuite|akamai\.com|evil\.example/);
+ }
 });
 test('HTML format alone and script-only denial strings do not establish access-denied content',async()=>{
  for(const body of ['<html><title>Error</title><body>Please try again later</body></html>',
@@ -83,7 +113,7 @@ test('JSON denial classification examines only bounded error fields and never re
   const page=new EventEmitter(),access=watchPublicAccess(page);
   page.emit('response',denialResponse(403,'application/json; charset=utf-8',JSON.stringify(body)));
   const diagnostic=await access.denialDiagnostic();
-  assert.deepEqual(diagnostic,{http_status:403,content_type:'application/json',response_kind:'JSON',denial_kind:want});
+  assert.deepEqual(diagnostic,{http_status:403,content_type:'application/json',response_kind:'JSON',denial_kind:want,edge_provider_hint:'UNKNOWN'});
   assert.doesNotMatch(JSON.stringify(diagnostic),/private-|flightList|Invalid CSRF|Missing required/);
  }
 });
@@ -96,7 +126,7 @@ test('oversized, malformed, and unreadable denial bodies remain unknown without 
   const page=new EventEmitter(),access=watchPublicAccess(page);
   page.emit('response',item);
   assert.deepEqual(await access.denialDiagnostic(),{
-   http_status:429,content_type:'application/problem+json',response_kind:'JSON',denial_kind:'UNKNOWN'
+   http_status:429,content_type:'application/problem+json',response_kind:'JSON',denial_kind:'UNKNOWN',edge_provider_hint:'UNKNOWN'
   });
  }
 });
@@ -104,7 +134,7 @@ test('unrecognized content types cannot expose arbitrary header values or body c
  const page=new EventEmitter(),access=watchPublicAccess(page);
  page.emit('response',denialResponse(403,'private-header-secret','Access Denied private-body-secret'));
  assert.deepEqual(await access.denialDiagnostic(),{
-  http_status:403,content_type:null,response_kind:'UNKNOWN',denial_kind:'UNKNOWN'
+  http_status:403,content_type:null,response_kind:'UNKNOWN',denial_kind:'UNKNOWN',edge_provider_hint:'UNKNOWN'
  });
 });
 test('a pending denial body cannot delay the status latch or diagnostic drain beyond one second',async t=>{
@@ -115,7 +145,7 @@ test('a pending denial body cannot delay the status latch or diagnostic drain be
  const diagnostic=access.denialDiagnostic();
  await new Promise(resolve=>setImmediate(resolve));
  t.mock.timers.tick(1000);
- assert.deepEqual(await diagnostic,{http_status:403,content_type:'text/html',response_kind:'HTML',denial_kind:'UNKNOWN'});
+ assert.deepEqual(await diagnostic,{http_status:403,content_type:'text/html',response_kind:'HTML',denial_kind:'UNKNOWN',edge_provider_hint:'UNKNOWN'});
 });
 test('denial diagnostics ignore successful and unrelated response bodies and keep the first refusal',async()=>{
  const page=new EventEmitter(),access=watchPublicAccess(page);
@@ -129,6 +159,6 @@ test('denial diagnostics ignore successful and unrelated response bodies and kee
  page.emit('response',denialResponse(403,'application/json','{"message":"Validation failed"}'));
  page.emit('response',untouched(429));
  assert.deepEqual(await access.denialDiagnostic(),{
-  http_status:403,content_type:'application/json',response_kind:'JSON',denial_kind:'APPLICATION_VALIDATION'
+  http_status:403,content_type:'application/json',response_kind:'JSON',denial_kind:'APPLICATION_VALIDATION',edge_provider_hint:'UNKNOWN'
  });
 });

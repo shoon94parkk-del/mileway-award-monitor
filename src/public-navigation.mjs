@@ -29,13 +29,9 @@ export async function openPublicPage(page,{attempts=2,delay=ms=>new Promise(r=>s
   for(let attempt=1;attempt<=attempts;attempt++){
     try{
       await enforceSeoulTimezone(page);
-      if(typeof page.setExtraHTTPHeaders==='function'){
-        await page.setExtraHTTPHeaders({
-          'Cache-Control':'no-cache, no-store, max-age=0',
-          'Pragma':'no-cache',
-          'Accept-Language':'ko-KR,ko;q=0.9,en;q=0.7',
-        });
-      }
+      // Keep the browser's normal request headers. Page-wide cache headers also
+      // reach cross-origin scripts/fonts/fetches and trigger unsupported CORS
+      // preflights. CDP cache disabling and the navigation URL handle freshness.
       const target=new URL(PUBLIC_URL);
       if(cacheBust)target.searchParams.set('_mileway_cb',`${Date.now()}-${attempt}`);
       const response=await page.goto(target.toString(),{waitUntil:'commit',timeout:30000});

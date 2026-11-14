@@ -2,6 +2,14 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-15 — Preserve native browser headers for public resources
+
+The public-navigation helper injected `Cache-Control` and `Pragma` into every browser request. Retained browser logs showed third-party scripts/fonts/fetches failing CORS preflights for these headers. A two-origin local browser reproduction confirmed the defect: the old helper sent an unsupported OPTIONS preflight and failed; with native request headers, the same resource loaded through a normal GET.
+
+Remove page-wide extra headers. Retain the Chromium cache-disabled setting, cache-busted navigation URL, Seoul timezone, public UI route selection, and access-limit stop behavior. This fixes the demonstrated resource-loading defect; it does not by itself prove why a particular airline query was denied. The same polluted client also had a historical successful query, so verify the updated client through one ordinary public canary before claiming restored access.
+
+Windows CI and runtime preflight now include navigation and denial-observer tests. Safe denial diagnostics may identify a known edge-provider marker, but generic HTML/403 remains unattributed and no vendor hint establishes an exact blocking rule.
+
 ## 2026-11-14 — Explicit immediate manual retry, with bounded denial diagnostics
 
 After the current cooldown was explained, the user explicitly requested an immediate rerun. `workflow_dispatch` therefore has an optional `retry_now` input, false by default. Only an explicit manual dispatch can skip the local waiting period; scheduled and push-triggered runs retain it. This does not skip the single-browser check, permit failed queries to publish, or change any airline request/access mechanism.

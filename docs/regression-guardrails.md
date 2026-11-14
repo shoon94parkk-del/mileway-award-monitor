@@ -26,6 +26,7 @@ Last updated: 2026-11-14
 - A failed one-browser access check must not start the five-worker matrix. Outbound and return scans must not overlap or cancel each other. Canary output never enters published seat snapshots.
 - Run the exact Windows collector preflight suite in Windows CI. Workflow fixture checks must pass with both LF and CRLF; Linux-only success does not verify the production runner.
 - Keep the latest measured failure stage visible even when an older access-limit observation remains unresolved for recovery scheduling.
+- Never add page-wide cache headers to public browsing: they can contaminate cross-origin resources. Preserve cache freshness through CDP cache disabling and the navigation URL, using the native browser locale and request headers.
 
 ## Alerts
 - Device alert rules/secrets are private and not published.
