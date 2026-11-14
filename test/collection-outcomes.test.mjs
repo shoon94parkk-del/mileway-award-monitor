@@ -8,18 +8,19 @@ import {spawnSync} from 'node:child_process';
 const script=path.resolve('scripts/collection-outcomes.mjs');
 const healthScript=path.resolve('scripts/write-health.mjs');
 const worker=(id,overrides={})=>({worker_id:id,install:'success',tests:'success',collection:'success',...overrides});
-function withReports(records,scanOutcome,check){
+function withReports(records,scanOutcome,check,canaryOutcome='skipped',priorHealth){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-outcomes-'));
  try{
   const reports=path.join(dir,'reports');fs.mkdirSync(reports);
   for(const [index,record] of records.entries())fs.writeFileSync(path.join(reports,index+'.json'),JSON.stringify(record));
   const envFile=path.join(dir,'github-env');
   const run=spawnSync(process.execPath,[script,'aggregate',reports],{
-   cwd:dir,encoding:'utf8',env:{...process.env,GITHUB_ENV:envFile,SCAN_OUTCOME:scanOutcome}
+   cwd:dir,encoding:'utf8',env:{...process.env,GITHUB_ENV:envFile,SCAN_OUTCOME:scanOutcome,CANARY_OUTCOME:canaryOutcome}
   });
   assert.equal(run.status,0,run.stderr);
   const outcomes=Object.fromEntries(fs.readFileSync(envFile,'utf8').trim().split('\n').map(line=>line.split('=')));
   const healthFile=path.join(dir,'health.json');
+  if(priorHealth)fs.writeFileSync(healthFile,JSON.stringify(priorHealth));
   const healthRun=spawnSync(process.execPath,[healthScript,healthFile],{
    cwd:dir,encoding:'utf8',env:{...process.env,...outcomes,BUILD_OUTCOME:'skipped',
     PUBLISH_OUTCOME:'skipped',SOURCE_OUTCOME:'skipped',NOTIFY_OUTCOME:'skipped',
@@ -110,4 +111,62 @@ test('a different worker test failure cannot hide a measured collection access l
   assert.equal(health.last_error_code,'ACCESS_LIMIT');
   assert.equal(health.last_access_limit_at,'2026-11-14T08:00:00.000Z');
  });
+});
+
+test('a denied canary records ACCESS_LIMIT with zero scan workers and keeps shared source freshness unchanged',()=>{
+ withReports([{kind:'canary',install:'success',tests:'success',collection:'failure',
+  collection_error_code:'ACCESS_LIMIT',collection_access_limited_at:'2026-11-14T08:00:00.000Z'}],
+ 'skipped',(outcomes,health)=>{
+  assert.equal(outcomes.COLLECT_OUTCOME,'failure');
+  assert.equal(outcomes.COLLECT_ERROR_CODE,'ACCESS_LIMIT');
+  assert.equal(health.status,'degraded');
+  assert.equal(health.last_error_step,'collection');
+  assert.equal(health.last_access_limit_at,'2026-11-14T08:00:00.000Z');
+  assert.equal(health.last_successful_scan_at,'2026-11-12T00:25:29.327Z');
+  assert.equal(health.source_updated_at,'2026년 9월 12일 23:00');
+ },'failure',{status:'healthy',source_updated_at:'2026년 9월 12일 23:00',last_successful_scan_at:'2026-11-12T00:25:29.327Z'});
+});
+
+test('canary dependency or test failures keep collection skipped and cannot claim a passed search',()=>{
+ for(const stages of [{install:'failure',tests:'skipped',collection:'skipped'},
+  {install:'success',tests:'failure',collection:'skipped'}]){
+  withReports([{kind:'canary',...stages}],'skipped',(outcomes,health)=>{
+   assert.equal(outcomes.INSTALL_OUTCOME,stages.install);
+   assert.equal(outcomes.TESTS_OUTCOME,stages.tests);
+   assert.equal(outcomes.COLLECT_OUTCOME,'skipped');
+   assert.equal(health.status,'degraded');
+   assert.equal(health.last_successful_scan_at,undefined);
+  },'failure');
+ }
+});
+
+test('missing failed canary evidence keeps dependency and tests unproven while retaining gate failure',()=>{
+ withReports([],'skipped',(outcomes,health)=>{
+  assert.deepEqual(outcomes,{INSTALL_OUTCOME:'skipped',TESTS_OUTCOME:'skipped',COLLECT_OUTCOME:'failure'});
+  assert.equal(health.status,'degraded');
+ },'failure');
+});
+
+test('a successful canary cannot stand in for worker zero or a completed five-worker search',()=>{
+ const canary={kind:'canary',install:'success',tests:'success',collection:'success'};
+ withReports([canary],'skipped',(outcomes,health)=>{
+  assert.deepEqual(outcomes,{INSTALL_OUTCOME:'skipped',TESTS_OUTCOME:'skipped',COLLECT_OUTCOME:'skipped'});
+  assert.equal(health.last_successful_scan_at,undefined);
+ },'success');
+ withReports([canary,worker(0),worker(1),worker(2),worker(3),worker(4)],'success',(outcomes)=>{
+  assert.deepEqual(outcomes,{INSTALL_OUTCOME:'success',TESTS_OUTCOME:'success',COLLECT_OUTCOME:'success'});
+ },'success');
+});
+
+test('canary artifact has a separate allowlisted identity and preserves observed access denial',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-canary-outcome-'));
+ try{
+  const result=path.join(dir,'result.json'),file=path.join(dir,'canary.json');
+  fs.writeFileSync(result,JSON.stringify({failure_code:'ACCESS_LIMIT',access_limited_at:'2026-11-14T08:00:00.000Z'}));
+  const run=spawnSync(process.execPath,[script,'write-canary',file,result],{encoding:'utf8',env:{...process.env,
+   INSTALL_OUTCOME:'success',TESTS_OUTCOME:'success',COLLECT_OUTCOME:'failure',WORKER_ID:'0',GITHUB_TOKEN:'private'}});
+  assert.equal(run.status,0,run.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file,'utf8')),{kind:'canary',install:'success',tests:'success',collection:'failure',
+   collection_error_code:'ACCESS_LIMIT',collection_access_limited_at:'2026-11-14T08:00:00.000Z'});
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

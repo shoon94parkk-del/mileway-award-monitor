@@ -15,8 +15,8 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: mileway-europe-return-collection
-  cancel-in-progress: true
+  group: public-daily-collection
+  cancel-in-progress: false
 
 jobs:
   preflight:
@@ -36,9 +36,60 @@ jobs:
         id: cooldown
         run: node scripts/collection-preflight.mjs public-data/health.json
 
-  scan:
+  canary:
+    name: Confirm public UI query access before five browser workers
     needs: preflight
     if: github.event.repository.private == false && needs.preflight.outputs.allowed == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    outputs:
+      allowed: ${{ steps.probe.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser dependency
+        id: install
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Validate public UI canary gate and measured outcomes
+        id: tests
+        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs
+      - name: Query one public ICN-to-LHR month through the regular UI
+        id: probe
+        run: node scripts/collection-canary.mjs
+      - name: Record measured canary stage outcomes
+        if: always()
+        run: node scripts/collection-outcomes.mjs write-canary data/scan-outcomes/canary.json data/public-canary/results.json
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COLLECT_OUTCOME: ${{ steps.probe.outcome }}
+      - name: Upload canary outcomes separately from worker shards
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: return-outcome-canary
+          path: data/scan-outcomes/canary.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload public canary diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: return-canary-diagnostics
+          path: |
+            data/public-canary/results.json
+            data/public-canary/last-run-error.json
+            data/public-canary/last-public-error.json
+            data/public-canary/last-calendar-error.json
+          if-no-files-found: warn
+          retention-days: 3
+
+  scan:
+    needs: [preflight, canary]
+    if: github.event.repository.private == false && needs.canary.result == 'success' && needs.canary.outputs.allowed == 'true'
     name: Europe return browser runner ${{ matrix.id }}
     strategy:
       fail-fast: false
@@ -58,15 +109,36 @@ jobs:
         with:
           node-version: '24'
       - name: Install public browser automation
+        id: install
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Validate the return calendar reader and five-runner merge
+        id: tests
         run: node --test test/europe-return-shards.test.mjs test/europe-returns.test.mjs test/public-accessible-award.test.mjs test/public-modern-ui.test.mjs
       - name: Collect visible Europe-to-Incheon award calendars
+        id: collect
         shell: pwsh
         run: |
           Write-Host "Europe return runner ${{ matrix.id }} scanning: ${{ matrix.routes }}"
           node --no-warnings scripts/collect-europe-returns.mjs --route "${{ matrix.routes }}" --output data/returns-europe.json --interval-ms 3500
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record measured worker stage outcomes
+        if: always()
+        continue-on-error: true
+        env:
+          WORKER_ID: ${{ matrix.id }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+        run: node scripts/collection-outcomes.mjs write data/scan-outcomes/runner-${{ matrix.id }}.json data/returns-europe.json
+      - name: Upload worker stage outcomes
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: return-outcome-${{ matrix.id }}
+          path: data/scan-outcomes/runner-${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 3
       - name: Upload public return diagnostics
         if: always()
         continue-on-error: true
@@ -117,4 +189,57 @@ jobs:
               sleep $((5*i))
             done
             exit 1
+          fi
+
+  status:
+    name: Preserve a return-side public access limit in shared health
+    needs: [preflight, canary, scan, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Download measured canary and worker outcomes
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: return-outcome-*
+          path: data/scan-outcomes
+          merge-multiple: true
+      - name: Aggregate measured public collection outcomes
+        env:
+          SCAN_OUTCOME: ${{ needs.scan.result }}
+          CANARY_OUTCOME: ${{ needs.canary.result }}
+        run: node scripts/collection-outcomes.mjs aggregate data/scan-outcomes
+      - name: Record only measured access denial without claiming full scan recovery
+        if: env.COLLECT_ERROR_CODE == 'ACCESS_LIMIT'
+        env:
+          SOURCE_OUTCOME: skipped
+          PUBLISH_OUTCOME: skipped
+          BUILD_OUTCOME: skipped
+          FULL_SCAN: 'false'
+          NOTIFY_OUTCOME: skipped
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          node --no-warnings scripts/write-health.mjs public-data/health.json
+          node --no-warnings scripts/build-public-status.mjs
+      - name: Publish shared access-limit health
+        if: env.COLLECT_ERROR_CODE == 'ACCESS_LIMIT'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898242+github-actions[bot]@users.noreply.github.com'
+          git add public-data/health.json public-data/status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record return-side public access limit"
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi

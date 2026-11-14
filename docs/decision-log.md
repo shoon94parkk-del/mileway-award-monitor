@@ -2,6 +2,14 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-14 — A real denied retry is not a completed search
+
+Verification run `43546142771` started at 02:24:40 UTC after the cooldown expired. All five Windows workers reached the public source and received HTTP 403 on their first award query; no route/month result was collected and publication was skipped. Keep the current state failed and the last-good seat data intact. A lightweight recovery job succeeding means only that it dispatched or deferred work.
+
+Subsequent full scans require a one-browser public UI access check before the five-way matrix. Outbound and return workflows share a non-cancelling concurrency group so they cannot create ten simultaneous airline-query browsers. The access check uses the same route selection and rendered calendar, never another host, credential, or bypass. Display access denial distinctly from generic collection failure. Device alert state must be read from the current `mileway-alert-api-hoon` production service.
+
+Measured healthy runtime, concurrency evidence, and estimates are recorded in `docs/operations/collection-runtime.md`; access-denied collection has no verified completion ETA.
+
 ## 2026-11-14 — Respect public-source access limits with a bounded cooldown
 
 An explicit public collection report `failure_code=ACCESS_LIMIT` is preserved separately from the failed stage, with its observed timestamp. Public status reports `ACCESS_LIMIT` and a retry time sixty minutes after that observation. Both outbound and return workflows check the latest shared health before starting browsers; an active cooldown fails preflight rather than producing a green collection cycle. Skipped scans and successful source watchers do not clear the failure or advance its timestamp. The gate automatically permits collection after sixty minutes; only a completed successful scan establishes recovery. Last-good seats and source freshness remain independent of this access state.

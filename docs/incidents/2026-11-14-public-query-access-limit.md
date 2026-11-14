@@ -21,3 +21,11 @@ Both collection workflows check the latest shared access-limit state before laun
 Regression tests cover denial detection, late response classification, outcome aggregation, cooldown expiry, skipped-run behavior, and real-scan recovery. The cloud site build and collector syntax checks are required before deployment.
 
 The observed GitHub runner remains denied by the airline. These changes repair detection, reporting, and bounded recovery; they do not establish restored access or fresh seat inventory. Operational recovery requires a subsequent successful full collection and publication. No login, CAPTCHA, session, or access-control bypass was added.
+
+## Follow-up verification at 02:24–02:26 UTC
+
+[Run 43546142771](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43546142771) passed the expired cooldown at 02:24:49 UTC and started all five Windows workers at 02:24:52–53. Each public query again returned HTTP 403. No `OUTBOUND UI` calendar result was logged; the Europe A diagnostic report confirms `coverage=[]`, `rows=[]`, `attempt_complete=false`, and `failure_code=ACCESS_LIMIT`. Those empty arrays describe failed collection and do not establish zero available seats. Publication was skipped. Shared health recorded the latest observed denial at 02:26:03.100 UTC.
+
+The follow-up patch adds a one-browser access check before either five-worker matrix and a shared non-cancelling concurrency group. A blocked check cannot start matrix workers or publish its output as seats. Return-side denial also updates shared cooldown state. Later local dependency or test failures retain outstanding recovery eligibility until a completed full scan. The site labels this state `접근 제한`, preserves the last confirmed data, and reads device alert state from the current production API.
+
+Healthy measured runtimes and post-check estimates are documented in [collection-runtime.md](../operations/collection-runtime.md). The new access check has not yet completed a successful production full scan; its added runtime remains an estimate.

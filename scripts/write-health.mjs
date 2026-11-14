@@ -30,15 +30,18 @@ let status=hasOperationalOutcome?'healthy':(prev.status||'unknown'),error_step=n
 if(hasOperationalOutcome)for(const [outcome,step] of outcomes){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
 const completedScan=fullScan&&collect==='success'&&build==='success';
 const measuredAccessLimit=collect==='failure'&&process.env.COLLECT_ERROR_CODE==='ACCESS_LIMIT';
+const outstandingAccessLimit=prev.status==='degraded'&&prev.last_error_code==='ACCESS_LIMIT'&&!completedScan;
 // A successful watcher or a cooldown skip is not recovery from a denied scan.
-if(prev.status==='degraded'&&prev.last_error_code==='ACCESS_LIMIT'&&!completedScan)status='degraded';
+if(outstandingAccessLimit)status='degraded';
 const next={...prev,version:1,status,alerts};
 const currentSource=process.env.CURRENT_SOURCE||readSnapshotSource();if(currentSource)next.source_updated_at=currentSource;
 if(fullScan&&collect==='success'&&build==='success')next.last_successful_scan_at=now;
 if(notify==='success')next.last_notification_check_at=now;
 if(error_step){
  next.last_error_at=now;next.last_error_step=error_step;
- next.last_error_code=measuredAccessLimit?'ACCESS_LIMIT':null;
+ // A later local failure is not evidence that public query access recovered.
+ // Keep hourly access-limit recovery eligible while reporting its true stage.
+ next.last_error_code=measuredAccessLimit||outstandingAccessLimit?'ACCESS_LIMIT':null;
 }
 // A different worker's earlier-stage failure cannot erase an observed denial.
 if(measuredAccessLimit){

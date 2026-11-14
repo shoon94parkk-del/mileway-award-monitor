@@ -8,8 +8,7 @@ permissions:
   contents: write
 concurrency:
   group: public-daily-collection
-  # Cancel the older two-lane scanner when the new five-runner scan starts.
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   preflight:
@@ -29,9 +28,60 @@ jobs:
         id: cooldown
         run: node scripts/collection-preflight.mjs public-data/health.json
 
-  scan:
+  canary:
+    name: Confirm public UI query access before five browser workers
     needs: preflight
     if: github.event.repository.private == false && needs.preflight.outputs.allowed == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    outputs:
+      allowed: ${{ steps.probe.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser dependency
+        id: install
+        run: npm install --no-save --package-lock=false playwright@1.62.1
+      - name: Validate public UI canary gate and measured outcomes
+        id: tests
+        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs
+      - name: Query one public ICN-to-LHR month through the regular UI
+        id: probe
+        run: node scripts/collection-canary.mjs
+      - name: Record measured canary stage outcomes
+        if: always()
+        run: node scripts/collection-outcomes.mjs write-canary data/scan-outcomes/canary.json data/public-canary/results.json
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COLLECT_OUTCOME: ${{ steps.probe.outcome }}
+      - name: Upload canary outcomes separately from worker shards
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: outbound-outcome-canary
+          path: data/scan-outcomes/canary.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload public canary diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: outbound-canary-diagnostics
+          path: |
+            data/public-canary/results.json
+            data/public-canary/last-run-error.json
+            data/public-canary/last-public-error.json
+            data/public-canary/last-calendar-error.json
+          if-no-files-found: warn
+          retention-days: 3
+
+  scan:
+    needs: [preflight, canary]
+    if: github.event.repository.private == false && needs.canary.result == 'success' && needs.canary.outputs.allowed == 'true'
     name: Outbound browser runner ${{ matrix.id }} (${{ matrix.label }})
     strategy:
       fail-fast: false
@@ -150,7 +200,7 @@ jobs:
 
   status:
     name: Record full scan health
-    needs: [preflight, scan, publish]
+    needs: [preflight, canary, scan, publish]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -172,6 +222,7 @@ jobs:
       - name: Aggregate collection stages without inferring test failures
         env:
           SCAN_OUTCOME: ${{ needs.scan.result }}
+          CANARY_OUTCOME: ${{ needs.canary.result }}
         run: node scripts/collection-outcomes.mjs aggregate data/scan-outcomes
       - name: Auto-register Telegram target
         continue-on-error: true

@@ -77,3 +77,26 @@ test('a completed successful scan can recover without erasing the last access-li
   assert.ok(health.recovered_at);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('a later canary dependency, test, or non-denial collection failure retains outstanding access-limit recovery',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mileway-canary-outstanding-limit-'));
+ try{
+  const healthFile=path.join(dir,'health.json');
+  for(const [stage,step] of [['INSTALL','dependency_install'],['TESTS','tests'],['COLLECT','collection']]){
+   fs.writeFileSync(healthFile,JSON.stringify(priorHealth));
+   const write=spawnSync(process.execPath,[healthWriter,healthFile],{cwd:dir,encoding:'utf8',env:{...process.env,
+    INSTALL_OUTCOME:'skipped',SOURCE_OUTCOME:'skipped',TESTS_OUTCOME:'skipped',COLLECT_OUTCOME:'skipped',
+    BUILD_OUTCOME:'skipped',PUBLISH_OUTCOME:'skipped',NOTIFY_OUTCOME:'skipped',FULL_SCAN:'false',
+    COLLECT_ERROR_CODE:'',COLLECT_ACCESS_LIMITED_AT:'',TELEGRAM_BOT_TOKEN:'',TELEGRAM_CHAT_ID:'',
+    [stage+'_OUTCOME']:'failure'}});
+   assert.equal(write.status,0,write.stderr);
+   const health=JSON.parse(fs.readFileSync(healthFile,'utf8'));
+   assert.equal(health.status,'degraded');
+   assert.equal(health.last_error_step,step);
+   assert.equal(health.last_error_code,'ACCESS_LIMIT');
+   assert.equal(health.last_access_limit_at,limitedAt);
+   assert.equal(health.source_updated_at,priorHealth.source_updated_at);
+   assert.equal(health.last_successful_scan_at,undefined);
+  }
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

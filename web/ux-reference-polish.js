@@ -1,7 +1,7 @@
 const HEALTH_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/health.json';
 const STATUS_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/status.json';
 const SNAPSHOT_URL='https://raw.githubusercontent.com/shoon94parkk-del/mileway-award-monitor/main/public-data/snapshot.json';
-const ALERT_API_URL='https://mileway-alert-api.onrender.com';
+const ALERT_API_URL='https://mileway-alert-api-hoon.onrender.com';
 const ALERT_TOKEN_KEY='mileway.alert.manage-token.v1';
 const $=s=>document.querySelector(s);
 
@@ -74,10 +74,14 @@ async function syncHealth(){
   const health=$('.ux-health'),value=$('#ux-health-value'),alert=$('#ux-alert-value');
   if(source&&$('#ux-source-value'))$('#ux-source-value').textContent=compactSource(source);
   const operationalFailure=collector==='failed'||healthCollectionFailure;
+  const accessLimited=operationalFailure&&(
+   statusMatchesSnapshot&&status?.error_code==='ACCESS_LIMIT'||
+   healthCollectionFailure&&h?.last_error_code==='ACCESS_LIMIT');
   const delayed=sourceStatus==='delayed';
   const partial=collector==='partial';
   const ok=!operationalFailure&&!delayed&&!partial&&sourceStatus==='current';
-  if(value)value.textContent=operationalFailure?'수집 실패':delayed?'원자료 지연':partial?'부분 반영':ok?'정상':'확인 중';
+  if(value)value.textContent=accessLimited?'접근 제한':operationalFailure?'수집 실패':delayed?'원자료 지연':partial?'부분 반영':ok?'정상':'확인 중';
+  if(health)health.title=accessLimited?'대한항공 조회가 제한되어 마지막 확인 자료를 표시합니다. 새 좌석 수집은 아직 완료되지 않았습니다.':'';
   health?.classList.toggle('is-ok',ok);
   health?.classList.toggle('is-warn',operationalFailure||delayed||partial);
   if(alert)alert.textContent=device.label;

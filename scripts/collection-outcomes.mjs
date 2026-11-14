@@ -9,14 +9,15 @@ const validIso=value=>{
  const stamp=typeof value==='string'?Date.parse(value):NaN;
  return Number.isFinite(stamp)?new Date(stamp).toISOString():null;
 };
-const validRecord=record=>workerIds.has(record?.worker_id)&&
+const validRecord=record=>(record?.kind==='canary'&&!Object.hasOwn(record,'worker_id')||
+ record?.kind===undefined&&workerIds.has(record?.worker_id))&&
  Object.values(stages).every(stage=>validOutcomes.has(record[stage]));
 const [command,file]=process.argv.slice(2);
-if(!file)throw Error('Usage: collection-outcomes.mjs write FILE | aggregate DIRECTORY');
+if(!file)throw Error('Usage: collection-outcomes.mjs write|write-canary FILE REPORT | aggregate DIRECTORY');
 
-if(command==='write'){
+if(command==='write'||command==='write-canary'){
  // Deliberately allowlist only nonsecret workflow facts, never the environment.
- const record={worker_id:Number(process.env.WORKER_ID)};
+ const record=command==='write-canary'?{kind:'canary'}:{worker_id:Number(process.env.WORKER_ID)};
  for(const [variable,stage] of Object.entries(stages))record[stage]=process.env[variable]||'skipped';
  if(!validRecord(record))throw Error('Invalid worker stage outcomes');
  let result;try{result=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));}catch{}
@@ -32,22 +33,29 @@ if(command==='write'){
   if(!name.endsWith('.json'))continue;
   let record;try{record=JSON.parse(fs.readFileSync(path.join(file,name),'utf8'));}catch{continue;}
   if(!validRecord(record))continue;
-  if(reports.has(record.worker_id))duplicates.add(record.worker_id);
-  reports.set(record.worker_id,record);
+  const id=record.kind==='canary'?'canary':record.worker_id;
+  if(reports.has(id))duplicates.add(id);
+  reports.set(id,record);
  }
  for(const id of duplicates)reports.delete(id);
- const records=[...reports.values()],complete=records.length===workerIds.size;
+ const canary=reports.get('canary');
+ const records=[...reports.values()].filter(record=>record.kind!=='canary'),complete=records.length===workerIds.size;
+ const failedCanary=!records.length&&canary&&Object.values(stages).some(stage=>['failure','cancelled'].includes(canary[stage]));
  const outcomes={};
  for(const [variable,stage] of Object.entries(stages)){
-  const measured=records.map(record=>record[stage]);
+  const measured=(failedCanary?[canary]:records).map(record=>record[stage]);
   outcomes[variable]=measured.includes('failure')?'failure':measured.includes('cancelled')?'cancelled':
-   complete&&measured.every(outcome=>outcome==='success')?'success':'skipped';
+   (complete||failedCanary)&&measured.every(outcome=>outcome==='success')?'success':'skipped';
  }
  // A runner may stop before it can upload evidence. Never call its tests failed
  // (or passed) from the job result; retain the overall collection failure.
  if(['failure','cancelled'].includes(process.env.SCAN_OUTCOME)&&
   !['failure','cancelled'].includes(outcomes.COLLECT_OUTCOME))outcomes.COLLECT_OUTCOME=process.env.SCAN_OUTCOME;
- const limited=records.filter(record=>record.collection==='failure'&&record.collection_error_code==='ACCESS_LIMIT');
+ // The canary may fail before it uploads any stage evidence. Its job result
+ // proves gate failure, never successful tests or an attempted matrix search.
+ if(!records.length&&!failedCanary&&['failure','cancelled'].includes(process.env.CANARY_OUTCOME))
+  outcomes.COLLECT_OUTCOME=process.env.CANARY_OUTCOME;
+ const limited=[...records,...(canary?[canary]:[])].filter(record=>record.collection==='failure'&&record.collection_error_code==='ACCESS_LIMIT');
  if(limited.length){
   outcomes.COLLECT_ERROR_CODE='ACCESS_LIMIT';
   const dates=limited.map(record=>validIso(record.collection_access_limited_at)).filter(Boolean).sort();

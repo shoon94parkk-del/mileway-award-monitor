@@ -34,6 +34,7 @@ The old service names in the previous workspace are not the current production t
 - Parallel collection falls back conservatively when 403/429 access limits appear.
 - Outbound health aggregates measured dependency/test/collection outcomes from all five workers. An overall scan failure is not evidence of failed tests; missing stage artifacts leave test outcomes unproven.
 - Public `ACCESS_LIMIT` failures retain the observed time and impose a sixty-minute browser-launch cooldown in both collection workflows. Cooldown skips do not establish recovery or extend the timer; collection resumes automatically after expiry.
+- The post-cooldown access check uses one public browser before the five-worker matrix. Both directions share a non-cancelling source concurrency group: the maximum simultaneous full-scan query browsers is five across the site. A successful recovery dispatcher is not proof of a successful search.
 
 Important: scheduled workflow success, collector success, source freshness, publication freshness, and notification success are distinct states.
 
