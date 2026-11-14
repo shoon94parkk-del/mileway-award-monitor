@@ -2,6 +2,10 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-15 — Replay the successful November 12 run without collector changes
+
+The user explicitly requested the November 12 successful setup, so rerun all jobs of `43125985343` at its original SHA `31e4bb17` as attempt 2. Confirm the original workflow, source, five route partitions, image, Node/npm/Playwright and commands rather than approximating them with current code. All five workers passed their fourteen tests and then failed the first route/month twice without a verified result calendar; publication was skipped. The legacy code does not emit HTTP-denial diagnostics, so do not attribute a newly measured 403 to this attempt. Its status job incorrectly passes the overall scan failure as the test outcome; correct the resulting public `last_error_step` to `collection` using the measured step results, retaining the actual earlier denial timestamp and last-good publication. Keep the current production collector and its guards unchanged.
+
 ## 2026-11-15 — Preserve native browser headers for public resources
 
 The public-navigation helper injected `Cache-Control` and `Pragma` into every browser request. Retained browser logs showed third-party scripts/fonts/fetches failing CORS preflights for these headers. A two-origin local browser reproduction confirmed the defect: the old helper sent an unsupported OPTIONS preflight and failed; with native request headers, the same resource loaded through a normal GET.
