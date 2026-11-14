@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
+import {dailySourceIsStale} from '../src/source-timestamp.mjs';
 
 const COOLDOWN_MS=60*60*1000;
 export function accessLimitRetryAfter(health){
@@ -15,6 +16,11 @@ export function collectionCooldown(health,now=new Date()){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  let health={};try{health=JSON.parse(fs.readFileSync(process.argv[2]||'public-data/health.json','utf8'));}catch{}
  const result=collectionCooldown(health);
+ // The additional early-morning recovery attempt is only needed if the
+ // published source is genuinely stale. Do not double-scan a fresh daily set.
+ const recoveryOnly=process.env.MILEWAY_RECOVERY_ONLY==='true';
+ const sourceFresh=recoveryOnly&&!dailySourceIsStale(health.source_updated_at,new Date());
+ if(sourceFresh)result.allowed=false;
  const manualRetry=process.env.GITHUB_EVENT_NAME==='workflow_dispatch'&&process.env.MILEWAY_MANUAL_RETRY==='true';
  if(manualRetry){
   result.allowed=true;
@@ -24,7 +30,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  if(result.allowed)console.log(manualRetry?
   'Collection preflight: explicit user-requested manual retry; the full scan still requires a successful public UI check.':
   'Collection preflight: no active access-limit cooldown.');
- else{
+ else if(sourceFresh){
+  console.log('RECOVERY NOT NEEDED: source already fresh; skip the extra morning browser request.');
+ }else{
   console.error('ACCESS_LIMIT: collection paused until '+result.retry_after_at+'; no browser launched.');
   // Keep the workflow unsuccessful: watchdogs must not mistake a cooldown skip
   // for a completed publication and suppress later eligible recovery.
