@@ -28,11 +28,23 @@ const outcomes=[[install,'dependency_install'],[source,'source_check'],[tests,'t
 const hasOperationalOutcome=outcomes.some(([outcome])=>outcome!=='skipped');
 let status=hasOperationalOutcome?'healthy':(prev.status||'unknown'),error_step=null;
 if(hasOperationalOutcome)for(const [outcome,step] of outcomes){if(outcome==='failure'||outcome==='cancelled'){status='degraded';error_step=step;break;}}
+const completedScan=fullScan&&collect==='success'&&build==='success';
+const measuredAccessLimit=collect==='failure'&&process.env.COLLECT_ERROR_CODE==='ACCESS_LIMIT';
+// A successful watcher or a cooldown skip is not recovery from a denied scan.
+if(prev.status==='degraded'&&prev.last_error_code==='ACCESS_LIMIT'&&!completedScan)status='degraded';
 const next={...prev,version:1,status,alerts};
 const currentSource=process.env.CURRENT_SOURCE||readSnapshotSource();if(currentSource)next.source_updated_at=currentSource;
 if(fullScan&&collect==='success'&&build==='success')next.last_successful_scan_at=now;
 if(notify==='success')next.last_notification_check_at=now;
-if(error_step){next.last_error_at=now;next.last_error_step=error_step;}
+if(error_step){
+ next.last_error_at=now;next.last_error_step=error_step;
+ next.last_error_code=measuredAccessLimit?'ACCESS_LIMIT':null;
+}
+// A different worker's earlier-stage failure cannot erase an observed denial.
+if(measuredAccessLimit){
+ const observed=Date.parse(process.env.COLLECT_ACCESS_LIMITED_AT||'');
+ next.last_access_limit_at=Number.isFinite(observed)?new Date(observed).toISOString():now;
+}
 if(hasOperationalOutcome&&status==='healthy'&&prev.status==='degraded')next.recovered_at=now;
 fs.mkdirSync(path.dirname(file),{recursive:true});
 const before=JSON.stringify(prev),after=JSON.stringify(next);if(before!==after)fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');

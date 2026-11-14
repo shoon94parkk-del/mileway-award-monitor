@@ -1,6 +1,6 @@
 # Mileway project memory
 
-Last updated: 2026-09-22
+Last updated: 2026-11-14
 
 ## Product truth
 Mileway is a Korean Air public **daily** award-seat explorer. It does not claim realtime inventory and does not expose a remaining-seat count when the source does not provide one. Final availability must be confirmed on Korean Air.
@@ -32,6 +32,8 @@ The old service names in the previous workspace are not the current production t
 - A completed region is published independently through a single-writer path.
 - Failed/incomplete regions never replace the last good published region.
 - Parallel collection falls back conservatively when 403/429 access limits appear.
+- Outbound health aggregates measured dependency/test/collection outcomes from all five workers. An overall scan failure is not evidence of failed tests; missing stage artifacts leave test outcomes unproven.
+- Public `ACCESS_LIMIT` failures retain the observed time and impose a sixty-minute browser-launch cooldown in both collection workflows. Cooldown skips do not establish recovery or extend the timer; collection resumes automatically after expiry.
 
 Important: scheduled workflow success, collector success, source freshness, publication freshness, and notification success are distinct states.
 

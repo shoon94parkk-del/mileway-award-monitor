@@ -1,6 +1,6 @@
 # Mileway regression guardrails
 
-Last updated: 2026-09-22
+Last updated: 2026-11-14
 
 ## Data truth
 - Never call Mileway realtime inventory.
@@ -21,6 +21,8 @@ Last updated: 2026-09-22
 - Cloudflare/GitHub recovery checks do not create duplicate heavy collectors.
 - A failed/incomplete region cannot overwrite the last good region.
 - Collector success and source freshness remain separate.
+- Report measured worker-stage failures accurately; never label the full scan job result as a unit-test outcome.
+- An explicit public-source access limit stops source queries and gates browser launches for sixty minutes. Do not move the observation timestamp forward on cooldown skips or count skipped workflows as successful cycles.
 
 ## Alerts
 - Device alert rules/secrets are private and not published.

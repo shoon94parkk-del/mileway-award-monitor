@@ -12,8 +12,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  preflight:
+    name: Respect public-source access-limit cooldown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      allowed: ${{ steps.cooldown.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Stop before any browser launch during access-limit cooldown
+        id: cooldown
+        run: node scripts/collection-preflight.mjs public-data/health.json
+
   scan:
-    if: github.event.repository.private == false
+    needs: preflight
+    if: github.event.repository.private == false && needs.preflight.outputs.allowed == 'true'
     name: Outbound browser runner ${{ matrix.id }} (${{ matrix.label }})
     strategy:
       fail-fast: false
@@ -33,10 +51,13 @@ jobs:
         with:
           node-version: '24'
       - name: Install browser dependency
+        id: install
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Validate public UI collector and 5-runner partitions
+        id: tests
         run: node --test test/outbound-ui-collector.test.mjs test/outbound-five-runner.test.mjs test/public-accessible-award.test.mjs test/public-modern-ui.test.mjs
       - name: Scrape Korean Air rendered seat calendar
+        id: collect
         env:
           MILEWAY_DIRECT_API: '0'
         shell: pwsh
@@ -44,6 +65,38 @@ jobs:
           Write-Host "Runner ${{ matrix.id }} scanning: ${{ matrix.routes }}"
           node --no-warnings src/public-extract.mjs --route "${{ matrix.routes }}" --output data/shard-results --interval-ms 3000 --max-retries 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record measured worker stage outcomes
+        if: always()
+        continue-on-error: true
+        env:
+          WORKER_ID: ${{ matrix.id }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+        run: node scripts/collection-outcomes.mjs write data/scan-outcomes/runner-${{ matrix.id }}.json data/shard-results/results.json
+      - name: Upload worker stage outcomes
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: outbound-outcome-${{ matrix.id }}
+          path: data/scan-outcomes/runner-${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Upload public collection diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: outbound-diagnostics-${{ matrix.id }}
+          path: |
+            data/shard-results/results.json
+            data/shard-results/route-discovery.json
+            data/shard-results/last-run-error.json
+            data/shard-results/last-public-error.json
+            data/shard-results/last-calendar-error.json
+          if-no-files-found: warn
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         with:
           name: outbound-shard-${{ matrix.id }}
@@ -97,7 +150,7 @@ jobs:
 
   status:
     name: Record full scan health
-    needs: [scan, publish]
+    needs: [preflight, scan, publish]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -109,6 +162,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Download measured worker outcomes
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: outbound-outcome-*
+          path: data/scan-outcomes
+          merge-multiple: true
+      - name: Aggregate collection stages without inferring test failures
+        env:
+          SCAN_OUTCOME: ${{ needs.scan.result }}
+        run: node scripts/collection-outcomes.mjs aggregate data/scan-outcomes
       - name: Auto-register Telegram target
         continue-on-error: true
         env:
@@ -117,10 +181,8 @@ jobs:
         run: node --no-warnings scripts/register-telegram.mjs
       - name: Record collection and publication status
         env:
-          INSTALL_OUTCOME: success
           SOURCE_OUTCOME: skipped
-          TESTS_OUTCOME: ${{ needs.scan.result }}
-          COLLECT_OUTCOME: ${{ needs.scan.result }}
+          PUBLISH_OUTCOME: ${{ needs.publish.result }}
           BUILD_OUTCOME: ${{ needs.publish.result }}
           FULL_SCAN: ${{ needs.publish.result == 'success' }}
           NOTIFY_OUTCOME: skipped

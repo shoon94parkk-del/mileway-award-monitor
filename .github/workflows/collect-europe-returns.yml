@@ -19,8 +19,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  preflight:
+    name: Respect public-source access-limit cooldown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      allowed: ${{ steps.cooldown.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Stop before any browser launch during access-limit cooldown
+        id: cooldown
+        run: node scripts/collection-preflight.mjs public-data/health.json
+
   scan:
-    if: github.event.repository.private == false
+    needs: preflight
+    if: github.event.repository.private == false && needs.preflight.outputs.allowed == 'true'
     name: Europe return browser runner ${{ matrix.id }}
     strategy:
       fail-fast: false
@@ -49,6 +67,15 @@ jobs:
           Write-Host "Europe return runner ${{ matrix.id }} scanning: ${{ matrix.routes }}"
           node --no-warnings scripts/collect-europe-returns.mjs --route "${{ matrix.routes }}" --output data/returns-europe.json --interval-ms 3500
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload public return diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: return-diagnostics-${{ matrix.id }}
+          path: data/returns-europe.json
+          if-no-files-found: warn
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         with:
           name: return-shard-${{ matrix.id }}

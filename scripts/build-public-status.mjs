@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {collectionCycle} from '../src/collection-cycle.mjs';
 import {sourceFreshness} from '../src/health-status.mjs';
+import {accessLimitRetryAfter} from './collection-preflight.mjs';
 
 const read=(file,fallback={})=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return fallback;}};
 const isoMs=value=>{const ms=Date.parse(value||'');return Number.isFinite(ms)?ms:NaN;};
@@ -43,7 +44,8 @@ const status={
   notification_status:notificationFailure?'failed':health.last_notification_check_at?'checked':'unknown',
   last_notification_check_at:health.last_notification_check_at||null,
   heartbeat_at:now.toISOString(),
-  error_code:healthFailureCurrent?(health.last_error_step||'unknown'):null,
+  error_code:healthFailureCurrent?(health.last_error_code||health.last_error_step||'unknown'):null,
+  retry_after_at:healthFailureCurrent&&health.last_error_code==='ACCESS_LIMIT'?accessLimitRetryAfter(health):null,
   regions
 };
 fs.mkdirSync('public-data',{recursive:true});

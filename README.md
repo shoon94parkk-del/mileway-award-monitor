@@ -51,8 +51,11 @@ npm run deploy:cloudflare
 - `publication_id`
 - `notification_status`
 - region status records
+- `error_code=ACCESS_LIMIT` / `retry_after_at` when the public source denied collection
 
 The UI must not call stale airline source data “normal” just because a collection process completed successfully. `source_status=delayed` is displayed separately from collector health.
+
+After an explicit public-source access limit, both collection workflows pause browser launches for sixty minutes from the observed denial. A cooldown preflight remains unsuccessful so recovery scheduling can resume automatically after the timer expires. Skipped attempts do not clear the failure or renew the cooldown.
 
 `public-data/health.json` remains an operational compatibility file; `status.json` is the preferred public interpretation layer.
 
