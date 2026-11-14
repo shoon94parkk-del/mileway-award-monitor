@@ -49,8 +49,16 @@ const db=new DatabaseSync(path.join(output,'seats.db'));
 db.exec('CREATE TABLE IF NOT EXISTS snapshots (origin TEXT, destination TEXT, month TEXT, checked_at TEXT, source_updated_at TEXT, snapshot_json TEXT, PRIMARY KEY(origin,destination,month));');
 const store=db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?)');
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
-const browser=await pw.chromium.launch({...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
-const page=await browser.newPage({locale:'ko-KR',viewport:{width:1280,height:900}});
+const standardChrome=process.env.MILEWAY_STANDARD_CHROME==='1';
+const browser=await pw.chromium.launch(standardChrome?{
+  channel:'chrome',headless:process.argv.includes('--headless')
+}:{...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
+const browserContext=await browser.newContext({
+  locale:'ko-KR',viewport:{width:1280,height:900},
+  ...(standardChrome?{timezoneId:'Asia/Seoul'}:{})
+});
+const page=await browserContext.newPage();
+if(standardChrome)console.log('PUBLIC BROWSER: installed Chrome; native HTTP/2, cookies and cache; no custom protocol flags');
 const publicAccess=watchPublicAccess(page);
 page.setDefaultTimeout(20000);
 const pending=new Set();
