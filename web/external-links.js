@@ -23,6 +23,10 @@ async function showExternalLinks(){
  section.append(heading);
  section.append(addText('p','대한항공 조회 제한으로 자료가 오래된 경우, zoommytrip 운영자가 다른 사이트에 공개한 지역별 게시물을 확인할 수 있습니다. 좌석 수와 예약 가능 여부는 대한항공에서 재확인하세요.'));
  const links=document.createElement('div');links.className='external-reference-links';
+ const latest=document.createElement('a');latest.href=categoryUrl;latest.target='_blank';latest.rel='noopener noreferrer';
+ latest.append(addText('b','최신 게시물 전체 보기'));
+ latest.append(addText('span','제공처에서 직접 확인 · 자동 반영과 무관'));
+ links.append(latest);
  try{
   const response=await fetch(DATA_URL,{cache:'no-store',signal:AbortSignal.timeout(7000)});
   if(!response.ok())throw Error('External link index unavailable');
@@ -38,9 +42,7 @@ async function showExternalLinks(){
    links.append(link);
   }
  }catch(error){
-  const link=document.createElement('a');link.href=categoryUrl;link.target='_blank';link.rel='noopener noreferrer';
-  link.textContent='zoommytrip 공개 자료 모아보기';
-  links.append(link);
+  console.info('External article pointers unavailable. Use provider listing directly.');
  }
  if(!links.children.length){
   const a=document.createElement('a');a.href=categoryUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent='최신 공개 자료 모아보기';links.append(a);
