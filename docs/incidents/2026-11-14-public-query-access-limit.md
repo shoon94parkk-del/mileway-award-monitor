@@ -35,3 +35,9 @@ Healthy measured runtimes and post-check estimates are documented in [collection
 [Run 43603463237](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43603463237), like the 14:00 run, failed two workflow-contract assertions before the public UI query step. The workflow files had CRLF line endings on Windows, while the tests split and matched LF-only text. This is an internal regression introduced by the earlier mitigation, not a new observation of airline access denial. The last verified HTTP 403 remains the 02:26 UTC observation until a later real query runs.
 
 The fix normalizes fixture line endings, validates unchanged contracts using both LF and CRLF inputs, and adds a dedicated Windows CI preflight job. Public status now distinguishes the current `tests` failure from the retained older access-limit state used for recovery eligibility. The runtime preflight remains enabled; no failed test or source query is treated as success.
+
+### Verification after the portability fix
+
+[CI run 43604488304](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43604488304) passed both the full Ubuntu suite/build (220 tests) and the exact Windows preflight suite (28 tests). The same Windows validation step then passed in [real collector run 43604555166](https://github.com/shoon94parkk-del/mileway-award-monitor/actions/runs/43604555166).
+
+That run reached the public award query and observed `ACCESS_LIMIT HTTP 403` at **2026-11-14 14:24:00.826 UTC (23:24 KST)**. The single-browser gate failed, the five-worker matrix and publication were skipped, and shared health recorded a new sixty-minute cooldown ending at 15:24 UTC. This verifies that the internal test regression is fixed and that access denial still prevents actual seat collection. The last-good seat publication remains unchanged.
