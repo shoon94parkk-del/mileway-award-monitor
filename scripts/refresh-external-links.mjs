@@ -69,6 +69,10 @@ export async function refreshLinks(file='public-data/external-links.json'){
  }
  const articles=selectExternalLinks(discovered,previous.articles);
  if(!articles.length||!discovered.length)throw Error('Could not verify a current provider index; leave prior links unchanged. '+(error||''));
+ if(JSON.stringify(articles)===JSON.stringify(previous.articles)){
+  console.log('PUBLIC EXTERNAL LINKS: no changed provider article pointers');
+  return previous;
+ }
  const current={...previous,last_checked_at:new Date().toISOString(),articles};
  fs.writeFileSync(file,JSON.stringify(current,null,2)+'\n');
  console.log('PUBLIC EXTERNAL LINKS:',articles.map(a=>a.region+':'+a.date).join(', '));
