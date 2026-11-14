@@ -1,0 +1,37 @@
+name: Validate local Chrome test launcher
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/start-local-chrome-check.cmd'
+      - 'scripts/run-local-standard-chrome-check.ps1'
+      - '.github/workflows/validate-local-chrome-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check local script syntax without launching any browser
+        shell: pwsh
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/run-local-standard-chrome-check.ps1').Path,
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.ToString() }
+            exit 1
+          }
+          $cmd=Get-Content 'scripts/start-local-chrome-check.cmd' -Raw -Encoding UTF8
+          if(-not $cmd.Contains('run-local-standard-chrome-check.ps1') -or
+             -not $cmd.Contains('mileway-award-monitor/archive/refs/heads/main.zip')) {
+            throw 'Local test bootstrap is incomplete'
+          }
+          Write-Host 'Windows local test scripts passed static validation. No airline request was sent.'
