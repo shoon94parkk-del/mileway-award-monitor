@@ -8,6 +8,20 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
   Write-Error 'npm 설치가 필요합니다.'
 }
+$nodeVersion=(node --version).Trim().TrimStart('v')
+$nodeMajor=[int]($nodeVersion.Split('.')[0])
+if($nodeMajor -lt 24){
+  throw ("Node.js 24 이상이 필요합니다. 현재 버전: "+$nodeVersion)
+}
+$chromeCandidates=@(
+  (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
+  (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'),
+  (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe')
+)
+if(-not ($chromeCandidates | Where-Object {Test-Path $_} | Select-Object -First 1)){
+  throw 'Google Chrome 브라우저가 설치되어 있지 않습니다. https://www.google.com/chrome/'
+}
+
 $env:MILEWAY_STANDARD_CHROME='1'
 $env:MILEWAY_DIRECT_API='0'
 Write-Host '대한항공 공개 보너스 달력을 설치된 Chrome에서 1회만 확인합니다.'
