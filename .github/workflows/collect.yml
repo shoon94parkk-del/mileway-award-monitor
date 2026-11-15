@@ -7,13 +7,6 @@ on:
         type: boolean
         required: false
         default: false
-  push:
-    branches: [main]
-    paths: ['.github/workflows/collect.yml', 'src/public-extract.mjs', 'src/outbound-ui-collector.mjs', 'src/public-accessible-award.mjs']
-  schedule:
-    # One restrained recovery attempt at 02:30 KST only while source is stale.
-    # Respect the published access-limit cooldown, then test one real calendar.
-    - cron: '30 17 * * *'
 permissions:
   contents: write
 concurrency:
