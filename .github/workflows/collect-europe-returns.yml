@@ -1,17 +1,6 @@
 name: Collect Europe to Incheon award returns
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/collect-europe-returns.yml'
-      - 'scripts/collect-europe-returns.mjs'
-      - 'scripts/europe-return-shards.mjs'
-      - 'scripts/merge-europe-return-shards.mjs'
-      - 'src/public-accessible-award.mjs'
-  schedule:
-    # 03:40 KST daily, after the usual outbound collection window.
-    - cron: '40 18 * * *'
 permissions:
   contents: write
 concurrency:
