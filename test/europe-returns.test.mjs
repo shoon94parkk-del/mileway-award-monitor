@@ -51,7 +51,7 @@ test('site build and manually dispatched workflow expose independent return coll
  const workflow=read('.github/workflows/collect-europe-returns.yml'),builder=read('scripts/build-cloud.mjs'),home=read('web/index.html');
  assert.match(workflow,/scripts\/collect-europe-returns\.mjs/);
  assert.match(workflow,/scripts\/publish-europe-returns\.mjs/);
- assert.match(workflow,/^  workflow_dispatch:\\s*$/m);
+ assert.match(workflow,/^  workflow_dispatch:\s*$/m);
  assert.doesNotMatch(workflow,/^  schedule:/m);
  assert.match(builder,/returns-data\.json/);
  assert.match(builder,/returns\.html/);
