@@ -6,16 +6,31 @@ const errorNames=new Set(['Error','TypeError','ReferenceError','SyntaxError','Ra
 const methods=new Set(['GET','POST','OPTIONS','HEAD','PUT','PATCH','DELETE']);
 const resourceTypes=new Set(['document','stylesheet','script','image','font','xhr','fetch','eventsource','websocket','manifest','other']);
 const contentTypes=new Set(['application/json','application/x-www-form-urlencoded','text/plain']);
+const networkCodes=new Set(['ERR_ABORTED','ERR_FAILED','ERR_BLOCKED_BY_CLIENT','ERR_BLOCKED_BY_RESPONSE',
+ 'ERR_NAME_NOT_RESOLVED','ERR_CONNECTION_RESET','ERR_CONNECTION_CLOSED','ERR_TIMED_OUT']);
+const externalHosts=new Map([
+ ['ingestap.quantummetric.com','QUANTUM_METRIC'],
+ ['segment.api.useinsider.com','INSIDER'],['falcon.useinsider.com','INSIDER'],
+ ['js-cdn.dynatrace.com','DYNATRACE']
+]);
 const MAX_EVENTS=10000,MAX_QUERIES=4,MAX_REQUEST_SAMPLES=2;
 const attempt=(fn,fallback=null)=>{try{return fn();}catch{return fallback;}};
 const increment=(counts,key)=>{counts[key]=(counts[key]||0)+1;};
-const queryCounts=()=>({requests:0,failed:0,status_counts:{}});
+const queryCounts=()=>({requests:0,finished:0,failed:0,status_counts:{}});
 const phaseCounts=()=>({page_errors:{},console:{error:0,warning:0},resources:{same_origin:{},other_origin:{},unknown_origin:{}},public_query:queryCounts()});
 
 function location(request){
  const url=attempt(()=>new URL(request.url()));
  return {scope:!url?'unknown_origin':url.origin===target.origin?'same_origin':'other_origin',
+  hostCategory:url?externalHosts.get(url.hostname)||'OTHER':'OTHER',
   isQuery:!!url&&url.origin===target.origin&&url.pathname===target.pathname};
+}
+
+function networkCode(request){
+ const raw=attempt(()=>request.failure()?.errorText);
+ if(typeof raw!=='string')return 'OTHER';
+ const code=raw.startsWith('net::')?raw.slice(5):raw;
+ return networkCodes.has(code)?code:'OTHER';
 }
 
 function requestSample(request,expected){
@@ -79,7 +94,7 @@ export function watchPublicQueryDiagnostics(page){
  function resource(request,ctx){
   const raw=attempt(()=>request.resourceType()),type=resourceTypes.has(raw)?raw:'other';
   const bucket=state.phases[ctx.phase].resources[ctx.scope];
-  return bucket[type]??=( {requested:0,failed:0,http_errors:0} );
+  return bucket[type]??=( {requested:0,finished:0,failed:0,http_errors:0,failures:{}} );
  }
  observe('pageerror',error=>{
   const name=attempt(()=>error.name);
@@ -101,11 +116,20 @@ export function watchPublicQueryDiagnostics(page){
   else ctx.query.request_limit_reached=true;
  });
  observe('requestfailed',request=>{
-  const ctx=context(request);
-  resource(request,ctx).failed++;
+  const ctx=context(request),bucket=resource(request,ctx);
+  bucket.failed++;
+  increment(bucket.failures[ctx.hostCategory]??={},networkCode(request));
   if(!ctx.isQuery)return;
   state.phases[ctx.phase].public_query.failed++;
   if(ctx.query)ctx.query.failed++;
+ });
+ observe('requestfinished',request=>{
+  const ctx=context(request);
+  // Completion includes HTTP error responses; it is not a success counter.
+  resource(request,ctx).finished++;
+  if(!ctx.isQuery)return;
+  state.phases[ctx.phase].public_query.finished++;
+  if(ctx.query)ctx.query.finished++;
  });
  observe('response',response=>{
   const request=response.request(),ctx=context(request),raw=response.status();
@@ -122,7 +146,7 @@ export function watchPublicQueryDiagnostics(page){
    expected=attempt(()=>typeof value.origin==='string'&&typeof value.destination==='string'&&/^\d{4}-\d{2}$/.test(value.month)?
     {origin:value.origin,destination:value.destination,date:value.month.replace('-','')+'01'}:null);
    if(state.queries.length>=MAX_QUERIES){state.query_limit_reached=true;activeQuery=null;return;}
-   activeQuery={request_count:0,requests:[],failed:0,status_counts:{},request_limit_reached:false};
+   activeQuery={request_count:0,requests:[],finished:0,failed:0,status_counts:{},request_limit_reached:false};
    state.queries.push(activeQuery);
   },
   snapshot(){return JSON.parse(JSON.stringify(state));},

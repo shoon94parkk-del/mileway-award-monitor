@@ -168,3 +168,55 @@ test('pending content type metadata cannot delay a snapshot and dispose stops ob
  page.emit('request',request());
  assert.equal(diagnostic.snapshot().phases.query.public_query.requests,1);
 });
+
+test('external failed fetches classify exact hosts and exact network codes without leaking URLs or error text',()=>{
+ const page=new EventEmitter(),diagnostic=watchPublicQueryDiagnostics(page);
+ for(const [host,errorText,category,code] of [
+  ['ingestap.quantummetric.com','net::ERR_FAILED','QUANTUM_METRIC','ERR_FAILED'],
+  ['segment.api.useinsider.com','net::ERR_ABORTED','INSIDER','ERR_ABORTED'],
+  ['falcon.useinsider.com','ERR_BLOCKED_BY_CLIENT','INSIDER','ERR_BLOCKED_BY_CLIENT'],
+  ['js-cdn.dynatrace.com','net::ERR_BLOCKED_BY_RESPONSE','DYNATRACE','ERR_BLOCKED_BY_RESPONSE'],
+  ['ingestap.quantummetric.com.evil.example','net::ERR_FAILED '+secret,'OTHER','OTHER'],
+  ['unlisted.example','net::ERR_NAME_NOT_RESOLVED','OTHER','ERR_NAME_NOT_RESOLVED'],
+  ['unlisted.example','net::ERR_CONNECTION_RESET','OTHER','ERR_CONNECTION_RESET'],
+  ['unlisted.example','net::ERR_CONNECTION_CLOSED','OTHER','ERR_CONNECTION_CLOSED'],
+  ['unlisted.example','net::ERR_TIMED_OUT','OTHER','ERR_TIMED_OUT']
+ ]){
+  const req=request({url:()=>`https://${host}/${secret}?token=${secret}`,failure:()=>({errorText})});
+  page.emit('request',req);page.emit('requestfailed',req);
+  assert.equal(diagnostic.snapshot().phases.init.resources.other_origin.fetch.failures[category][code],1);
+ }
+ const serialized=JSON.stringify(diagnostic.snapshot());
+ assert.doesNotMatch(serialized,/private-secret|https:|quantummetric\.com|useinsider\.com|dynatrace\.com|evil\.example|net::/);
+});
+
+test('request completion is counted separately from HTTP success and attributed to its starting phase',async()=>{
+ const page=new EventEmitter(),diagnostic=watchPublicQueryDiagnostics(page);
+ const req=request({url:()=> 'https://ingestap.quantummetric.com/'+secret,
+  failure:()=>assert.fail('Completed request failure must not be read')});
+ page.emit('request',req);diagnostic.setPhase('discovery');
+ page.emit('response',response(req,403));page.emit('requestfinished',req);
+ assert.deepEqual(diagnostic.snapshot().phases.init.resources.other_origin.fetch,
+  {requested:1,finished:1,failed:0,http_errors:1,failures:{}});
+ diagnostic.beginQuery(expected);
+ const query=request();page.emit('request',query);page.emit('response',response(query,403));page.emit('requestfinished',query);
+ await settle();
+ const output=diagnostic.snapshot();
+ assert.equal(output.phases.query.public_query.finished,1);
+ assert.equal(output.queries[0].finished,1);
+ assert.equal(output.queries[0].status_counts['403'],1);
+});
+
+test('unknown and throwing failure metadata still count failure using only fixed OTHER categories',()=>{
+ const page=new EventEmitter(),diagnostic=watchPublicQueryDiagnostics(page);
+ const cases=[
+  request({url:()=> 'https://unknown.example/'+secret,failure:()=>{throw Error(secret);}}),
+  request({url:()=> 'https://unknown.example/'+secret,failure:()=>({get errorText(){throw Error(secret);}})}),
+  request({url:()=>{throw Error(secret);},failure:()=>({errorText:secret})})
+ ];
+ for(const req of cases)assert.doesNotThrow(()=>{page.emit('request',req);page.emit('requestfailed',req);});
+ const output=diagnostic.snapshot();
+ assert.equal(output.phases.init.resources.other_origin.fetch.failures.OTHER.OTHER,2);
+ assert.equal(output.phases.init.resources.unknown_origin.fetch.failures.OTHER.OTHER,1);
+ assert.doesNotMatch(JSON.stringify(output),/private-secret|unknown\.example/);
+});
