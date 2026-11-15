@@ -5,19 +5,16 @@ import worker,{dispatchFromCloudflare,skipReason} from '../worker/src/index.mjs'
 
 const cycle={cycle_id:'2026-09-14T23:00:00+09:00',cycle_start_utc:'2026-09-14T14:00:00.000Z'};
 
-test('Cloudflare retries every 10 minutes from 23:00 through 03:50 KST',()=>{
+test('Cloudflare dispatch crons are removed after owner-PC migration',()=>{
  const config=JSON.parse(fs.readFileSync(new URL('../worker/wrangler.jsonc',import.meta.url),'utf8'));
- assert.deepEqual(config.triggers.crons,['*/10 14-17 * * *']);
+ assert.deepEqual(config.triggers.crons,[]);
 });
 
-test('Cloudflare scheduled failures are caught and logged',async()=>{
- const messages=[];
- const context={waitUntil(promise){return promise;}};
- const workerModule=await import(`../worker/src/index.mjs?failure-test=${Date.now()}`);
- const original=console.error;
- console.error=(...args)=>messages.push(args.join(' '));
- try{await workerModule.default.scheduled({}, {}, context);}finally{console.error=original;}
- assert.match(messages[0],/GITHUB_ACTIONS_TOKEN/);
+test('Cloudflare scheduled events no longer launch any dispatch',async()=>{
+ const context={waitUntil(){throw Error('Retired worker should never schedule GitHub requests')}};
+ const output=[],original=console.log;console.log=(...args)=>output.push(args.join(' '));
+ try{await worker.scheduled({}, {GITHUB_ACTIONS_TOKEN:'unused'},context)}finally{console.log=original}
+ assert.match(output[0],/disabled/);
 });
 
 test('Cloudflare recovery trigger skips an active or successful cycle',()=>{
@@ -53,5 +50,5 @@ test('Cloudflare trigger requires its secret',async()=>{
 test('Cloudflare worker exposes a lightweight health endpoint',async()=>{
  const response=await worker.fetch();
  assert.equal(response.status,200);
- assert.equal(await response.text(),'Mileway daily dispatcher is active.');
+ assert.equal(await response.text(),'Mileway legacy dispatcher retired. Airline collection runs on the owner PC.');
 });
