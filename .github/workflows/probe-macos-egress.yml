@@ -1,0 +1,63 @@
+name: Test one official airline query from alternate macOS runner
+# User-requested one-shot network comparison only. No repeated runs, proxy,
+# airline login, captcha bypass, hidden APIs or data publication.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-macos-egress.yml']
+permissions:
+  contents: read
+concurrency:
+  group: one-shot-macos-network-diagnostic
+  cancel-in-progress: false
+jobs:
+  probe:
+    name: Check official ICN-LHR visible calendar from macOS network
+    runs-on: macos-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Identify disposable runner network without storing secrets
+        shell: bash
+        run: |
+          echo "OS: $(uname -s), version: $(sw_vers -productVersion)"
+          echo "Egress IP (ephemeral GitHub runner, not user IP):"
+          curl --silent --show-error --fail --max-time 10 https://api.ipify.org || true
+          echo
+          echo "Installed Google Chrome:"
+          ls -ld '/Applications/Google Chrome.app' || true
+      - name: Install official-screen automation
+        shell: bash
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          if [ ! -x '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' ]; then
+            npx playwright install chrome
+          fi
+      - name: One official Korean Air rendered UI calendar query (no retries)
+        shell: bash
+        env:
+          MILEWAY_STANDARD_CHROME: '1'
+          MILEWAY_DIRECT_API: '0'
+          MILEWAY_QUERY_DIAGNOSTICS: '1'
+        run: |
+          TODAY=$(node -e "console.log(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))")
+          echo "Single direct official UI query for ICN-LHR on $TODAY, no proxy or IP rotation."
+          node --no-warnings src/public-extract.mjs --route LHR --start "$TODAY" --end "$TODAY" --output data/macos-egress --interval-ms 3000 --max-retries 1 --headless
+      - name: Explain measured result without publishing inventory
+        if: always()
+        shell: bash
+        run: |
+          node -e "const fs=require('fs');const f='data/macos-egress/results.json';if(!fs.existsSync(f)){console.log('RESULT: no saved query report');process.exit(0)}const j=JSON.parse(fs.readFileSync(f));console.log('RESULT:',JSON.stringify({source:j.source_type,engine:j.collection_engine,updated:j.source_updated_at,completed:j.attempt_complete,coverage:j.coverage?.length,unqueryable:j.unqueryable?.length,failure_code:j.failure_code,denial:j.access_denial},null,2))"
+      - name: Upload minimal diagnostic evidence, no authenticated data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-official-one-route-diagnostic
+          path: |
+            data/macos-egress/query-diagnostics.json
+          if-no-files-found: ignore
+          retention-days: 2
