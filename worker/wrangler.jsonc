@@ -4,9 +4,7 @@
   "main": "src/index.mjs",
   "compatibility_date": "2026-09-14",
   "triggers": {
-    "crons": [
-      "*/10 14-17 * * *"
-    ]
+    "crons": []
   },
   "vars": {
     "GITHUB_REPOSITORY": "shoon94parkk-del/mileway-award-monitor",
