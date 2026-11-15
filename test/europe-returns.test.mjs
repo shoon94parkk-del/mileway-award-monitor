@@ -46,12 +46,13 @@ test('unqueryable return months preserve old results as unverified but never sig
  assert.equal(merged.preserved_unknown_rows,1);
  assert.equal(merged.last_successful_scan_at,next.finished_at);
 });
-test('site build and scheduled workflow expose independent return collection without changing outbound collector',()=>{
+test('site build and manually dispatched workflow expose independent return collection without changing outbound collector',()=>{
  const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
  const workflow=read('.github/workflows/collect-europe-returns.yml'),builder=read('scripts/build-cloud.mjs'),home=read('web/index.html');
  assert.match(workflow,/scripts\/collect-europe-returns\.mjs/);
  assert.match(workflow,/scripts\/publish-europe-returns\.mjs/);
- assert.match(workflow,/schedule:/);
+ assert.match(workflow,/^  workflow_dispatch:\\s*$/m);
+ assert.doesNotMatch(workflow,/^  schedule:/m);
  assert.match(builder,/returns-data\.json/);
  assert.match(builder,/returns\.html/);
  assert.match(home,/href="\/returns\.html"/);
