@@ -39,3 +39,16 @@ test('GitHub-hosted collection can still be manually tested and site rebuild rem
  assert.match(local,/scripts\/collection-canary\.mjs/);
  assert.match(local,/scripts\/merge-europe-return-shards\.mjs/);
 });
+
+test('external legacy Cloudflare dispatch gets an explicitly named no-op, never source query or health publication',()=>{
+ const collector=workflow('collect.yml');
+ assert.match(collector,/ignore-external:/);
+ assert.ok(collector.includes('if: inputs.retry_now != true'));
+ assert.ok(collector.includes('if: inputs.retry_now == true'));
+ assert.ok(collector.includes('if: always() && inputs.retry_now == true'));
+ assert.ok(collector.includes('Ignored external dispatch'));
+ const config=JSON.parse(fs.readFileSync('worker/wrangler.jsonc','utf8'));
+ assert.deepEqual(config.triggers.crons,[]);
+ const worker=fs.readFileSync('worker/src/index.mjs','utf8');
+ assert.ok(worker.includes('Mileway remote collection dispatcher disabled'));
+});
