@@ -1,0 +1,56 @@
+name: Retire Cloudflare automatic airline dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retire-cloudflare-dispatch.yml'
+      - 'worker/wrangler.jsonc'
+      - 'worker/src/index.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: mileway-retire-cloudflare-legacy-dispatch
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify no automatic Cloudflare triggers remain in source
+        run: |
+          node --test test/cloudflare-dispatcher.test.mjs
+          node -e "const c=JSON.parse(require('fs').readFileSync('worker/wrangler.jsonc'));if(c.triggers.crons.length)process.exit(1)"
+      - name: Check existing Cloudflare deployment permissions
+        id: credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Existing Cloudflare deployment secrets are configured."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No Cloudflare deploy credentials configured in GitHub; cannot update an already deployed worker."
+            echo "Disable its Cron Trigger in the Cloudflare dashboard or configure the account-authorized deploy secrets."
+          fi
+      - name: Deploy retired Worker and remove old 10-minute Cron Trigger
+        if: steps.credentials.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.131.2 deploy --config worker/wrangler.jsonc
+      - name: Summarize deployment state
+        shell: bash
+        run: |
+          if [ "${{ steps.credentials.outputs.ready }}" = "true" ]; then
+            echo "Cloudflare Worker deployment step completed."
+          else
+            echo "Cloudflare deployment NOT performed. Source and GitHub receiver are safe; account owner must disable the existing Cloudflare cron."
+          fi
