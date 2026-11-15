@@ -1,10 +1,6 @@
 name: Probe direct Korean Air daily API
+# One-off diagnostics only; do not probe the airline automatically from GitHub.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/probe-direct-daily-api.mjs'
-      - '.github/workflows/direct-daily-api-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
