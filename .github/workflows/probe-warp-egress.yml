@@ -1,0 +1,72 @@
+name: One-shot official calendar test over verified Cloudflare WARP
+# One user-requested trial. Never scheduled. No anonymous proxies, rotating
+# addresses, credentialed airline endpoints, or multi-route collection.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-warp-egress.yml']
+permissions:
+  contents: read
+concurrency:
+  group: one-shot-warp-official-calendar-test
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    name: Verify WARP exit then test one official browser query
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare browser and WARP packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chrome
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cloudflare-warp
+      - name: Establish actual encrypted WARP egress, or fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Before tunnel, ephemeral datacenter IP:"
+          curl -fsSL --max-time 12 https://api.ipify.org || true
+          echo
+          sudo systemctl start warp-svc || true
+          sudo warp-cli --accept-tos registration new
+          sudo warp-cli --accept-tos mode warp+doh
+          sudo warp-cli --accept-tos connect
+          READY=0
+          for n in 1 2 3 4 5 6; do
+            TRACE="$(curl --silent --show-error --max-time 12 https://www.cloudflare.com/cdn-cgi/trace || true)"
+            if printf '%s\n' "$TRACE" | grep -q '^warp=on$'; then READY=1; break; fi
+            sleep 3
+          done
+          sudo warp-cli --accept-tos status || true
+          if [ "$READY" -ne 1 ]; then echo "WARP VPN NOT VERIFIED. STOP before airline requests."; exit 78; fi
+          echo "WARP VPN verified warp=on."
+          echo "After tunnel, outbound IP:"
+          curl -fsSL --max-time 12 https://api.ipify.org
+          echo
+      - name: One official ICN-LHR public calendar query through verified WARP
+        shell: bash
+        env:
+          MILEWAY_STANDARD_CHROME: '1'
+          MILEWAY_DIRECT_API: '0'
+          MILEWAY_QUERY_DIAGNOSTICS: '1'
+        run: |
+          set -euo pipefail
+          TODAY=$(node -e "console.log(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))")
+          echo "ONE official public UI query on $TODAY. No parallel queries or retries."
+          node --no-warnings src/public-extract.mjs --route LHR --start "$TODAY" --end "$TODAY" --output data/warp-one-shot --interval-ms 3000 --max-retries 1 --headless
+      - name: Print safe measured outcome
+        if: always()
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'),f='data/warp-one-shot/results.json';if(!fs.existsSync(f)){console.log('No airline inventory report. VPN or navigation may have failed.');process.exit(0)}const j=JSON.parse(fs.readFileSync(f));console.log(JSON.stringify({source:j.source_type,source_updated_at:j.source_updated_at,complete:j.attempt_complete,coverage:j.coverage?.length,unqueryable:j.unqueryable?.length,failed:j.failed?.length,failure_code:j.failure_code,denial:j.access_denial},null,2))"
