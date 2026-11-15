@@ -1,4 +1,5 @@
 name: Collect public daily award seats
+run-name: ${{ inputs.retry_now == true && 'Manual official Korean Air browser test' || 'Ignored external dispatch · owner PC collects seats' }}
 on:
   workflow_dispatch:
     inputs:
@@ -14,8 +15,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ignore-external:
+    name: Ignore unattended Cloudflare trigger without touching Korean Air
+    if: inputs.retry_now != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Do not access the airline or change health data
+        run: echo "This legacy external dispatch was ignored. Official collection runs on the user-owned Windows PC."
   preflight:
     name: Respect public-source access-limit cooldown
+    if: inputs.retry_now == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -211,7 +221,7 @@ jobs:
   status:
     name: Record full scan health
     needs: [preflight, canary, scan, publish]
-    if: always()
+    if: always() && inputs.retry_now == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
