@@ -1,9 +1,7 @@
 name: One-shot standard Chrome public award access probe
+# One-off diagnostics only; do not probe the airline automatically from GitHub.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/probe-standard-chrome.yml']
 permissions:
   contents: read
 concurrency:
