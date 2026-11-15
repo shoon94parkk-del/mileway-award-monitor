@@ -72,13 +72,13 @@ export async function dispatchFromCloudflare({env,now=new Date(),fetchImpl=fetch
 }
 
 export default {
- async scheduled(_controller,env,ctx){
-  ctx.waitUntil(dispatchFromCloudflare({env}).catch(error=>{
-   console.error(`Mileway dispatcher failed: ${error?.message||String(error)}`);
-  }));
+ async scheduled(){
+  // Retired: legacy Cloudflare triggers must never launch GitHub airline scans.
+  // The account owner's Windows Chrome is the only automatic collector.
+  console.log('Mileway remote collection dispatcher disabled; no GitHub or airline requests.');
  },
  async fetch(){
-  return new Response('Mileway daily dispatcher is active.',{
+  return new Response('Mileway legacy dispatcher retired. Airline collection runs on the owner PC.',{
    headers:{'Content-Type':'text/plain; charset=utf-8'}
   });
  }
