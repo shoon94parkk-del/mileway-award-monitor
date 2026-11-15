@@ -1,8 +1,6 @@
 name: Force daily scan by 23:05 KST
+# Legacy interlock is manual-only while a user-owned Windows collector is used.
 on:
-  schedule:
-    # Start well before the top-of-hour congestion window, then wait inside the runner.
-    - cron: '50 13 * * *'
   workflow_dispatch:
 permissions:
   actions: write
