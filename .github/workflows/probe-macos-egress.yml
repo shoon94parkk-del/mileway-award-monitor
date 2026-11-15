@@ -3,9 +3,6 @@ name: Test one official airline query from alternate macOS runner
 # airline login, captcha bypass, hidden APIs or data publication.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/probe-macos-egress.yml']
 permissions:
   contents: read
 concurrency:
