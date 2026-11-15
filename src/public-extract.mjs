@@ -52,7 +52,8 @@ const store=db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?)');
 const edge=[process.env.KE_BROWSER_EXECUTABLE,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(p=>p&&fs.existsSync(p));
 const standardChrome=process.env.MILEWAY_STANDARD_CHROME==='1';
 const browser=await pw.chromium.launch(standardChrome?{
-  channel:'chrome',headless:process.argv.includes('--headless')
+  channel:'chrome',headless:process.argv.includes('--headless'),
+  ...(process.env.MILEWAY_HTTP1_COMPAT==='1'?{args:['--disable-http2','--disable-quic']}:{})
 }:{...(edge?{executablePath:edge}:{}),args:NETWORK_ARGS,headless:process.argv.includes('--headless')});
 const browserContext=await browser.newContext({
   locale:'ko-KR',viewport:{width:1280,height:900},
