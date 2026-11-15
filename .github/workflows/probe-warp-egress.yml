@@ -60,6 +60,7 @@ jobs:
           MILEWAY_STANDARD_CHROME: '1'
           MILEWAY_DIRECT_API: '0'
           MILEWAY_QUERY_DIAGNOSTICS: '1'
+          MILEWAY_HTTP1_COMPAT: '1'
         run: |
           set -euo pipefail
           TODAY=$(node -e "console.log(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))")
