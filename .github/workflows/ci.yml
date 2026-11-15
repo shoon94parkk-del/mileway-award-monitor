@@ -68,4 +68,4 @@ jobs:
         with:
           node-version: '24'
       - name: Test public collection gates without launching a browser
-        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs test/public-navigation.test.mjs test/public-access-limit.test.mjs
+        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs test/public-navigation.test.mjs test/public-access-limit.test.mjs test/public-query-diagnostics.test.mjs

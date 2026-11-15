@@ -14,9 +14,10 @@ export function runPublicCanary({now=new Date(),output='data/public-canary',
  fs.mkdirSync(output,{recursive:true});
  // A previous probe, including a successful one, cannot authorize this run.
  fs.rmSync(file,{force:true});
+ fs.rmSync(path.join(output,'query-diagnostics.json'),{force:true});
  const args=['--no-warnings',extractor,'--route','LHR','--start',today,'--end',today,
   '--output',output,'--interval-ms','3000','--max-retries','1'];
- const run=runCollector(args,{...process.env,MILEWAY_DIRECT_API:'0'});
+ const run=runCollector(args,{...process.env,MILEWAY_DIRECT_API:'0',MILEWAY_QUERY_DIAGNOSTICS:'1'});
  let report;try{report=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}
  const coverage=report?.coverage,unknown=report?.unqueryable;
  const entries=Array.isArray(coverage)&&Array.isArray(unknown)?[...coverage,...unknown]:[];

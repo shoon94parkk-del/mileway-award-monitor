@@ -19,9 +19,11 @@ async function checkProbe(result,status,check){
   const output=path.join(dir,'canary');fs.mkdirSync(output);
   // A stale successful report must never authorize a failed new invocation.
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(report()));
+  fs.writeFileSync(path.join(output,'query-diagnostics.json'),'{}');
   let invocation;
   const gate=runPublicCanary({now,output,runCollector:(args,env)=>{
    assert.equal(fs.existsSync(path.join(output,'results.json')),false);
+   assert.equal(fs.existsSync(path.join(output,'query-diagnostics.json')),false);
    invocation={args,env};
    if(result)fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(result));
    return {status};
@@ -37,6 +39,7 @@ test('public canary checks only ICN to LHR for today in Seoul through the existi
    '--route','LHR','--start','2026-11-15','--end','2026-11-15',
    '--output',output,'--interval-ms','3000','--max-retries','1']);
   assert.equal(env.MILEWAY_DIRECT_API,'0');
+  assert.equal(env.MILEWAY_QUERY_DIAGNOSTICS,'1');
  });
 });
 

@@ -59,7 +59,7 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.62.1
       - name: Validate public UI canary gate and measured outcomes
         id: tests
-        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs test/public-navigation.test.mjs test/public-access-limit.test.mjs
+        run: node --test test/collection-canary.test.mjs test/collection-outcomes.test.mjs test/outbound-ui-collector.test.mjs test/public-accessible-award.test.mjs test/public-navigation.test.mjs test/public-access-limit.test.mjs test/public-query-diagnostics.test.mjs
       - name: Query one public ICN-to-LHR month through the regular UI
         id: probe
         env:
@@ -88,6 +88,7 @@ jobs:
           name: outbound-canary-diagnostics
           path: |
             data/public-canary/results.json
+            data/public-canary/query-diagnostics.json
             data/public-canary/last-run-error.json
             data/public-canary/last-public-error.json
             data/public-canary/last-calendar-error.json

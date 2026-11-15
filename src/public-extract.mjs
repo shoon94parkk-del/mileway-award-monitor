@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import {watchPublicAccess} from './public-access-limit.mjs';
+import {watchPublicQueryDiagnostics} from './public-query-diagnostics.mjs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
@@ -60,6 +61,11 @@ const browserContext=await browser.newContext({
 const page=await browserContext.newPage();
 if(standardChrome)console.log('PUBLIC BROWSER: installed Chrome; native HTTP/2, cookies and cache; no custom protocol flags');
 const publicAccess=watchPublicAccess(page);
+let queryDiagnostics=null;
+if(process.env.MILEWAY_QUERY_DIAGNOSTICS==='1'){
+  try{queryDiagnostics=watchPublicQueryDiagnostics(page);}
+  catch{console.error('Public query diagnostics could not be attached.');}
+}
 page.setDefaultTimeout(20000);
 const pending=new Set();
 let apiErrors=[];
@@ -102,6 +108,7 @@ async function dismissCookie(){
   await dismissPublicCookies(page);
 }
 async function initializeSearchPage(expectedSourceUpdatedAt=null) {
+  queryDiagnostics?.setPhase('init');
   publicAccess.throwIfBlocked();
   pending.clear();apiErrors=[];lastPublicResponse=null;
   await openPublicPage(page);
@@ -261,6 +268,7 @@ try {
     console.log(`Resuming ${report.coverage.length+report.unqueryable.length} saved route/months from the same daily data`);
   }
   const regions=await discoverDestinationRegions();
+  queryDiagnostics?.setPhase('discovery');
   const routes=[];
   for (const region of regions) {
     const buttons=await regionList('destination',region);
@@ -308,6 +316,7 @@ try {
             const chronological=previousMonth&&new Date(monthKey+'-01T00:00:00Z').getTime()-
               new Date(previousMonth+'-01T00:00:00Z').getTime()<32*86400000;
             if(attempt===1&&chronological){
+              queryDiagnostics?.beginQuery({origin:'ICN',destination:route.code,month:monthKey});
               await page.getByRole('navigation',{name:'가는 여정'}).getByRole('button',{name:'다음 달',exact:true}).click();
             }else{
               if(!(attempt===1&&queryFormReady)){
@@ -316,6 +325,7 @@ try {
               }
               await selectPublicMonth(page,monthKey);
               publicAccess.throwIfBlocked();
+              queryDiagnostics?.beginQuery({origin:'ICN',destination:route.code,month:monthKey});
               await page.getByRole('button',{name:'조회',exact:true}).click();
               queryFormReady=false;
             }
@@ -445,4 +455,14 @@ try {
   if(report.coverage.length||report.unqueryable.length||report.failed.length||report.failure_code)save();else writeJson('last-run-error.json',{at:new Date().toISOString(),message:e.message});
   console.error(e.message);process.exitCode=/ACCESS_LIMIT/.test(e.message)?75:1;
 }
-finally {await browser.close();db.close();releaseCollection();}
+finally {
+  if(queryDiagnostics){
+    try{
+      const diagnostic=queryDiagnostics.snapshot();
+      writeJson('query-diagnostics.json',diagnostic);
+      console.log('PUBLIC QUERY DIAGNOSTICS',JSON.stringify(diagnostic));
+    }catch{console.error('Public query diagnostics could not be saved.');}
+    finally{try{queryDiagnostics.dispose();}catch{}}
+  }
+  await browser.close();db.close();releaseCollection();
+}

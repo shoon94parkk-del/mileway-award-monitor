@@ -2,6 +2,10 @@
 
 Append-only high-risk decisions.
 
+## 2026-11-15 — Observe the existing public query before changing request behavior
+
+The original successful collector and the standard installed-Chrome collector both failed later. Code review did not establish an airport/month selection defect. Add passive, bounded diagnostics to the existing one-query canary to distinguish preceding page/resource failures and request-field mismatches from the observed refusal. Record only fixed phase/error/resource classifications, capped counts, HTTP statuses and equality booleans for the known outbound request fields. Never log raw requests, cookies, tokens, URLs, browser error text, or successful response bodies. Diagnostic observation does not change networking, session creation, UI clicks, denial stop behavior or publication eligibility. Run the same diagnostic tests in Windows preflight; actual calendar and publication evidence remain necessary before recovery is claimed.
+
 ## 2026-11-15 — Replay the successful November 12 run without collector changes
 
 The user explicitly requested the November 12 successful setup, so rerun all jobs of `43125985343` at its original SHA `31e4bb17` as attempt 2. Confirm the original workflow, source, five route partitions, image, Node/npm/Playwright and commands rather than approximating them with current code. All five workers passed their fourteen tests and then failed the first route/month twice without a verified result calendar; publication was skipped. The legacy code does not emit HTTP-denial diagnostics, so do not attribute a newly measured 403 to this attempt. Its status job incorrectly passes the overall scan failure as the test outcome; correct the resulting public `last_error_step` to `collection` using the measured step results, retaining the actual earlier denial timestamp and last-good publication. Keep the current production collector and its guards unchanged.
