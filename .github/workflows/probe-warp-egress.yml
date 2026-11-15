@@ -3,9 +3,6 @@ name: One-shot official calendar test over verified Cloudflare WARP
 # addresses, credentialed airline endpoints, or multi-route collection.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/probe-warp-egress.yml']
 permissions:
   contents: read
 concurrency:
