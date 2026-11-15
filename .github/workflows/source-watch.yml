@@ -1,30 +1,7 @@
 name: Watch Korean Air daily source
+# Explicit manual diagnostics only; local PC is responsible for daily airline collection.
 on:
-  schedule:
-    # Two prewarm shots before the 23:00 KST refresh window. Either allocated runner
-    # can survive a delay in the other scheduled event.
-    - cron: '32 13 * * *'
-    - cron: '47 13 * * *'
-    # Late independent GitHub checks stay armed well into the morning. Avoid the
-    # top-of-hour congestion window by using :17/:47.
-    - cron: '17,47 14-20 * * *'
-    - cron: '17 21 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    # Only source-freshness/interlock changes need an immediate watcher run.
-    # Collector implementation changes are validated by CI/smoke and must not
-    # create competing Korean Air browser traffic during development.
-    paths:
-      - '.github/workflows/source-watch.yml'
-      - 'src/public-source-check.mjs'
-      - 'src/source-observer.mjs'
-      - 'src/source-timestamp.mjs'
-      - 'src/collection-cycle.mjs'
-      - 'scripts/cycle-info.mjs'
-      - 'src/public-navigation.mjs'
-      - 'test/public-source-check.test.mjs'
-      - 'test/collection-cycle.test.mjs'
 permissions:
   actions: write
   contents: read
