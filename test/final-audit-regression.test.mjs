@@ -4,15 +4,14 @@ import fs from 'node:fs';
 
 const read=file=>fs.readFileSync(file,'utf8');
 
-test('public UI describes the real 23 KST watcher instead of a fake hourly cadence',()=>{
+test('public UI identifies user-PC collection without claiming disabled GitHub watch times',()=>{
  const cloud=read('web/cloud-enhancements.js'),build=read('scripts/build-cloud.mjs');
- assert.match(cloud,/30초 집중 확인/);
- assert.match(cloud,/23시 집중 감시/);
- assert.doesNotMatch(cloud,/약 1시간/);
- assert.match(build,/22:47 KST/);
- assert.match(build,/22:57~23:20/);
- assert.match(build,/23:33~02:03/);
- assert.doesNotMatch(build,/평소 약 1시간/);
+ assert.match(cloud,/Windows PC · 설치 미확인/);
+ assert.match(cloud,/USER_OWNED_WINDOWS_CHROME/);
+ assert.doesNotMatch(cloud,/30초 집중 확인|23시 집중 감시/);
+ assert.match(build,/Windows PC/);
+ assert.match(build,/08:30/);
+ assert.doesNotMatch(build,/22:47 KST|22:57~23:20|23:33~02:03|평소 약 1시간/);
 });
 
 test('legacy secret-based alert manager is no longer shipped in cloud enhancements',()=>{
