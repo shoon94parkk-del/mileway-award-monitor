@@ -1,3 +1,9 @@
+> **운영 변경 (2026-11-15):** 대한항공 공식 달력 조회는 사용자 Windows PC 수집기로 이관했습니다. GitHub Actions의 자동 출국·귀국 스캔, 소스 감시, 23:05 강제 실행, 시간별 복구, 자동 API 진단은 수동 실행 전용으로 중단했습니다. Telegram 및 상태 워크플로 일정은 유지합니다.
+>
+> **중요:** 별도 배포된 Cloudflare Worker `mileway-daily-dispatch`는 이전에 `*/10 14-17 * * *` 일정으로 GitHub 수집을 재호출했습니다. 저장소 설정은 `crons: []`로 변경했고 Worker 예정 실행도 무동작 처리했지만, **Cloudflare 계정에 새 버전을 실제 배포하지 않으면 기존 크론이 남아 있습니다.** 현재 GitHub의 수집 워크플로는 확인 입력 없는 외부 호출을 좌석 조회 없이 무시합니다. Cloudflare Dashboard에서 기존 Cron Trigger를 삭제하거나 계정 소유자의 Wrangler 배포로 제거해야 합니다.
+>
+> 사용자 PC 설치와 실제 좌석 조회 성공 여부는 **미확인**입니다. [관리자 PC 공식 수집기 설치 방법](../official-korean-air-local-collector.md)을 참고하세요. 아래에 기록된 GitHub 5-runner 성능은 과거 실행에 관한 기록입니다.
+
 # 전체 수집 소요 시간과 병렬 실행 근거
 
 확인일: 2026-11-14 UTC. 아래 시간은 GitHub Actions 실행·단계 메타데이터와 성공 실행의 공개 UI 로그에서 측정했다. 새 항공사 조회 없이 기존 기록만 분석했다.
