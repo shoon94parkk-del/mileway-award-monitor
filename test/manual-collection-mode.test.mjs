@@ -13,7 +13,8 @@ const sourceJobs=[
  'collect.yml','collect-europe-returns.yml','source-watch.yml',
  'force-2305.yml','recover-access-limit.yml',
  'diagnose-timezone.yml','direct-daily-api-probe.yml','direct-hybrid-smoke.yml',
- 'guest-realtime-probe.yml','probe-standard-chrome.yml'
+ 'guest-realtime-probe.yml','probe-standard-chrome.yml',
+ 'probe-warp-egress.yml','probe-macos-egress.yml'
 ];
 
 test('all GitHub-hosted airline access jobs are manual only and cannot be scheduled or pushed automatically',()=>{
